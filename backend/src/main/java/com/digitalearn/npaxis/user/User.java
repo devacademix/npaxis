@@ -90,11 +90,11 @@ public class User extends BaseEntity implements UserDetails, Principal {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    private boolean accountLocked;
+    @Builder.Default
+    private boolean accountLocked = true;
 
     @Builder.Default
-    private boolean accountEnabled = true;
-
+    private boolean accountEnabled = false;
 
     @Override
     public String getName() {

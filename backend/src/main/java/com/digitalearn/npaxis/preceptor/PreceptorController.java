@@ -2,6 +2,9 @@ package com.digitalearn.npaxis.preceptor;
 
 import com.digitalearn.npaxis.common.responses.ResponseHandler;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +55,20 @@ public class PreceptorController {
         return ResponseHandler.generateResponse(preceptors, "Preceptors fetched successfully", true, HttpStatus.OK);
     }
 
-    @Operation(summary = "Fetch preceptor by ID", description = "Retrieves an active preceptor by their unique user ID.")
+    @Operation(
+            summary = "Fetch preceptor by ID",
+            description = "Retrieves an active preceptor by their unique user ID.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Preceptor fetched successfully",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = PreceptorResponseDTO.class)
+                            )
+                    )
+            }
+    )
     @GetMapping(value = {GET_ACTIVE_PRECEPTOR_BY_ID_API, GET_ACTIVE_PRECEPTOR_BY_ID_API + "/"})
     public ResponseEntity<Map<String, Object>> getActivePreceptorById(@PathVariable("userId") Long userId) {
         log.info("Fetching active preceptor with ID: {}", userId);
@@ -64,7 +80,7 @@ public class PreceptorController {
     @PreAuthorize("#userId == principal.userId")
     @PutMapping(value = {PUT_UPDATE_PRECEPTOR_API, PUT_UPDATE_PRECEPTOR_API + "/"})
     public ResponseEntity<Map<String, Object>> updatePreceptor(
-            @PathVariable("userId") Long userId,
+            @PathVariable Long userId,
             @Valid @RequestBody PreceptorRequestDTO preceptorRequestDto) {
         log.info("Updating preceptor with ID: {}", userId);
         PreceptorResponseDTO updatedPreceptor = preceptorService.updatePreceptor(userId, preceptorRequestDto);
