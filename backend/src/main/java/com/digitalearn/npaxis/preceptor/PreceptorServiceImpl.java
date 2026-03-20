@@ -3,11 +3,13 @@ package com.digitalearn.npaxis.preceptor;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * Implementation of PreceptorService.
@@ -20,14 +22,31 @@ public class PreceptorServiceImpl implements PreceptorService {
     private final PreceptorRepository preceptorRepository;
     private final PreceptorMapper preceptorMapper;
 
-    @Override
     @Transactional(readOnly = true)
-    public List<PreceptorResponseDTO> getAllActivePreceptors() {
-        log.debug("Preceptor Service Impl --> Get all active preceptors");
-        return preceptorRepository.findAllActive().stream()
-                .map(preceptorMapper::toPreceptorDTO)
-                .toList();
+    @Override
+    public Page<PreceptorResponseDTO> searchPreceptors(
+            PreceptorFilter filter,
+            Pageable pageable
+    ) {
+
+        log.debug("Searching preceptors with filters + pagination");
+
+        Specification<Preceptor> spec = this.buildPreceptorSpec(filter);
+
+        Page<Preceptor> page = preceptorRepository.findAll(spec, pageable);
+
+        return page.map(preceptorMapper::toPreceptorDTO);
     }
+
+//    @Transactional(readOnly = true)
+//    @Override
+//    public List<PreceptorResponseDTO> getAllActivePreceptors(PreceptorFilter filter,
+//                                                             Pageable pageable) {
+//        log.debug("Preceptor Service Impl --> Get all active preceptors");
+//        return preceptorRepository.findAllActive().stream()
+//                .map(preceptorMapper::toPreceptorDTO)
+//                .toList();
+//    }
 
     @Override
     @Transactional(readOnly = true)
@@ -126,5 +145,17 @@ public class PreceptorServiceImpl implements PreceptorService {
                 .email(preceptor.getEmail())
 
                 .build();
+    }
+
+    private Specification<Preceptor> buildPreceptorSpec(PreceptorFilter filter) {
+        return Specification.where(PreceptorSpecification.isActive())
+                .and(PreceptorSpecification.isNotDeleted())
+                .and(PreceptorSpecification.hasSpecialty(filter.getSpecialty()))
+                .and(PreceptorSpecification.hasLocation(filter.getLocation()))
+                .and(PreceptorSpecification.hasAvailableDays(filter.getAvailableDays()))
+                .and(PreceptorSpecification.honorariumBetween(
+                        filter.getMinHonorarium(),
+                        filter.getMaxHonorarium()
+                ));
     }
 }

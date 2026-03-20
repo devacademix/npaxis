@@ -31,7 +31,7 @@ public class PreceptorRegistrationStrategy implements RegistrationStrategy {
         PreceptorRegistrationRequest preceptorReq = (PreceptorRegistrationRequest) request;
 
         Preceptor preceptor = new Preceptor();
-        preceptor.setUser(savedUser); // Link the profile to the saved User record
+        preceptor.setUser(savedUser);
         preceptor.setSpecialty(preceptorReq.getSpecialty());
         preceptor.setCredentials(preceptorReq.getCredentials());
         preceptor.setLocation(preceptorReq.getLocation());

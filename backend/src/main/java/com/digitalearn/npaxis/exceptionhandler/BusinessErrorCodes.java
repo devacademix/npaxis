@@ -90,6 +90,11 @@ public enum BusinessErrorCodes {
      */
     USERNAME_NOT_FOUND(4003, HttpStatus.UNAUTHORIZED, "Username not found."),
 
+    /**
+     * Indicates that the User is not Email Verified yet.
+     */
+    EMAIL_NOT_VERIFIED(1002, HttpStatus.FORBIDDEN, "Email not verified. Verify your email first. Check your email for verification code."),
+
 
     // ===== Validation Errors =====
     /**

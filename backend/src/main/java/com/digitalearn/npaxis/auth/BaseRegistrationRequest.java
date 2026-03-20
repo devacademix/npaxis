@@ -8,7 +8,7 @@ import lombok.Data;
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.EXISTING_PROPERTY,
-        property = "roleId", // Look at the ID sent by the frontend
+        property = "roleId",
         visible = true
 )
 @JsonSubTypes({

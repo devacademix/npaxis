@@ -1,15 +1,17 @@
 package com.digitalearn.npaxis.auth;
 
+import com.digitalearn.npaxis.email.EmailService;
+import com.digitalearn.npaxis.email.EmailTemplate;
+import com.digitalearn.npaxis.exceptionhandler.BusinessErrorCodes;
+import com.digitalearn.npaxis.exceptions.BusinessException;
 import com.digitalearn.npaxis.exceptions.ResourceAlreadyExistsException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
-import com.digitalearn.npaxis.preceptor.Preceptor;
-import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.role.Role;
 import com.digitalearn.npaxis.role.RoleName;
 import com.digitalearn.npaxis.role.RoleRepository;
 import com.digitalearn.npaxis.security.jwt.JwtService;
-import com.digitalearn.npaxis.student.Student;
-import com.digitalearn.npaxis.student.StudentRepository;
+import com.digitalearn.npaxis.token.TokenRepository;
+import com.digitalearn.npaxis.token.TokenService;
 import com.digitalearn.npaxis.user.User;
 import com.digitalearn.npaxis.user.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -32,7 +36,7 @@ import java.util.Map;
 
 /**
  * Service implementation responsible for authentication,
- * user registration, token refresh and logout.
+ * user registration, token refresh, and logout.
  * <p>
  * Access token is returned in the response body.
  * Refresh token is stored securely in an HttpOnly cookie.
@@ -48,8 +52,9 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final StudentRepository studentRepository;
-    private final PreceptorRepository preceptorRepository;
+    private final TokenRepository tokenRepository;
+    private final EmailService emailService;
+    private final TokenService tokenService;
 
     private final List<RegistrationStrategy> registrationStrategies;
 
@@ -66,18 +71,32 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Login attempt for email '{}'", authRequest.getEmail());
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        authRequest.getEmail(),
-                        authRequest.getPassword()
-                )
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            authRequest.getEmail(),
+                            authRequest.getPassword()
+                    )
+            );
 
-        User user = (User) authentication.getPrincipal();
+            User user = (User) authentication.getPrincipal();
+            return buildAuthResponse(user, servletResponse);
 
-        log.info("Authentication successful for '{}'", user.getEmail());
+        } catch (DisabledException _) {
 
-        return buildAuthResponse(user, servletResponse);
+            User user = userRepository.findByEmail(authRequest.getEmail())
+                    .orElseThrow();
+
+            if (!user.isEmailVerified()) {
+                sendValidationEmail(user, EmailTemplate.EMAIL_VERIFICATION);
+                throw new BusinessException(BusinessErrorCodes.EMAIL_NOT_VERIFIED);
+            }
+
+            throw new BusinessException(BusinessErrorCodes.ACCOUNT_DISABLED);
+
+        } catch (LockedException _) {
+            throw new BusinessException(BusinessErrorCodes.ACCOUNT_LOCKED);
+        }
     }
 
     /**
@@ -85,13 +104,12 @@ public class AuthServiceImpl implements AuthService {
      * <p>
      * After registration, tokens are issued just like login.
      *
-     * @param request         registration request
-     * @param servletResponse response used to attach refresh cookie
+     * @param request registration request
      * @return AuthResponse with access token
      */
     @Override
     @Transactional
-    public AuthResponse register(BaseRegistrationRequest request, HttpServletResponse servletResponse) {
+    public String register(BaseRegistrationRequest request) {
         log.info("Registration started for email '{}'", request.getEmail());
 
         // 1. Check if email already exists
@@ -124,14 +142,52 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("User '{}' registered successfully with ID {}", savedUser.getEmail(), savedUser.getUserId());
 
-        // 5. Build and return the response
-        return buildAuthResponse(savedUser, servletResponse);
+        // 5. Send Validation Email
+        this.sendValidationEmail(savedUser, EmailTemplate.EMAIL_VERIFICATION);
+
+        // 6. Build and return the response
+        return "User registered successfully. Please check your email for verification.";
+    }
+
+    private void sendValidationEmail(User user, EmailTemplate emailTemplate) {
+        String plainOtp = tokenService.generateAndSaveToken(user.getEmail());
+
+        emailService.sendEmail(
+                user.getEmail(),
+                emailTemplate,
+                Map.of(
+                        "name", user.getDisplayName(),
+                        "otp", plainOtp
+                )
+        );
+    }
+
+
+    @Transactional
+    @Override
+    public AuthResponse verifyEmail(String email, String otp, HttpServletResponse servletResponse) {
+        log.info("Verifying email for user with email: " + email);
+        // 1. Validate OTP
+        boolean isValid = tokenService.verifyToken(email, otp);
+
+        if (isValid) {
+            // 2. Enable User
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+            user.setAccountEnabled(true);
+            user.setEmailVerified(true);
+            userRepository.save(user);
+            log.info("User account enabled successfully");
+            return this.buildAuthResponse(user, servletResponse);
+        } else {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
     }
 
     /**
      * Generates a new access token using the refresh token.
      *
-     * @param refreshToken refresh token extracted from cookie
+     * @param refreshToken refresh token extracted from a cookie
      * @return AuthResponse containing a new access token
      */
     @Override
@@ -187,6 +243,25 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         servletResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    @Override
+    public String forgotPassword(ForgotPasswordRequest forgotPasswordRequest) {
+        User user = userRepository.findByEmail(forgotPasswordRequest.email())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + forgotPasswordRequest.email()));
+
+        this.sendValidationEmail(user, EmailTemplate.FORGOT_PASSWORD);
+        return "An OTP has been sent to the email: " + user.getEmail();
+    }
+
+    @Override
+    public String resetPassword(AuthRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getEmail()));
+
+        user.setPassword(this.passwordEncoder.encode(request.getPassword()));
+        this.userRepository.save(user);
+        return "Password reset successfully. Please login.";
     }
 
     /**
@@ -272,17 +347,5 @@ public class AuthServiceImpl implements AuthService {
                 .role(user.getRole().getRoleName().name())
                 .accessToken(accessToken)
                 .build();
-    }
-
-    /**
-     * Validates role for self registration.
-     */
-    private RoleName validateRole(RoleName roleName) {
-
-        if (roleName != RoleName.ROLE_STUDENT && roleName != RoleName.ROLE_PRECEPTOR) {
-            throw new IllegalArgumentException("Invalid role for self-registration: " + roleName);
-        }
-
-        return roleName;
     }
 }

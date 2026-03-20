@@ -2,7 +2,9 @@ package com.digitalearn.npaxis.preceptor;
 
 import com.digitalearn.npaxis.auditing.BaseEntity;
 import com.digitalearn.npaxis.user.User;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -19,6 +21,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 @Table(name = "preceptors")
@@ -52,8 +55,12 @@ public class Preceptor extends BaseEntity {
     @Column(length = 100)
     private String setting;
 
-    @Column(name = "available_days", length = 100)
-    private String availableDays;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(name = "preceptor_available_days",
+            joinColumns = @JoinColumn(name = "preceptor_id"))
+    @Column(name = "day")
+    private Set<DayOfWeekEnum> availableDays;
 
     @Column(length = 100)
     private String honorarium;

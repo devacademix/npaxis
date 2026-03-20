@@ -28,11 +28,17 @@ public class APIConstants {
      */
     public static final String LOGOUT_API = "logout";
 
+    public static final String VERIFY_OTP_API = "verify-otp";
+
+    public static final String FORGOT_PASSWORD_API = "forgot-password";
+
+    public static final String RESET_PASSWORD_API = "reset-password";
+
     /**
      * API endpoint for refreshing the JWT token.
      * This is typically used to obtain a new access token using a valid refresh token.
      */
-    public static final String REFRESH_TOKEN = "refresh-token";
+    public static final String REFRESH_TOKEN_API = "refresh-token";
 
     /**
      * API endpoint for admin initialization of roles and users.
