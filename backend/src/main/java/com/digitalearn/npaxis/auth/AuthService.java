@@ -1,6 +1,7 @@
 package com.digitalearn.npaxis.auth;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.transaction.Transactional;
 import org.springframework.security.core.AuthenticationException;
 
 /**
@@ -19,6 +20,9 @@ public interface AuthService {
      */
     AuthResponse login(AuthRequest authRequest, HttpServletResponse servletResponse) throws AuthenticationException;
 
+    @Transactional
+    AuthResponse verifyEmail(String email, String otp, HttpServletResponse servletResponse);
+
     /**
      * Refreshes the JWT token using the provided refresh token.
      *
@@ -31,9 +35,9 @@ public interface AuthService {
      * Registers a new user (Student or Preceptor) in the system.
      *
      * @param registerRequest The registration details.
-     * @return AuthResponse containing registered user details.
+     * @return String containing registered user details.
      */
-    AuthResponse register(BaseRegistrationRequest registerRequest, HttpServletResponse servletResponse);
+    String register(BaseRegistrationRequest registerRequest);
 
     /**
      * Initializes default roles and users in the system (e.g., ADMIN and USER roles).

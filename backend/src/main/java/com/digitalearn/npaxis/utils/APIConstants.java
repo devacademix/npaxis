@@ -27,6 +27,7 @@ public class APIConstants {
      * API endpoint for user logout.
      */
     public static final String LOGOUT_API = "logout";
+    public static final String ACTIVATE_ACCOUNT = "activate-account";
 
     /**
      * API endpoint for refreshing the JWT token.

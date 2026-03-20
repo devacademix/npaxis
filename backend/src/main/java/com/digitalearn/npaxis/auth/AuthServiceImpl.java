@@ -1,21 +1,22 @@
 package com.digitalearn.npaxis.auth;
 
+import com.digitalearn.npaxis.email.EmailService;
+import com.digitalearn.npaxis.email.EmailTemplate;
 import com.digitalearn.npaxis.exceptions.ResourceAlreadyExistsException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
-import com.digitalearn.npaxis.preceptor.Preceptor;
-import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.role.Role;
 import com.digitalearn.npaxis.role.RoleName;
 import com.digitalearn.npaxis.role.RoleRepository;
 import com.digitalearn.npaxis.security.jwt.JwtService;
-import com.digitalearn.npaxis.student.Student;
-import com.digitalearn.npaxis.student.StudentRepository;
+import com.digitalearn.npaxis.token.TokenRepository;
+import com.digitalearn.npaxis.token.TokenService;
 import com.digitalearn.npaxis.user.User;
 import com.digitalearn.npaxis.user.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -48,8 +49,9 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final StudentRepository studentRepository;
-    private final PreceptorRepository preceptorRepository;
+    private final TokenRepository tokenRepository;
+    private final EmailService emailService;
+    private final TokenService tokenService;
 
     private final List<RegistrationStrategy> registrationStrategies;
 
@@ -86,12 +88,11 @@ public class AuthServiceImpl implements AuthService {
      * After registration, tokens are issued just like login.
      *
      * @param request         registration request
-     * @param servletResponse response used to attach refresh cookie
      * @return AuthResponse with access token
      */
     @Override
     @Transactional
-    public AuthResponse register(BaseRegistrationRequest request, HttpServletResponse servletResponse) {
+    public String register(BaseRegistrationRequest request) {
         log.info("Registration started for email '{}'", request.getEmail());
 
         // 1. Check if email already exists
@@ -124,14 +125,56 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("User '{}' registered successfully with ID {}", savedUser.getEmail(), savedUser.getUserId());
 
-        // 5. Build and return the response
-        return buildAuthResponse(savedUser, servletResponse);
+        // 5. Send Validation Email
+        this.sendValidationEmail(savedUser);
+
+        // 6. Build and return the response
+        return "User registered successfully. Please check your email for verification.";
+    }
+
+    private void sendValidationEmail(User user) {
+        String plainOtp = tokenService.generateAndSaveToken(user.getEmail());
+
+        emailService.sendEmail(
+            user.getEmail(),
+            EmailTemplate.EMAIL_VERIFICATION,
+            Map.of(
+                "name", user.getDisplayName(),
+                "otp", plainOtp
+            )
+        );
+    }
+
+
+    @Transactional
+    @Override
+    public AuthResponse verifyEmail(String email, String otp, HttpServletResponse servletResponse) {
+        log.info("Verifying email for user with email: " + email);
+        // 1. Validate OTP
+        boolean isValid = tokenService.verifyToken(email, otp);
+
+        if (isValid) {
+            // 2. Enable User
+            log.info("Enable user with email: " + email);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+            log.info("User with email: " + user.getEmail() + " is already in the database.");
+            user.setAccountEnabled(true);
+            user.setAccountLocked(false);
+            userRepository.save(user);
+            log.info("User account enabled successfully");
+            return this.buildAuthResponse(user, servletResponse);
+        }
+        else {
+            log.info("Got negative from token service");
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
     }
 
     /**
      * Generates a new access token using the refresh token.
      *
-     * @param refreshToken refresh token extracted from cookie
+     * @param refreshToken refresh token extracted from a cookie
      * @return AuthResponse containing a new access token
      */
     @Override
@@ -272,17 +315,5 @@ public class AuthServiceImpl implements AuthService {
                 .role(user.getRole().getRoleName().name())
                 .accessToken(accessToken)
                 .build();
-    }
-
-    /**
-     * Validates role for self registration.
-     */
-    private RoleName validateRole(RoleName roleName) {
-
-        if (roleName != RoleName.ROLE_STUDENT && roleName != RoleName.ROLE_PRECEPTOR) {
-            throw new IllegalArgumentException("Invalid role for self-registration: " + roleName);
-        }
-
-        return roleName;
     }
 }

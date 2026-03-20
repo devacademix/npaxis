@@ -12,6 +12,32 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: keepchanges798@gmail.com
+    password: vasq arvg wtuh jdam
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          trust: "*"
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+          debug: true
+
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+        queue-capacity: 100
+      thread-name-prefix: npaxis-async-
+
 #  flyway:
 #    enabled: true
 #    locations: classpath:db/migration
@@ -23,3 +49,8 @@ security:
     expiration:
       access: 900000       # 15 mins
       refresh: 604800000   # 7 days
+
+npaxis:
+  email:
+    from-address: noreply@npaxis.com
+    from-name: NPaxis Platform

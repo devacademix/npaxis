@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,12 +15,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+import static com.digitalearn.npaxis.utils.APIConstants.ACTIVATE_ACCOUNT;
 import static com.digitalearn.npaxis.utils.APIConstants.AUTH_API;
 import static com.digitalearn.npaxis.utils.APIConstants.INITIALIZE_ROLE_AND_USER_API;
 import static com.digitalearn.npaxis.utils.APIConstants.LOGIN_API;
@@ -75,13 +79,9 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation errors or user already exists")
     })
     @PostMapping(value = {USER_REGISTRATION_API, USER_REGISTRATION_API + "/"}, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<AuthResponse> register(
-            @RequestBody BaseRegistrationRequest request,
-            HttpServletResponse servletResponse) {
-
-        AuthResponse response = authService.register(request, servletResponse);
-
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> register(@RequestBody BaseRegistrationRequest request) {
+        String response = authService.register(request);
+        return ResponseHandler.generateResponse(response, "User registered successfully.", true, HttpStatus.OK);
     }
 
     /**
@@ -137,5 +137,13 @@ public class AuthController {
         log.info("Logout initiated.");
         this.authService.logout(servletResponse, refreshToken);
         return ResponseHandler.generateResponse(null, "Logout successful", true, HttpStatus.OK);
+    }
+
+    @PostMapping(ACTIVATE_ACCOUNT)
+    public ResponseEntity<Map<String, Object>> confirm(@RequestBody VerifyOTPRequest verifyOTPRequest, HttpServletResponse servletResponse) {
+        log.info("Inside activate account controller");
+        AuthResponse response = authService.verifyEmail(verifyOTPRequest.email(), verifyOTPRequest.otp(), servletResponse);
+
+        return ResponseHandler.generateResponse(response, "Account activated successfully", true, HttpStatus.OK);
     }
 }
