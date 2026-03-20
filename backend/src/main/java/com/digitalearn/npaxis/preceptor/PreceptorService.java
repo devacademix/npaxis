@@ -1,20 +1,29 @@
 package com.digitalearn.npaxis.preceptor;
 
 import jakarta.validation.Valid;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service interface for managing Preceptor details.
  */
 public interface PreceptorService {
 
-    /**
-     * Retrieves all active preceptors.
-     *
-     * @return List of PreceptorResponseDTOs.
-     */
-    List<PreceptorResponseDTO> getAllActivePreceptors();
+    @Transactional(readOnly = true)
+    Page<PreceptorResponseDTO> searchPreceptors(
+            PreceptorFilter filter,
+            Pageable pageable
+    );
+
+//    /**
+//     * Retrieves all active preceptors.
+//     *
+//     * @return List of PreceptorResponseDTOs.
+//     */
+//    @Transactional(readOnly = true)
+//    List<PreceptorResponseDTO> getAllActivePreceptors(PreceptorFilter filter,
+//                                                      Pageable pageable);
 
     /**
      * Retrieves an active preceptor by their ID.
@@ -65,7 +74,7 @@ public interface PreceptorService {
     /**
      * Submits a license for verification.
      *
-     * @param userId             The ID of the preceptor.
+     * @param userId              The ID of the preceptor.
      * @param preceptorRequestDto DTO containing license information.
      * @return Updated PreceptorResponseDTO.
      */

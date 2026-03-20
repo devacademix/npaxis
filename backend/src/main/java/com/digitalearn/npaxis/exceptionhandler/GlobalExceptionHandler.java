@@ -1,6 +1,7 @@
 package com.digitalearn.npaxis.exceptionhandler;
 
 import com.digitalearn.npaxis.common.responses.DateTimeUtils;
+import com.digitalearn.npaxis.exceptions.BusinessException;
 import com.digitalearn.npaxis.exceptions.ResourceAlreadyExistsException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.exceptions.ValidationErrorUtils;
@@ -114,6 +115,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ExceptionResponse> handleAuthExceptions(Exception ex) {
         log.warn("Authentication failure [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage());
         return buildResponse(BAD_CREDENTIALS, ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ExceptionResponse> handleBusinessException(BusinessException ex) {
+
+        BusinessErrorCodes error = ex.getErrorCode();
+
+        log.warn("Business exception [{}]: {}", error.name(), ex.getMessage());
+
+        return ResponseEntity
+                .status(error.getHttpStatus())
+                .body(
+                        ExceptionResponse.builder()
+                                .businessErrorCode(error.getCode())
+                                .businessErrorDescription(error.getDescription())
+                                .error(ex.getMessage())
+                                .timestamp(String.valueOf(LocalDateTime.now()))
+                                .build()
+                );
     }
 
     /**

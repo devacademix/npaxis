@@ -2,6 +2,7 @@ package com.digitalearn.npaxis.auth;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import org.springframework.security.core.AuthenticationException;
 
 /**
@@ -48,4 +49,8 @@ public interface AuthService {
     String initializeAdmin();
 
     void logout(HttpServletResponse servletResponse, String refreshToken);
+
+    String forgotPassword(@Valid ForgotPasswordRequest forgotPasswordRequest);
+
+    String resetPassword(@Valid AuthRequest request);
 }

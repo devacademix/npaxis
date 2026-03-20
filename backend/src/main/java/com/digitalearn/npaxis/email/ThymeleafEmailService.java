@@ -1,4 +1,5 @@
 package com.digitalearn.npaxis.email;
+
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;

@@ -26,10 +26,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Slf4j
 public class SecurityConfig {
 
-    private final CustomAccessDeniedHandler customAccessDeniedHandler;
-    private final AuthenticationProvider authenticationProvider;
-    private final JwtAuthFilter jwtAuthFilter;
-
     /**
      * URL patterns for different access levels.
      * - USER_ONLY_URLS: URLs accessible only by users with the ADMIN role.
@@ -42,7 +38,9 @@ public class SecurityConfig {
     private static final String[] PRECEPTOR_ONLY_URLS = {"/preceptors/**"};
     private static final String[] STUDENT_ONLY_URLS = {"/students/**"};
     private static final String[] PUBLIC_URLS = {"/auth/**", "/h2-console/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**"};
-
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final AuthenticationProvider authenticationProvider;
+    private final JwtAuthFilter jwtAuthFilter;
 
     /**
      * Configures the security filter chain for the application.
