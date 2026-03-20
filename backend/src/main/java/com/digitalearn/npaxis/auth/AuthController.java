@@ -1,11 +1,11 @@
 package com.digitalearn.npaxis.auth;
 
+import com.digitalearn.npaxis.common.responses.GenericApiResponse;
 import com.digitalearn.npaxis.common.responses.ResponseHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,21 +15,19 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
-import static com.digitalearn.npaxis.utils.APIConstants.ACTIVATE_ACCOUNT;
 import static com.digitalearn.npaxis.utils.APIConstants.AUTH_API;
+import static com.digitalearn.npaxis.utils.APIConstants.FORGOT_PASSWORD_API;
 import static com.digitalearn.npaxis.utils.APIConstants.INITIALIZE_ROLE_AND_USER_API;
 import static com.digitalearn.npaxis.utils.APIConstants.LOGIN_API;
 import static com.digitalearn.npaxis.utils.APIConstants.LOGOUT_API;
-import static com.digitalearn.npaxis.utils.APIConstants.REFRESH_TOKEN;
+import static com.digitalearn.npaxis.utils.APIConstants.REFRESH_TOKEN_API;
+import static com.digitalearn.npaxis.utils.APIConstants.RESET_PASSWORD_API;
 import static com.digitalearn.npaxis.utils.APIConstants.USER_REGISTRATION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.VERIFY_OTP_API;
 
 /**
  * Controller responsible for handling authentication-related operations.
@@ -58,7 +56,7 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation errors")
     })
     @PostMapping(value = {LOGIN_API, LOGIN_API + "/"}, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody AuthRequest authRequest, HttpServletResponse servletResponse) {
+    public ResponseEntity<GenericApiResponse<AuthResponse>> login(@Valid @RequestBody AuthRequest authRequest, HttpServletResponse servletResponse) {
 
         log.info("Login attempt initiated for user with login ID:: {}", authRequest.getEmail());
         AuthResponse response = this.authService.login(authRequest, servletResponse);
@@ -79,7 +77,7 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation errors or user already exists")
     })
     @PostMapping(value = {USER_REGISTRATION_API, USER_REGISTRATION_API + "/"}, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> register(@RequestBody BaseRegistrationRequest request) {
+    public ResponseEntity<GenericApiResponse<String>> register(@RequestBody BaseRegistrationRequest request) {
         String response = authService.register(request);
         return ResponseHandler.generateResponse(response, "User registered successfully.", true, HttpStatus.OK);
     }
@@ -95,8 +93,8 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid refresh token"),
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation errors")
     })
-    @PostMapping(value = {REFRESH_TOKEN, REFRESH_TOKEN + "/"}, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> refreshToken(@CookieValue("refreshToken") String refreshToken) {
+    @PostMapping(value = {REFRESH_TOKEN_API, REFRESH_TOKEN_API + "/"}, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GenericApiResponse<AuthResponse>> refreshToken(@CookieValue("refreshToken") String refreshToken) {
         AuthResponse response = this.authService.refreshToken(refreshToken);
         log.debug("Token refreshed successfully for user.");
         return ResponseHandler.generateResponse(response, "Token refreshed successfully", true, HttpStatus.OK);
@@ -114,7 +112,7 @@ public class AuthController {
             @ApiResponse(responseCode = "403", description = "Forbidden - Already initialized or not allowed")
     })
     @PostMapping(value = {INITIALIZE_ROLE_AND_USER_API, INITIALIZE_ROLE_AND_USER_API + "/"}, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> initialize() {
+    public ResponseEntity<GenericApiResponse<String>> initialize() {
         log.warn("Initializing default roles and users. This should only be called during system setup.");
 
         String initResponse = authService.initializeAdmin();
@@ -130,7 +128,7 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation errors")
     })
     @PostMapping(value = {LOGOUT_API, LOGOUT_API + "/"}, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> logout(
+    public ResponseEntity<GenericApiResponse<Object>> logout(
             HttpServletResponse servletResponse,
             @CookieValue("refreshToken") String refreshToken
     ) {
@@ -139,11 +137,21 @@ public class AuthController {
         return ResponseHandler.generateResponse(null, "Logout successful", true, HttpStatus.OK);
     }
 
-    @PostMapping(ACTIVATE_ACCOUNT)
-    public ResponseEntity<Map<String, Object>> confirm(@RequestBody VerifyOTPRequest verifyOTPRequest, HttpServletResponse servletResponse) {
+    @PostMapping(value = {VERIFY_OTP_API, VERIFY_OTP_API + "/"})
+    public ResponseEntity<GenericApiResponse<AuthResponse>> confirm(@RequestBody VerifyOTPRequest verifyOTPRequest, HttpServletResponse servletResponse) {
         log.info("Inside activate account controller");
         AuthResponse response = authService.verifyEmail(verifyOTPRequest.email(), verifyOTPRequest.otp(), servletResponse);
 
         return ResponseHandler.generateResponse(response, "Account activated successfully", true, HttpStatus.OK);
+    }
+
+    @PostMapping(value = {FORGOT_PASSWORD_API, FORGOT_PASSWORD_API + "/"})
+    public ResponseEntity<GenericApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest) {
+        return ResponseHandler.generateResponse(this.authService.forgotPassword(forgotPasswordRequest), "Reset password and mail sent successfully", true, HttpStatus.OK);
+    }
+
+    @PostMapping(value = {RESET_PASSWORD_API, RESET_PASSWORD_API + "/"})
+    public ResponseEntity<GenericApiResponse<String>> resetPassword(@Valid @RequestBody AuthRequest request) {
+        return ResponseHandler.generateResponse(this.authService.resetPassword(request), "Reset password and mail sent successfully", true, HttpStatus.OK);
     }
 }

@@ -15,11 +15,10 @@ import java.time.LocalDateTime;
 @Slf4j
 public class TokenServiceImpl implements TokenService {
 
+    private static final int OTP_EXPIRATION_MINUTES = 5;
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom secureRandom = new SecureRandom();
-
-    private static final int OTP_EXPIRATION_MINUTES = 5;
 
     @Override
     @Transactional

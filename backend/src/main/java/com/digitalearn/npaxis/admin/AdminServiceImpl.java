@@ -9,10 +9,11 @@ import com.digitalearn.npaxis.role.Role;
 import com.digitalearn.npaxis.role.RoleName;
 import com.digitalearn.npaxis.role.RoleRepository;
 import com.digitalearn.npaxis.user.User;
-import com.digitalearn.npaxis.user.UserMapper;
 import com.digitalearn.npaxis.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +36,7 @@ public class AdminServiceImpl implements AdminService {
     public AdminRegisterResponse registerAdmin(AdminRegisterRequest request) {
         log.info("Registering user with email {} as ADMIN", request.email());
 
-        if(userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new ResourceAlreadyExistsException("User already exists with Email: " + request.email());
         }
 
@@ -63,9 +64,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<Preceptor> getPendingPreceptors() {
+    public Page<Preceptor> getPendingPreceptors(Pageable pageable) {
         log.info("Fetching all pending preceptors");
-        return preceptorRepository.findByVerificationStatus(VerificationStatus.PENDING);
+        return preceptorRepository.findByVerificationStatus(pageable, VerificationStatus.PENDING);
     }
 
     @Override

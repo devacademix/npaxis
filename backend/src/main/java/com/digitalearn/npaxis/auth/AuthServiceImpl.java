@@ -2,6 +2,8 @@ package com.digitalearn.npaxis.auth;
 
 import com.digitalearn.npaxis.email.EmailService;
 import com.digitalearn.npaxis.email.EmailTemplate;
+import com.digitalearn.npaxis.exceptionhandler.BusinessErrorCodes;
+import com.digitalearn.npaxis.exceptions.BusinessException;
 import com.digitalearn.npaxis.exceptions.ResourceAlreadyExistsException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.role.Role;
@@ -16,10 +18,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -33,7 +36,7 @@ import java.util.Map;
 
 /**
  * Service implementation responsible for authentication,
- * user registration, token refresh and logout.
+ * user registration, token refresh, and logout.
  * <p>
  * Access token is returned in the response body.
  * Refresh token is stored securely in an HttpOnly cookie.
@@ -68,18 +71,32 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Login attempt for email '{}'", authRequest.getEmail());
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        authRequest.getEmail(),
-                        authRequest.getPassword()
-                )
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            authRequest.getEmail(),
+                            authRequest.getPassword()
+                    )
+            );
 
-        User user = (User) authentication.getPrincipal();
+            User user = (User) authentication.getPrincipal();
+            return buildAuthResponse(user, servletResponse);
 
-        log.info("Authentication successful for '{}'", user.getEmail());
+        } catch (DisabledException _) {
 
-        return buildAuthResponse(user, servletResponse);
+            User user = userRepository.findByEmail(authRequest.getEmail())
+                    .orElseThrow();
+
+            if (!user.isEmailVerified()) {
+                sendValidationEmail(user, EmailTemplate.EMAIL_VERIFICATION);
+                throw new BusinessException(BusinessErrorCodes.EMAIL_NOT_VERIFIED);
+            }
+
+            throw new BusinessException(BusinessErrorCodes.ACCOUNT_DISABLED);
+
+        } catch (LockedException _) {
+            throw new BusinessException(BusinessErrorCodes.ACCOUNT_LOCKED);
+        }
     }
 
     /**
@@ -87,7 +104,7 @@ public class AuthServiceImpl implements AuthService {
      * <p>
      * After registration, tokens are issued just like login.
      *
-     * @param request         registration request
+     * @param request registration request
      * @return AuthResponse with access token
      */
     @Override
@@ -126,22 +143,22 @@ public class AuthServiceImpl implements AuthService {
         log.info("User '{}' registered successfully with ID {}", savedUser.getEmail(), savedUser.getUserId());
 
         // 5. Send Validation Email
-        this.sendValidationEmail(savedUser);
+        this.sendValidationEmail(savedUser, EmailTemplate.EMAIL_VERIFICATION);
 
         // 6. Build and return the response
         return "User registered successfully. Please check your email for verification.";
     }
 
-    private void sendValidationEmail(User user) {
+    private void sendValidationEmail(User user, EmailTemplate emailTemplate) {
         String plainOtp = tokenService.generateAndSaveToken(user.getEmail());
 
         emailService.sendEmail(
-            user.getEmail(),
-            EmailTemplate.EMAIL_VERIFICATION,
-            Map.of(
-                "name", user.getDisplayName(),
-                "otp", plainOtp
-            )
+                user.getEmail(),
+                emailTemplate,
+                Map.of(
+                        "name", user.getDisplayName(),
+                        "otp", plainOtp
+                )
         );
     }
 
@@ -155,18 +172,14 @@ public class AuthServiceImpl implements AuthService {
 
         if (isValid) {
             // 2. Enable User
-            log.info("Enable user with email: " + email);
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-            log.info("User with email: " + user.getEmail() + " is already in the database.");
             user.setAccountEnabled(true);
-            user.setAccountLocked(false);
+            user.setEmailVerified(true);
             userRepository.save(user);
             log.info("User account enabled successfully");
             return this.buildAuthResponse(user, servletResponse);
-        }
-        else {
-            log.info("Got negative from token service");
+        } else {
             throw new IllegalArgumentException("Invalid or expired OTP");
         }
     }
@@ -230,6 +243,25 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         servletResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    @Override
+    public String forgotPassword(ForgotPasswordRequest forgotPasswordRequest) {
+        User user = userRepository.findByEmail(forgotPasswordRequest.email())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + forgotPasswordRequest.email()));
+
+        this.sendValidationEmail(user, EmailTemplate.FORGOT_PASSWORD);
+        return "An OTP has been sent to the email: " + user.getEmail();
+    }
+
+    @Override
+    public String resetPassword(AuthRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getEmail()));
+
+        user.setPassword(this.passwordEncoder.encode(request.getPassword()));
+        this.userRepository.save(user);
+        return "Password reset successfully. Please login.";
     }
 
     /**

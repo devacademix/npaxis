@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 /**
  * Data Transfer Object (DTO) for creating/updating a Preceptor.
  */
@@ -27,7 +29,7 @@ public record PreceptorRequestDTO(
         String setting,
 
         @Size(max = 100)
-        String availableDays,
+        List<DayOfWeekEnum> availableDays,
 
         @Size(max = 100)
         String honorarium,

@@ -1,59 +1,100 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="ie=edge" http-equiv="X-UA-Compatible">
     <title>Verify Your NPaxis Account</title>
     <style type="text/css">
         /* Client-specific resets */
-        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-        img { -ms-interpolation-mode: bicubic; }
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+        }
 
         /* General Resets */
-        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-        table { border-collapse: collapse !important; }
-        body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+
+        table {
+            border-collapse: collapse !important;
+        }
+
+        body {
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
 
         /* Mobile Styles */
         @media screen and (max-width: 600px) {
-            .email-container { width: 100% !important; margin: auto !important; }
-            .fluid-padding { padding: 20px 15px !important; }
-            .otp-box { font-size: 28px !important; letter-spacing: 4px !important; }
+            .email-container {
+                width: 100% !important;
+                margin: auto !important;
+            }
+
+            .fluid-padding {
+                padding: 20px 15px !important;
+            }
+
+            .otp-box {
+                font-size: 28px !important;
+                letter-spacing: 4px !important;
+            }
         }
     </style>
 </head>
 <body style="background-color: #f4f7f6; margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
 
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f7f6;">
+<table border="0" cellpadding="0" cellspacing="0" style="background-color: #f4f7f6;" width="100%">
     <tr>
         <td align="center" style="padding: 40px 10px;">
 
-            <table border="0" cellpadding="0" cellspacing="0" width="600" class="email-container" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <table border="0" cellpadding="0" cellspacing="0" class="email-container" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);"
+                   width="600">
 
                 <tr>
                     <td align="center" style="background-color: #0A2540; padding: 30px 20px;">
-                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">NPaxis</h1>
+                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">
+                            NPaxis</h1>
                     </td>
                 </tr>
 
                 <tr>
                     <td class="fluid-padding" style="padding: 40px 40px 20px 40px; color: #333333;">
-                        <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 600; color: #1a1a1a;">Verify Your Email Address</h2>
+                        <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 600; color: #1a1a1a;">Verify Your
+                            Email Address</h2>
 
                         <p style="margin: 0 0 15px 0; font-size: 16px; line-height: 24px; color: #555555;">
                             Hello <strong th:text="${name}">User</strong>,
                         </p>
 
                         <p style="margin: 0 0 25px 0; font-size: 16px; line-height: 24px; color: #555555;">
-                            Welcome to the NPaxis Platform! To complete your registration and secure your account, please use the 6-digit verification code below.
+                            Welcome to the NPaxis Platform! To complete your registration and secure your account,
+                            please use the 6-digit verification code below.
                         </p>
 
                         <table border="0" cellpadding="0" cellspacing="0" width="100%">
                             <tr>
                                 <td align="center" style="padding: 10px 0 30px 0;">
-                                    <div class="otp-box" style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px 30px; display: inline-block; font-size: 32px; font-weight: bold; color: #0A2540; letter-spacing: 6px;" th:text="${otp}">
+                                    <div class="otp-box"
+                                         style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px 30px; display: inline-block; font-size: 32px; font-weight: bold; color: #0A2540; letter-spacing: 6px;"
+                                         th:text="${otp}">
                                         000000
                                     </div>
                                 </td>
@@ -61,15 +102,18 @@
                         </table>
 
                         <p style="margin: 0 0 15px 0; font-size: 14px; line-height: 22px; color: #777777;">
-                            <em>This code will expire in 5 minutes.</em> If you did not create an account using this email address, please ignore this email or contact support.
+                            <em>This code will expire in 5 minutes.</em> If you did not create an account using this
+                            email address, please ignore this email or contact support.
                         </p>
                     </td>
                 </tr>
 
                 <tr>
-                    <td class="fluid-padding" style="background-color: #fcfcfc; border-top: 1px solid #eeeeee; padding: 25px 40px; text-align: center;">
+                    <td class="fluid-padding"
+                        style="background-color: #fcfcfc; border-top: 1px solid #eeeeee; padding: 25px 40px; text-align: center;">
                         <p style="margin: 0 0 10px 0; font-size: 12px; line-height: 18px; color: #999999;">
-                            &copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> Digitalearn Solution Pvt. Ltd. All rights reserved.
+                            &copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> Digitalearn Solution
+                            Pvt. Ltd. All rights reserved.
                         </p>
                         <p style="margin: 0; font-size: 12px; line-height: 18px; color: #999999;">
                             You are receiving this email because a registration request was made for NPaxis.

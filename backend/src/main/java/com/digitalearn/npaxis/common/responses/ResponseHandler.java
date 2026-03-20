@@ -1,11 +1,10 @@
 package com.digitalearn.npaxis.common.responses;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Utility class to handle API responses.
@@ -22,30 +21,41 @@ public class ResponseHandler {
 
 
     /**
-     * Generates a standardized API response.
-     *
-     * @param data       The data to be included in the response.
-     * @param message    A message describing the response.
-     * @param isSuccess  A boolean indicating whether the operation was successful.
-     * @param httpStatus The HTTP status code for the response.
-     * @param <T>        The type of the data being returned.
-     * @return A ResponseEntity containing the standardized response.
+     * For non-paginated response
      */
-    public static <T> ResponseEntity<Map<String, Object>> generateResponse(
-            T data,
-            String message,
-            Boolean isSuccess,
-            HttpStatus httpStatus
-    ) {
+    public static <T> ResponseEntity<GenericApiResponse<T>> generateResponse(T data, String message, Boolean isSuccess, HttpStatus httpStatus) {
 
+        return ResponseEntity.ok(
+                GenericApiResponse.<T>builder()
+                        .data(data)
+                        .message(message)
+                        .isSuccess(isSuccess)
+                        .statusCode(httpStatus)
+                        .timestamp(DateTimeUtils.localDateTimeToString(LocalDateTime.now()))
+                        .build()
+        );
+    }
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("data", data);
-        response.put("message", message);
-        response.put("isSuccess", isSuccess);
-        response.put("statusCode", httpStatus.value());
-        response.put("timestamp", DateTimeUtils.localDateTimeToString(LocalDateTime.now()));
+    /**
+     * For paginated response
+     */
+    public static <T> ResponseEntity<GenericApiResponse<T>> generatePaginatedResponse(Page<?> page, T data, String message, Boolean isSuccess, HttpStatus httpStatus) {
 
-        return new ResponseEntity<>(response, httpStatus);
+        return ResponseEntity.ok(
+                GenericApiResponse.<T>builder()
+                        .data(data)
+                        .isSuccess(true)
+                        .message(message)
+                        .isSuccess(isSuccess)
+                        .statusCode(httpStatus)
+                        .timestamp(DateTimeUtils.localDateTimeToString(LocalDateTime.now()))
+                        .meta(GenericApiResponse.Meta.builder()
+                                .totalElements(page.getTotalElements())
+                                .totalPages(page.getTotalPages())
+                                .page(page.getNumber())
+                                .size(page.getSize())
+                                .build())
+                        .build()
+        );
     }
 }
