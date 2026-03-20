@@ -71,6 +71,8 @@ public class User extends BaseEntity implements UserDetails, Principal {
     @Column(name = "password", nullable = false, length = 255)
     private String password;
 
+    @Column(name = "is_email_verified")
+    private boolean isEmailVerified = false;
     /**
      * The user's display name.
      */
@@ -90,11 +92,11 @@ public class User extends BaseEntity implements UserDetails, Principal {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    private boolean accountLocked;
+    @Builder.Default
+    private boolean accountLocked = false;
 
     @Builder.Default
-    private boolean accountEnabled = true;
-
+    private boolean accountEnabled = false;
 
     @Override
     public String getName() {
@@ -132,6 +134,6 @@ public class User extends BaseEntity implements UserDetails, Principal {
 
     @Override
     public boolean isEnabled() {
-        return this.accountEnabled;
+        return this.accountEnabled && this.isEmailVerified;
     }
 }

@@ -11,8 +11,6 @@ public abstract class PreceptorMapper {
 
     // Entity to DTO mapping
     @Mapping(target = "displayName", source = "user.displayName")
-    @Mapping(target = "email", source = "user.email")
-    @Mapping(target = "preceptorEmail", source = "email") // Mapping preceptor's specific email
     public abstract PreceptorResponseDTO toPreceptorDTO(Preceptor preceptor);
 
     // DTO to Entity mapping

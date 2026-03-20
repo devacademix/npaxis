@@ -17,4 +17,5 @@ public record AdminRegisterRequest(
 
         @NotBlank(message = "Display name is required")
         String displayName
-) {}
+) {
+}

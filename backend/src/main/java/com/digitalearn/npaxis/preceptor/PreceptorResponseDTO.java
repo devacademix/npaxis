@@ -1,6 +1,7 @@
 package com.digitalearn.npaxis.preceptor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Data Transfer Object (DTO) for returning a Preceptor.
@@ -14,7 +15,7 @@ public record PreceptorResponseDTO(
         String specialty,
         String location,
         String setting,
-        String availableDays,
+        List<DayOfWeekEnum> availableDays,
         String honorarium,
         String requirements,
 //        String preceptorEmail,

@@ -7,6 +7,9 @@ import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.preceptor.PreceptorResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,17 @@ public class StudentServiceImpl implements StudentService {
         return studentRepository.findAllActive().stream()
                 .map(studentMapper::toStudentDTO)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<StudentResponseDTO> searchStudents(
+            StudentFilter filter,
+            Pageable pageable
+    ) {
+        Specification<Student> spec = this.buildStudentSpec(filter);
+        Page<Student> page = studentRepository.findAll(spec, pageable);
+        return page.map(studentMapper::toStudentDTO);
     }
 
     @Override
@@ -103,5 +117,16 @@ public class StudentServiceImpl implements StudentService {
         return student.getSavedPreceptors().stream()
                 .map(preceptorMapper::toPreceptorDTO)
                 .toList();
+    }
+
+    private Specification<Student> buildStudentSpec(StudentFilter filter) {
+        return Specification
+                .where(StudentSpecification.isNotDeleted())
+                .and(StudentSpecification.isActive())
+                .and(StudentSpecification.hasUniversity(filter.getUniversity()))
+                .and(StudentSpecification.hasProgram(filter.getProgram()))
+                .and(StudentSpecification.hasGraduationYear(filter.getGraduationYear()))
+                .and(StudentSpecification.hasPhone(filter.getPhone()))
+                .and(StudentSpecification.hasSavedPreceptors(filter.getSavedPreceptorIds()));
     }
 }
