@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profile Settings | Clinical Atelier</title>
+<!-- Google Fonts: Manrope (Headlines) & Inter (Body) -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#b6c8fe",
+              "background": "#f7f9fb",
+              "on-error": "#ffffff",
+              "surface": "#f7f9fb",
+              "outline-variant": "#c3c6d6",
+              "tertiary": "#7b2600",
+              "inverse-primary": "#b2c5ff",
+              "primary-fixed": "#dae2ff",
+              "on-tertiary-fixed": "#380d00",
+              "tertiary-fixed": "#ffdbcf",
+              "surface-container-lowest": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "on-primary-container": "#c4d2ff",
+              "outline": "#737685",
+              "tertiary-fixed-dim": "#ffb59b",
+              "primary-container": "#0052cc",
+              "on-secondary-container": "#415382",
+              "inverse-surface": "#2d3133",
+              "surface-container-high": "#e6e8ea",
+              "primary-fixed-dim": "#b2c5ff",
+              "on-secondary-fixed-variant": "#344573",
+              "secondary-fixed-dim": "#b4c5fb",
+              "error-container": "#ffdad6",
+              "surface-container-low": "#f2f4f6",
+              "on-primary": "#ffffff",
+              "surface-tint": "#0c56d0",
+              "on-surface-variant": "#434654",
+              "primary": "#003d9b",
+              "surface-bright": "#f7f9fb",
+              "on-secondary": "#ffffff",
+              "on-background": "#191c1e",
+              "surface-variant": "#e0e3e5",
+              "on-secondary-fixed": "#021945",
+              "on-surface": "#191c1e",
+              "on-error-container": "#93000a",
+              "on-tertiary-fixed-variant": "#812800",
+              "inverse-on-surface": "#eff1f3",
+              "on-primary-fixed": "#001848",
+              "secondary": "#4c5d8d",
+              "surface-container": "#eceef0",
+              "on-primary-fixed-variant": "#0040a2",
+              "surface-dim": "#d8dadc",
+              "tertiary-container": "#a33500",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary-container": "#ffc6b2",
+              "error": "#ba1a1a",
+              "secondary-fixed": "#dae2ff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f7f9fb;
+        color: #191c1e;
+      }
+      h1, h2, h3 {
+        font-family: 'Manrope', sans-serif;
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-100 dark:bg-slate-900 flex flex-col p-4 gap-2 z-40">
+<div class="mb-8 px-2 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white overflow-hidden">
+<img alt="Medical Student Logo" data-alt="minimalist logo for a medical education platform with clean geometric lines in deep blue" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBboGy0wII6kDnu2yLu51h8ytxBxN_T0CyMSWCfLlyz2zeBGDy5C3VVLxbEzUys77ZrRLfN8lIO8zsVKmdIpsUFhO39KCGpi69McFl7XdOSJoNTK73tUI_9ewxsIKk-HQi3uV1Aoc3Y2Lham0F7uhtCutrcvWlIL6S6qRdRJqd2SSOAkem9ZIa_3lWrih-W3k4iBxsw3ZajVW3W-VL4HCr1Xn_Mtnv1GfDccDXfud_cFJHgEbcojOQahY2lHSh2vN5v56n2QzlTbS4J"/>
+</div>
+<div>
+<h2 class="font-['Manrope'] font-bold text-blue-700 dark:text-blue-400 text-lg leading-tight">The Atelier</h2>
+<p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Medical Education</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-xl">medical_services</span>
+                Clinical Rotations
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-xl">school</span>
+                Academic Records
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-xl">library_books</span>
+                Resources
+            </a>
+<!-- Active State: Settings -->
+<a class="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-400 rounded-lg shadow-sm scale-[0.98] transition-all font-['Inter'] text-sm font-semibold" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto flex flex-col gap-1 pt-4 border-t border-slate-200 dark:border-slate-800">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-xl">support</span>
+                Help Center
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined text-xl">logout</span>
+                Logout
+            </a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar Shell -->
+<header class="w-full sticky top-0 z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl flex justify-between items-center px-8 py-4">
+<div class="flex items-center gap-2">
+<span class="font-['Manrope'] tracking-tight text-xl font-bold text-slate-900 dark:text-slate-100">Clinical Atelier</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
+<a class="hover:text-blue-600 transition-colors" href="#">Documentation</a>
+<a class="hover:text-blue-600 transition-colors" href="#">Support</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-slate-500 hover:text-blue-600 transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-8 w-[1px] bg-slate-200 mx-1"></div>
+<div class="flex items-center gap-3">
+<span class="text-sm font-semibold text-slate-700 hidden lg:block">Alex Rivera</span>
+<div class="w-9 h-9 rounded-full bg-slate-200 overflow-hidden ring-2 ring-white ring-offset-2 ring-offset-slate-100">
+<img alt="Student Profile Avatar" data-alt="professional headshot of a young medical student in a light blue clinical coat with a soft neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOt6vwOpX609YXV-5OaovNqTQqJ3o54Tg5nuNRF_DmIHLdkzwI1gpZ2T7OVfOBSFfvdgF9NUUJD6ss0HUIutO6X5nNgS8DsqiX1zBVIoZHX66n9zwI_82FIERgEHxXfXKBRIoGL9PuHMUzMp4MOSfh1ycZ9ktb6mYWonbIay_InEndbhmucgNvV4CZJ0K-E9jdOY9g9PUffubep6I8bdDdLY9lx_lz-sSw1umSMm1z7sQ0x-EiXxN-1AoIqcdJCC8Dd65YPqVxO4Oo"/>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="p-10 max-w-5xl mx-auto space-y-12">
+<!-- Page Header -->
+<div class="space-y-2">
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface font-headline">Profile Settings</h1>
+<p class="text-on-surface-variant max-w-2xl font-body">Manage your institutional identity, academic credentials, and security preferences for your clinical portfolio.</p>
+</div>
+<!-- Settings Grid -->
+<div class="grid grid-cols-1 gap-8">
+<!-- Section 1: Personal Information -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-1">
+<h3 class="text-lg font-bold font-headline mb-1">Personal Information</h3>
+<p class="text-sm text-on-surface-variant font-body">Your contact details and profile identity used across clinical rotations.</p>
+</div>
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/20 shadow-sm space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">Full Name</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" placeholder="e.g. Jane Doe" type="text" value="Alex Rivera"/>
+</div>
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">Email Address</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" placeholder="email@example.com" type="email" value="alex.rivera@med-atelier.edu"/>
+</div>
+<div class="space-y-2 md:col-span-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">Phone Number</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" placeholder="+1 (000) 000-0000" type="tel" value="+1 (555) 234-8910"/>
+</div>
+</div>
+</div>
+</section>
+<hr class="border-outline-variant/10"/>
+<!-- Section 2: Academic Details -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-1">
+<h3 class="text-lg font-bold font-headline mb-1">Academic Details</h3>
+<p class="text-sm text-on-surface-variant font-body">Institution and program information for verification of your clinical hours.</p>
+</div>
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/20 shadow-sm space-y-6">
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">University</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" type="text" value="North Pacific Medical Academy"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">Program</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" type="text" value="Master of Science in Nursing (NP)"/>
+</div>
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">Graduation Year</label>
+<select class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm appearance-none">
+<option>2024</option>
+<option selected="">2025</option>
+<option>2026</option>
+<option>2027</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</section>
+<hr class="border-outline-variant/10"/>
+<!-- Section 3: Account Security -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-1">
+<h3 class="text-lg font-bold font-headline mb-1">Account Security</h3>
+<p class="text-sm text-on-surface-variant font-body">Update your password to keep your academic records and patient logs secure.</p>
+</div>
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/20 shadow-sm space-y-6">
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">Current Password</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" placeholder="••••••••••••" type="password"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">New Password</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" placeholder="Enter new password" type="password"/>
+</div>
+<div class="space-y-2">
+<label class="text-[11px] font-bold uppercase tracking-wider text-outline font-label">Confirm New Password</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-sm" placeholder="Repeat new password" type="password"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Action Footer -->
+<div class="flex justify-end items-center gap-4 pt-6 pb-20">
+<button class="px-6 py-3 text-sm font-semibold text-on-secondary-container bg-surface-container-high rounded-full hover:bg-surface-variant transition-colors">
+                        Cancel
+                    </button>
+<button class="px-8 py-3 text-sm font-bold text-white bg-gradient-to-br from-primary to-primary-container rounded-full shadow-lg shadow-primary/20 hover:opacity-90 transition-all scale-100 active:scale-95">
+                        Save Changes
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual FAB (Suppressed for Settings page per instructions) -->
+<!-- Navigation shell responsive pivot logic implemented via sidebar-canvas layout -->
+</body></html>

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Service interface for managing Preceptor details.
@@ -79,6 +80,17 @@ public interface PreceptorService {
      * @return Updated PreceptorResponseDTO.
      */
     PreceptorResponseDTO submitLicense(Long userId, @Valid PreceptorRequestDTO preceptorRequestDto);
+
+    /**
+     * Submits a license file for verification via multipart form upload.
+     *
+     * @param userId        The ID of the preceptor.
+     * @param licenseNumber License identifier.
+     * @param licenseState  Licensing state.
+     * @param file          Uploaded license file.
+     * @return Updated PreceptorResponseDTO.
+     */
+    PreceptorResponseDTO submitLicense(Long userId, String licenseNumber, String licenseState, MultipartFile file);
 
     /**
      * Reveals contact information of a preceptor.

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Preceptor Profile Management | Clinical Atelier</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#380d00",
+              "surface-variant": "#e0e3e5",
+              "inverse-primary": "#b2c5ff",
+              "on-error": "#ffffff",
+              "on-surface": "#191c1e",
+              "outline-variant": "#c3c6d6",
+              "on-primary": "#ffffff",
+              "tertiary-container": "#a33500",
+              "surface": "#f7f9fb",
+              "secondary-container": "#b6c8fe",
+              "background": "#f7f9fb",
+              "on-secondary-fixed-variant": "#344573",
+              "on-secondary": "#ffffff",
+              "primary": "#003d9b",
+              "primary-fixed-dim": "#b2c5ff",
+              "primary-container": "#0052cc",
+              "on-background": "#191c1e",
+              "on-primary-fixed-variant": "#0040a2",
+              "inverse-surface": "#2d3133",
+              "surface-container-lowest": "#ffffff",
+              "secondary-fixed": "#dae2ff",
+              "secondary-fixed-dim": "#b4c5fb",
+              "primary-fixed": "#dae2ff",
+              "secondary": "#4c5d8d",
+              "on-tertiary-fixed-variant": "#812800",
+              "surface-dim": "#d8dadc",
+              "surface-tint": "#0c56d0",
+              "error-container": "#ffdad6",
+              "tertiary-fixed-dim": "#ffb59b",
+              "surface-container-low": "#f2f4f6",
+              "surface-container-highest": "#e0e3e5",
+              "outline": "#737685",
+              "on-error-container": "#93000a",
+              "tertiary": "#7b2600",
+              "on-tertiary-container": "#ffc6b2",
+              "error": "#ba1a1a",
+              "on-primary-container": "#c4d2ff",
+              "surface-container-high": "#e6e8ea",
+              "on-surface-variant": "#434654",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed": "#ffdbcf",
+              "on-primary-fixed": "#001848",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary-container": "#415382",
+              "surface-container": "#eceef0",
+              "surface-bright": "#f7f9fb",
+              "on-secondary-fixed": "#021945"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-line-boundary {
+            border: none !important;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased">
+<!-- Top Navigation Bar -->
+<nav class="bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl shadow-[0px_12px_32px_rgba(25,28,30,0.06)] docked full-width top-0 sticky z-50">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-12">
+<span class="text-2xl font-headline font-bold tracking-tighter text-blue-900">Clinical Atelier</span>
+<div class="hidden md:flex gap-8">
+<a class="text-slate-500 hover:text-blue-600 transition-colors font-medium" href="#">Dashboard</a>
+<a class="text-slate-500 hover:text-blue-600 transition-colors font-medium" href="#">Inquiries</a>
+<a class="text-blue-700 border-b-2 border-blue-700 pb-1 font-bold" href="#">Profile</a>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center bg-surface-container-low px-4 py-2 rounded-lg">
+<span class="material-symbols-outlined text-outline text-sm mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-48" placeholder="Search resources..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-100 rounded-lg transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<button class="p-2 hover:bg-slate-100 rounded-lg transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+<img alt="Preceptor Profile Avatar" class="w-10 h-10 rounded-full object-cover border-2 border-primary/10" data-alt="Professional headshot of a mature medical professional with glasses in a modern clinical setting with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmPeQ818EDgfylJDjXx_pjtv3v6vP2N-IumlxpiucMnKvXeLn0gPCZUOHLNX5FMjhapqdwyeYaaArNVUHOiq-ompgSfkRD0hpZwDa1__Yf6T4JfXJdftgaorzH9KDY279Q6RzEzGgdTCm2QbDp08iexvfKyIgGi-2k6lkOQJ7USm5igm-2iy4i-FBsKw6bu9YgjT5aKl9pP-9d5sY-KkQBfInWh7V-msCScef6UKeWzGF0m9G3PLoH6olqhjDc2Bl8ACix743mwXYn"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="max-w-screen-2xl mx-auto px-8 py-12">
+<!-- Header Section -->
+<header class="mb-12">
+<div class="flex items-center gap-4 mb-4">
+<span class="text-label uppercase tracking-widest text-primary font-semibold text-[0.6875rem]">Clinical Listing</span>
+<div class="h-[1px] w-12 bg-outline-variant/30"></div>
+</div>
+<h1 class="text-5xl font-headline font-extrabold tracking-tight text-on-surface mb-4">Manage Professional Profile</h1>
+<p class="text-on-surface-variant max-w-2xl leading-relaxed">Ensure your clinical profile is accurate and comprehensive. This information is visible to students looking for high-quality rotations.</p>
+</header>
+<form class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+<!-- Left Column: Primary Details -->
+<div class="lg:col-span-8 space-y-12">
+<!-- Professional Identity -->
+<section class="bg-surface-container-lowest p-10 rounded-xl shadow-[0px_12px_32px_rgba(25,28,30,0.04)]">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">badge</span>
+<h2 class="text-2xl font-headline font-bold">Professional Identity</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="block text-label font-semibold text-on-surface-variant uppercase tracking-wider text-[0.6875rem]">Full Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg px-4 py-3 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" type="text" value="Dr. Sarah Elizabeth Jenkins"/>
+</div>
+<div class="space-y-2">
+<label class="block text-label font-semibold text-on-surface-variant uppercase tracking-wider text-[0.6875rem]">Credentials</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg px-4 py-3 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" type="text" value="MD, FAAP"/>
+</div>
+<div class="md:col-span-2 space-y-4">
+<label class="block text-label font-semibold text-on-surface-variant uppercase tracking-wider text-[0.6875rem]">Specialty Area</label>
+<div class="flex flex-wrap gap-2">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                                    Pediatric Cardiology <span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</span>
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                                    Internal Medicine <span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</span>
+<button class="border-2 border-dashed border-outline-variant text-outline px-3 py-1 rounded-full text-sm font-medium hover:border-primary hover:text-primary transition-all" type="button">
+                                    + Add Specialty
+                                </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Clinical Requirements -->
+<section class="bg-surface-container-lowest p-10 rounded-xl shadow-[0px_12px_32px_rgba(25,28,30,0.04)]">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<h2 class="text-2xl font-headline font-bold">Clinical Requirements</h2>
+</div>
+<p class="text-on-surface-variant text-sm mb-6">Specify documentation students must submit before beginning their rotation.</p>
+<div class="space-y-4">
+<label class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">security</span>
+</div>
+<span class="font-medium">Background Check</span>
+</div>
+<input checked="" class="w-6 h-6 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">medical_services</span>
+</div>
+<span class="font-medium">BLS Certification</span>
+</div>
+<input checked="" class="w-6 h-6 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">vaccines</span>
+</div>
+<span class="font-medium">Immunization Records</span>
+</div>
+<input checked="" class="w-6 h-6 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">policy</span>
+</div>
+<span class="font-medium">Liability Insurance</span>
+</div>
+<input class="w-6 h-6 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</label>
+</div>
+</section>
+<!-- Actions -->
+<div class="flex items-center justify-end gap-6 pt-6 border-t border-outline-variant/20">
+<button class="px-8 py-3 font-semibold text-outline hover:text-on-surface transition-all" type="button">Cancel</button>
+<button class="px-12 py-4 bg-gradient-to-br from-primary to-primary-container text-white rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" type="submit">
+                        Save Changes
+                    </button>
+</div>
+</div>
+<!-- Right Column: Sidebar Settings -->
+<div class="lg:col-span-4 space-y-8">
+<!-- Location & Availability -->
+<section class="bg-surface-container-low p-8 rounded-xl">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<h2 class="text-xl font-headline font-bold">Location &amp; Availability</h2>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="block text-label font-semibold text-on-surface-variant uppercase tracking-wider text-[0.6875rem]">Primary Practice</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-none rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-primary" type="text" value="St. Jude Medical Center, Building 4"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">map</span>
+</div>
+</div>
+<div class="space-y-3">
+<label class="block text-label font-semibold text-on-surface-variant uppercase tracking-wider text-[0.6875rem]">Available Days</label>
+<div class="grid grid-cols-4 gap-2">
+<button class="aspect-square flex items-center justify-center rounded-lg bg-primary text-white font-bold" type="button">M</button>
+<button class="aspect-square flex items-center justify-center rounded-lg bg-surface-container-lowest hover:bg-white text-outline font-medium transition-all" type="button">T</button>
+<button class="aspect-square flex items-center justify-center rounded-lg bg-primary text-white font-bold" type="button">W</button>
+<button class="aspect-square flex items-center justify-center rounded-lg bg-primary text-white font-bold" type="button">T</button>
+<button class="aspect-square flex items-center justify-center rounded-lg bg-surface-container-lowest hover:bg-white text-outline font-medium transition-all" type="button">F</button>
+<button class="aspect-square flex items-center justify-center rounded-lg bg-surface-container-lowest opacity-40 text-outline font-medium cursor-not-allowed" type="button">S</button>
+<button class="aspect-square flex items-center justify-center rounded-lg bg-surface-container-lowest opacity-40 text-outline font-medium cursor-not-allowed" type="button">S</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Honorarium Settings -->
+<section class="bg-surface-container-high p-8 rounded-xl">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">payments</span>
+<h2 class="text-xl font-headline font-bold">Honorarium Settings</h2>
+</div>
+<div class="p-6 bg-surface-container-lowest rounded-xl mb-6">
+<div class="flex justify-between items-end mb-4">
+<span class="text-sm text-on-surface-variant font-medium">Rotation Rate</span>
+<span class="text-2xl font-headline font-bold text-primary">$500 - $800</span>
+</div>
+<div class="w-full h-2 bg-surface-container-low rounded-full relative">
+<div class="absolute left-1/4 right-1/4 h-full bg-primary rounded-full"></div>
+<div class="absolute left-1/4 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-primary rounded-full shadow-sm"></div>
+<div class="absolute right-1/4 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-primary rounded-full shadow-sm"></div>
+</div>
+<div class="flex justify-between mt-4 text-[0.6875rem] font-bold text-outline uppercase">
+<span>Min: $100</span>
+<span>Max: $2000</span>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Honorariums are handled securely through our clinical clearinghouse to ensure prompt payment for your educational time.</p>
+</section>
+<!-- Help Card -->
+<div class="p-8 rounded-xl bg-gradient-to-br from-secondary-fixed to-secondary-container">
+<h3 class="font-headline font-bold text-on-secondary-fixed mb-2">Need assistance?</h3>
+<p class="text-sm text-on-secondary-fixed-variant mb-6">Our Preceptor Success Team is here to help you optimize your listing.</p>
+<a class="text-sm font-bold text-on-secondary-fixed flex items-center gap-2 hover:underline" href="#">
+                        Visit Support Center <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+</div>
+</div>
+</form>
+</main>
+<!-- Footer Section -->
+<footer class="bg-slate-100 w-full border-t border-slate-200">
+<div class="flex flex-col md:flex-row justify-between items-center px-8 py-12 w-full max-w-screen-2xl mx-auto">
+<p class="font-inter text-xs uppercase tracking-widest text-slate-500">© 2024 The Clinical Atelier. All rights reserved.</p>
+<div class="flex gap-8 mt-6 md:mt-0">
+<a class="font-inter text-xs uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:underline decoration-blue-500/30 transition-opacity duration-300" href="#">Privacy Policy</a>
+<a class="font-inter text-xs uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:underline decoration-blue-500/30 transition-opacity duration-300" href="#">Terms of Service</a>
+<a class="font-inter text-xs uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:underline decoration-blue-500/30 transition-opacity duration-300" href="#">Support Center</a>
+<a class="font-inter text-xs uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:underline decoration-blue-500/30 transition-opacity duration-300" href="#">Contact Us</a>
+</div>
+</div>
+</footer>
+</body></html>

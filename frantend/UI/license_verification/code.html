@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>License Verification | Clinical Atelier</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary": "#ffffff",
+              "on-secondary-container": "#415382",
+              "on-tertiary-fixed-variant": "#812800",
+              "on-secondary-fixed-variant": "#344573",
+              "tertiary-fixed": "#ffdbcf",
+              "surface-dim": "#d8dadc",
+              "on-tertiary-fixed": "#380d00",
+              "tertiary-container": "#a33500",
+              "on-primary-container": "#c4d2ff",
+              "background": "#f7f9fb",
+              "outline-variant": "#c3c6d6",
+              "inverse-primary": "#b2c5ff",
+              "surface-variant": "#e0e3e5",
+              "on-error": "#ffffff",
+              "outline": "#737685",
+              "on-tertiary-container": "#ffc6b2",
+              "surface-container": "#eceef0",
+              "secondary": "#4c5d8d",
+              "tertiary": "#7b2600",
+              "surface-container-highest": "#e0e3e5",
+              "surface": "#f7f9fb",
+              "primary-container": "#0052cc",
+              "secondary-fixed": "#dae2ff",
+              "secondary-container": "#b6c8fe",
+              "on-secondary-fixed": "#021945",
+              "secondary-fixed-dim": "#b4c5fb",
+              "surface-container-low": "#f2f4f6",
+              "inverse-on-surface": "#eff1f3",
+              "surface-container-lowest": "#ffffff",
+              "on-background": "#191c1e",
+              "error-container": "#ffdad6",
+              "on-secondary": "#ffffff",
+              "primary-fixed": "#dae2ff",
+              "on-surface-variant": "#434654",
+              "on-primary-fixed": "#001848",
+              "primary": "#003d9b",
+              "tertiary-fixed-dim": "#ffb59b",
+              "primary-fixed-dim": "#b2c5ff",
+              "on-primary-fixed-variant": "#0040a2",
+              "inverse-surface": "#2d3133",
+              "error": "#ba1a1a",
+              "surface-container-high": "#e6e8ea",
+              "on-surface": "#191c1e",
+              "on-primary": "#ffffff",
+              "surface-tint": "#0c56d0",
+              "surface-bright": "#f7f9fb",
+              "on-error-container": "#93000a"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- Top Navigation Shell -->
+<header class="w-full sticky top-0 z-50 bg-[#f7f9fb] dark:bg-slate-900 flex justify-between items-center px-8 h-16 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-[#003d9b] dark:text-blue-400 font-headline tracking-tight">Clinical Atelier</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#0052cc] transition-colors text-sm font-medium" href="#">Support</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#0052cc] transition-colors text-sm font-medium" href="#">Help Center</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-surface-container-high">
+<img alt="User Profile Avatar" class="h-full w-full object-cover" data-alt="Professional headshot of a male doctor in his 40s wearing a white clinical coat and a stethoscope" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4xuApzocHU_8kIUgChKm9ADMdGt0IpYwv0NBw2RguZL8l1SBjP1sjKzEKECKeqJdJRrHROexIK2XeOGPtmsDrncYhYsx05xkJv_3rLafPITqhtTrDdH-ImHCVpHrn5Xh36FMWJznD5rigmkb6vfbI5LPYeUxH4jIVllgkheu4P8LMkWm_nWGG4h6ZVpj7SaMNAnC3nMJjPNWeIweHnjtjFvvXu-sQL_86o_1LTTapdX2Sq8zjzJg7ZZd1EHlucf5kryH5oj_Mnux6"/>
+</div>
+</div>
+</header>
+<div class="flex min-h-[calc(100vh-64px)]">
+<!-- Sidebar Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 pt-20 bg-[#f2f4f6] dark:bg-slate-950 flex flex-col gap-2 border-r border-transparent hidden md:flex">
+<div class="px-8 mb-8">
+<p class="text-lg font-black text-[#191c1e] dark:text-white font-headline">Dr. Smith</p>
+<p class="text-xs text-slate-500 font-medium">Verified Preceptor</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 mx-4 px-4 py-3 rounded-lg flex items-center gap-3 transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Overview
+                </a>
+<a class="text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 mx-4 px-4 py-3 rounded-lg flex items-center gap-3 transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+                    Profile
+                </a>
+<a class="bg-white dark:bg-slate-800 text-[#003d9b] dark:text-blue-400 rounded-l-full ml-4 pl-4 py-3 shadow-sm flex items-center gap-3 font-medium text-sm scale-[0.98]" href="#">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+                    Licenses
+                </a>
+<a class="text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 mx-4 px-4 py-3 rounded-lg flex items-center gap-3 transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="question_answer">question_answer</span>
+                    Inquiries
+                </a>
+<a class="text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 mx-4 px-4 py-3 rounded-lg flex items-center gap-3 transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</nav>
+<div class="p-4 mt-auto border-t border-outline-variant/10">
+<button class="w-full text-slate-600 hover:text-error flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-sm font-medium">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                    Logout
+                </button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-8 md:p-12 max-w-6xl mx-auto w-full">
+<!-- Header Section -->
+<header class="mb-12">
+<h1 class="text-4xl font-extrabold font-headline text-on-surface tracking-tight mb-3">License Verification</h1>
+<p class="text-lg text-on-surface-variant max-w-2xl leading-relaxed">
+                    Maintain your professional status by keeping your medical licenses and certifications up-to-date. Updated records ensure uninterrupted student placement.
+                </p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Upload Section (Asymmetric Focus) -->
+<section class="lg:col-span-5">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm border border-outline-variant/20 h-full flex flex-col">
+<h2 class="text-xl font-bold font-headline mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="cloud_upload">cloud_upload</span>
+                            New Submission
+                        </h2>
+<div class="flex-1 border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center p-8 bg-surface-container-low/30 hover:bg-surface-container-low transition-colors group cursor-pointer mb-6">
+<div class="w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="file_upload">file_upload</span>
+</div>
+<p class="text-sm font-semibold text-on-surface mb-1">Drag and drop file here</p>
+<p class="text-xs text-on-surface-variant text-center">PDF, JPG, or PNG up to 10MB. Ensure document is clear and legible.</p>
+</div>
+<button class="w-full py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-full shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                            Upload New License
+                        </button>
+<p class="mt-4 text-[10px] text-on-surface-variant text-center uppercase tracking-widest font-bold">
+                            Endpoint: POST /preceptors/preceptor-01/submit-license
+                        </p>
+</div>
+</section>
+<!-- License List Section (Editorial Table) -->
+<section class="lg:col-span-7">
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm border border-outline-variant/20 h-full">
+<div class="flex justify-between items-end mb-8">
+<h2 class="text-xl font-bold font-headline">Active Credentials</h2>
+<div class="flex gap-2">
+<div class="px-3 py-1 bg-surface-container text-on-surface-variant text-[10px] font-bold rounded-full uppercase">All Records</div>
+</div>
+</div>
+<div class="space-y-6">
+<!-- Approved Item -->
+<div class="flex items-center justify-between p-4 rounded-lg bg-surface hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">State Medical License (CA)</p>
+<p class="text-xs text-on-surface-variant">ID: 99203-ABC</p>
+</div>
+</div>
+<div class="text-right flex items-center gap-8">
+<div>
+<p class="text-xs text-on-surface-variant mb-1 font-medium">Expires</p>
+<p class="text-xs font-bold text-on-surface">Oct 12, 2025</p>
+</div>
+<span class="px-3 py-1 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-tighter rounded-full border border-green-100">
+                                        Approved
+                                    </span>
+</div>
+</div>
+<!-- Pending Item -->
+<div class="flex items-center justify-between p-4 rounded-lg bg-surface hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">DEA Certification</p>
+<p class="text-xs text-on-surface-variant">Submitted 2 days ago</p>
+</div>
+</div>
+<div class="text-right flex items-center gap-8">
+<div>
+<p class="text-xs text-on-surface-variant mb-1 font-medium">Expires</p>
+<p class="text-xs font-bold text-on-surface">Jan 20, 2026</p>
+</div>
+<span class="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-tighter rounded-full border border-amber-100">
+                                        Pending
+                                    </span>
+</div>
+</div>
+<!-- Rejected Item -->
+<div class="flex items-center justify-between p-4 rounded-lg bg-surface hover:bg-surface-container-low transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-error/5 flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="error_outline">error_outline</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Board Certification (ANCC)</p>
+<button class="flex items-center gap-1 mt-1 group-hover:text-primary transition-colors">
+<span class="text-[10px] font-bold text-error uppercase">View Reason</span>
+<span class="material-symbols-outlined text-[12px] text-error" data-icon="info">info</span>
+</button>
+</div>
+</div>
+<div class="text-right flex items-center gap-8">
+<div>
+<p class="text-xs text-on-surface-variant mb-1 font-medium">Expires</p>
+<p class="text-xs font-bold text-on-surface">Expired</p>
+</div>
+<span class="px-3 py-1 bg-red-50 text-red-700 text-[10px] font-black uppercase tracking-tighter rounded-full border border-red-100">
+                                        Rejected
+                                    </span>
+</div>
+</div>
+</div>
+<!-- Empty State Fallback Logic (Subtle UI) -->
+<div class="mt-12 pt-8 border-t border-outline-variant/10 flex items-center justify-between">
+<p class="text-xs text-on-surface-variant italic">Need help with verification? Contact <a class="text-primary font-bold hover:underline" href="#">Provider Relations</a></p>
+<div class="flex gap-2">
+<button class="p-2 bg-surface hover:bg-surface-container transition-colors rounded-lg border border-outline-variant/20">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-2 bg-surface hover:bg-surface-container transition-colors rounded-lg border border-outline-variant/20">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Meta -->
+<footer class="mt-16 flex flex-col md:flex-row justify-between items-center gap-4 py-8 border-t border-outline-variant/10">
+<div class="flex items-center gap-6">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">NPaxis Precision Suite</p>
+<span class="h-1 w-1 rounded-full bg-outline-variant"></span>
+<p class="text-xs font-medium text-slate-400">Compliance v4.2.0</p>
+</div>
+<div class="flex gap-4">
+<img alt="HIPAA Compliant Badge" class="h-8 opacity-40 grayscale" data-alt="Monochrome minimalist logo of a medical safety certification seal on a white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8GHZOD2On5_kWWDgWbWVimgzYUT7ptEcmDrSiVLpHKcfF3Pq7mcNqh1YHd2VuB-5f6xTJ_31-HhSx7z9tXF9_IOz3_CjHID8BtKqTCuCtLtVB5HJ3A9nwJfqbJV4Xn5qqwoHbQj2aBZ3dHA3qdFulm10hnOvyKmwM1u70_gd2COSTgsNt6sWcvSZyvv-4qu23fuTkgM5o7xtzctFXBDDfiZ_aBVMdWtCia41MPfDUnl-Smp1lMdeiOuOW8jlS4dLyvqfh7qUF4l-x"/>
+</div>
+</footer>
+</main>
+</div>
+<!-- Mobile Nav Shell Toggle -->
+<div class="md:hidden fixed bottom-6 left-6 right-6 z-[60]">
+<nav class="glass-card rounded-full h-16 flex items-center justify-around px-6 shadow-2xl border border-white/20">
+<button class="text-slate-400">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+</button>
+<button class="text-primary scale-110">
+<span class="material-symbols-outlined" data-icon="verified_user" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+</button>
+<button class="text-slate-400">
+<span class="material-symbols-outlined" data-icon="question_answer">question_answer</span>
+</button>
+<button class="text-slate-400">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</nav>
+</div>
+</body></html>

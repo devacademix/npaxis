@@ -16,8 +16,9 @@ public class StudentSpecification {
     }
 
     public static Specification<Student> isActive() {
+        // BaseEntity has no persisted `active` field; active records are represented by `deleted = false`.
         return (root, query, cb) ->
-                cb.isTrue(root.get("active")); // if exists
+                cb.isFalse(root.get("deleted"));
     }
 
     public static Specification<Student> isNotDeleted() {
