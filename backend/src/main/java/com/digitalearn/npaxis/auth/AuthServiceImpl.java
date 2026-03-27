@@ -117,9 +117,8 @@ public class AuthServiceImpl implements AuthService {
             throw new ResourceAlreadyExistsException("User already exists with Email: " + request.getEmail());
         }
 
-        // 2. Fetch the Role
-        Role role = roleRepository.findById(request.getRoleId())
-                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + request.getRoleId()));
+        // 2. Resolve role by logical type (student/preceptor) instead of brittle DB IDs
+        Role role = resolveRegistrationRole(request.getRoleId());
 
         // 3. Create and Save the Base User
         User user = User.builder()
@@ -147,6 +146,24 @@ public class AuthServiceImpl implements AuthService {
 
         // 6. Build and return the response
         return "User registered successfully. Please check your email for verification.";
+    }
+
+    private Role resolveRegistrationRole(Long roleId) {
+        if (roleId == null) {
+            throw new IllegalArgumentException("roleId is required for registration.");
+        }
+
+        RoleName roleName = switch (roleId.intValue()) {
+            case 1 -> RoleName.ROLE_STUDENT;
+            case 2 -> RoleName.ROLE_PRECEPTOR;
+            default -> throw new IllegalArgumentException("Invalid role ID provided. Expected 1 (Student) or 2 (Preceptor).");
+        };
+
+        return roleRepository.findByRoleName(roleName)
+                .orElseGet(() -> {
+                    log.warn("Role '{}' not found in database. Auto-creating it during registration.", roleName);
+                    return roleRepository.save(Role.builder().roleName(roleName).build());
+                });
     }
 
     private void sendValidationEmail(User user, EmailTemplate emailTemplate) {

@@ -8,8 +8,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Implementation of PreceptorService.
@@ -133,17 +140,40 @@ public class PreceptorServiceImpl implements PreceptorService {
     }
 
     @Override
+    @Transactional
+    public PreceptorResponseDTO submitLicense(Long userId, String licenseNumber, String licenseState, MultipartFile file) {
+        log.debug("Preceptor Service Impl --> Submit multipart license for preceptor ID: {}", userId);
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("A license file is required.");
+        }
+
+        Preceptor preceptor = preceptorRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
+
+        String storedPath = storeLicenseFile(file, userId);
+
+        preceptor.setLicenseNumber(licenseNumber);
+        preceptor.setLicenseState(licenseState);
+        preceptor.setLicenseFileUrl(storedPath);
+        preceptor.setVerificationStatus(VerificationStatus.PENDING);
+        preceptor.setVerificationSubmittedAt(LocalDateTime.now());
+
+        Preceptor savedPreceptor = preceptorRepository.save(preceptor);
+        return preceptorMapper.toPreceptorDTO(savedPreceptor);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PreceptorContactResponseDTO revealContact(Long userId) {
         log.debug("Preceptor Service Impl --> Reveal contact for preceptor ID: {}", userId);
-        Preceptor preceptor = preceptorRepository.findByUserIdAndIsPremium(userId, true)
+        Preceptor preceptor = preceptorRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
         // In a real application, logic for premium access check would go here.
         // For now, we return the preceptor DTO which includes the contact details.
         return PreceptorContactResponseDTO.builder()
                 .phone(preceptor.getPhone())
                 .email(preceptor.getEmail())
-
                 .build();
     }
 
@@ -157,5 +187,32 @@ public class PreceptorServiceImpl implements PreceptorService {
                         filter.getMinHonorarium(),
                         filter.getMaxHonorarium()
                 ));
+    }
+
+    private String storeLicenseFile(MultipartFile file, Long userId) {
+        String originalName = file.getOriginalFilename() == null ? "license" : file.getOriginalFilename();
+        String extension = "";
+        int dot = originalName.lastIndexOf('.');
+        if (dot >= 0 && dot < originalName.length() - 1) {
+            extension = originalName.substring(dot + 1).toLowerCase(Locale.ROOT);
+        }
+
+        if (!extension.isEmpty() && !extension.equals("pdf") && !extension.equals("png") && !extension.equals("jpg") && !extension.equals("jpeg")) {
+            throw new IllegalArgumentException("Only PDF, PNG, JPG, and JPEG files are allowed.");
+        }
+
+        try {
+            Path uploadDir = Path.of("uploads", "licenses");
+            Files.createDirectories(uploadDir);
+
+            String safeName = originalName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String filename = "preceptor-" + userId + "-" + UUID.randomUUID() + "-" + safeName;
+            Path target = uploadDir.resolve(filename);
+
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            return target.toString().replace('\\', '/');
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to store uploaded license file.", ex);
+        }
     }
 }
