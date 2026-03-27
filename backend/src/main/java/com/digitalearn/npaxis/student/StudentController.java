@@ -8,6 +8,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -40,6 +45,38 @@ import static com.digitalearn.npaxis.utils.APIConstants.STUDENTS_API;
 public class StudentController {
 
     private final StudentService studentService;
+
+    @GetMapping
+    public ResponseEntity<GenericApiResponse<List<StudentResponseDTO>>> searchStudents(
+
+            @RequestParam(required = false) String university,
+            @RequestParam(required = false) String program,
+            @RequestParam(required = false) String graduationYear,
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) List<Long> savedPreceptorIds,
+
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+
+        StudentFilter filter = new StudentFilter();
+        filter.setUniversity(university);
+        filter.setProgram(program);
+        filter.setGraduationYear(graduationYear);
+        filter.setPhone(phone);
+        filter.setSavedPreceptorIds(savedPreceptorIds);
+
+        Page<StudentResponseDTO> result =
+                studentService.searchStudents(filter, pageable);
+
+        return ResponseHandler.generatePaginatedResponse(
+                result,
+                result.getContent(),
+                "Students fetched successfully",
+                true,
+                HttpStatus.OK
+        );
+    }
 
     @Operation(summary = "Fetch all active students", description = "Retrieves a list of all active students.")
     @GetMapping(value = {"", "/", GET_ALL_ACTIVE_STUDENTS_API, GET_ALL_ACTIVE_STUDENTS_API + "/"})

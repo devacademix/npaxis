@@ -33,6 +33,7 @@ import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_PRECEPTOR_BY_
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_STUDENT_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.PRECEPTORS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.PRECEPTORS_SEARCH_API;
 import static com.digitalearn.npaxis.utils.APIConstants.PUT_UPDATE_PRECEPTOR_API;
 import static com.digitalearn.npaxis.utils.APIConstants.RESTORE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.REVEAL_CONTACT_API;
@@ -53,7 +54,7 @@ public class PreceptorController {
             summary = "Search and filter preceptors",
             description = "Supports filtering, pagination, and sorting"
     )
-    @GetMapping
+    @GetMapping(value = {PRECEPTORS_SEARCH_API, PRECEPTORS_SEARCH_API + "/"})
     public ResponseEntity<GenericApiResponse<List<PreceptorResponseDTO>>> searchPreceptors(
 
             @RequestParam(required = false) String specialty,
