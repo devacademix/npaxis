@@ -305,6 +305,7 @@ public class APIConstants {
 
     // APIs for Preceptor Management
     public static final String PRECEPTORS_API = "preceptors";
+    public static final String PRECEPTORS_SEARCH_API = "search";
     public static final String PUT_UPDATE_PRECEPTOR_API = "preceptor-{userId}";
     public static final String GET_ALL_ACTIVE_PRECEPTORS_API = "active/all";
     public static final String GET_ACTIVE_PRECEPTOR_BY_ID_API = "active/preceptor-{userId}";
