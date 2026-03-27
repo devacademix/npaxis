@@ -1,75 +1,70 @@
-# React + TypeScript + Vite
+# NPaxis - Premium Clinical Rotation Platform (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+NPaxis is a high-performance, visually stunning web application designed to connect nursing and medical students with verified preceptors for clinical rotations and mentorship.
 
-Currently, two official plugins are available:
+## 🚀 Key Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### 1. Interactive 3D Experience
+- **Antigravity Particle System**: A custom-built HTML5 Canvas particle background with mouse-responsive gravity and node-based connectivity.
+- **Dynamic Orbital Graphics**: Interactive "Our Speciality" circular graphic with icons orbiting in multiple cycles and directions.
+- **Glassmorphism UI**: High-end modern aesthetics using frosted glass effects, vibrant gradients, and elegant typography.
 
-## React Compiler
+### 2. Public Access & Guest Browsing
+- **Public Browse Page**: Anyone can search for preceptors by specialty (Pediatric, Primary Care, Orthopaedic, etc.) or location without logging in.
+- **Search Functionality**: Instant filtering of preceptors directly from the Hero section.
+- **Authentication Guards**: Browsing is public, but critical actions (Inquiries/Chat) are protected and redirect users to the login flow.
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+### 3. Dedicated Common Pages
+- **About Us**: Detailed mission, vision, and real-time platform statistics.
+- **Contact Us**: Interactive contact form with success states and office information.
+- **Premium Landing**: A high-conversion landing page with smooth scrolling, testimonials, and feature showcases.
 
-Note: This will impact Vite dev & build performances.
+## 🛠️ Technology Stack
 
-## Expanding the ESLint configuration
+- **Framework**: React 18 (with TypeScript)
+- **Styling**: Tailwind CSS
+- **Animations**: Custom CSS Keyframes / HTML5 Canvas API
+- **Routing**: React Router DOM v6
+- **API Integration**: Axios (connected to Java Spring Boot Backend)
+- **Icons**: Google Material Symbols
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 📂 Project Structure (App)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+├── components/         # Reusable UI components
+├── pages/
+│   ├── common/         # Public pages (Landing, About, Contact, PublicBrowse)
+│   ├── auth/           # Login, Register, OTP flows
+│   ├── admin/          # Administrator Management Dashboard
+│   ├── preceptor/      # Preceptor Management Portal
+│   └── student/        # Student Dashboard & Protected Search
+├── services/           # API service layer (authService, preceptorService)
+└── routes/             # Protected and Public Route definitions
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## ⚡ Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2. **Run Development Server**:
+   ```bash
+   npm run dev
+   ```
+
+3. **Build for Production**:
+   ```bash
+   npm run build
+   ```
+
+## 🎨 Design Philosophy
+The UI is inspired by high-end SaaS platforms, focusing on:
+- **Clarity**: Simple navigation and highlighted call-to-actions.
+- **Trust**: Verified badges and professional medical imagery.
+- **Innovation**: Interactive 3D elements that set the platform apart from traditional educational portals.
+
+---
+© 2026 NPaxis Platform. All rights reserved.
