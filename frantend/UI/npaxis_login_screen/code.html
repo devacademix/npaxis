@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NPaxis | Secure Login</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-container": "#ffdad6",
+              "surface-dim": "#d8dadc",
+              "inverse-surface": "#2d3133",
+              "on-secondary-fixed": "#021945",
+              "on-tertiary-container": "#ffc6b2",
+              "inverse-on-surface": "#eff1f3",
+              "surface-container-highest": "#e0e3e5",
+              "on-secondary-container": "#415382",
+              "surface-container-high": "#e6e8ea",
+              "on-secondary-fixed-variant": "#344573",
+              "secondary-container": "#b6c8fe",
+              "tertiary-fixed-dim": "#ffb59b",
+              "surface-container-lowest": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "primary-container": "#0052cc",
+              "surface-container": "#eceef0",
+              "tertiary-container": "#a33500",
+              "on-surface": "#191c1e",
+              "on-primary-container": "#c4d2ff",
+              "inverse-primary": "#b2c5ff",
+              "background": "#f7f9fb",
+              "on-primary-fixed": "#001848",
+              "on-error-container": "#93000a",
+              "primary-fixed": "#dae2ff",
+              "on-background": "#191c1e",
+              "outline": "#737685",
+              "outline-variant": "#c3c6d6",
+              "on-error": "#ffffff",
+              "primary-fixed-dim": "#b2c5ff",
+              "on-primary-fixed-variant": "#0040a2",
+              "on-secondary": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-tertiary-fixed-variant": "#812800",
+              "error": "#ba1a1a",
+              "surface-container-low": "#f2f4f6",
+              "secondary": "#4c5d8d",
+              "surface-variant": "#e0e3e5",
+              "secondary-fixed": "#dae2ff",
+              "surface-bright": "#f7f9fb",
+              "on-tertiary-fixed": "#380d00",
+              "tertiary-fixed": "#ffdbcf",
+              "surface": "#f7f9fb",
+              "tertiary": "#7b2600",
+              "surface-tint": "#0c56d0",
+              "secondary-fixed-dim": "#b4c5fb",
+              "primary": "#003d9b",
+              "on-surface-variant": "#434654"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #003d9b 0%, #0052cc 100%);
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background min-h-screen flex flex-col">
+<!-- Top Navigation Anchor -->
+<header class="w-full top-0 z-50 bg-[#f7f9fb] flex justify-between items-center px-8 py-4 max-w-full">
+<div class="text-2xl font-black text-[#003d9b] font-headline tracking-tight">
+            NPaxis
+        </div>
+<div class="flex items-center gap-6">
+<a class="text-slate-600 font-medium hover:text-[#0052cc] transition-colors" href="#">Support</a>
+<a class="text-on-primary bg-primary-container px-5 py-2 rounded-full font-semibold hover:opacity-90 transition-all" href="#">Sign Up</a>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center px-6 py-12">
+<div class="w-full max-w-md">
+<!-- Login Card -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant/20 shadow-[0px_12px_32px_rgba(25,28,30,0.06)] p-10">
+<!-- Brand Identity -->
+<div class="text-center mb-8">
+<div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-container/10 mb-4">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="medical_services">medical_services</span>
+</div>
+<h1 class="font-headline text-2xl font-extrabold text-primary tracking-tight mb-2">NPaxis</h1>
+<p class="text-on-surface-variant text-sm font-medium">Connect Students with Verified Preceptors</p>
+</div>
+<!-- Error State Example (Uncomment to show) -->
+<div class="mb-6 flex items-center gap-3 p-4 rounded-lg bg-error-container text-on-error-container text-sm">
+<span class="material-symbols-outlined" data-icon="error">error</span>
+<span>Invalid email or password</span>
+</div>
+<!-- Login Form -->
+<form action="/auth/login" class="space-y-5" method="POST">
+<!-- Email Field -->
+<div class="space-y-1.5">
+<label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider" for="email">Email Address</label>
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline" data-icon="mail">mail</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-on-surface placeholder-outline/50" id="email" name="email" placeholder="name@university.edu" required="" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center">
+<label class="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider" for="password">Password</label>
+<a class="text-xs font-semibold text-primary hover:underline" href="#">Forgot password?</a>
+</div>
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline" data-icon="lock">lock</span>
+<input class="w-full pl-10 pr-12 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-on-surface placeholder-outline/50" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full btn-gradient text-on-primary py-3.5 rounded-full font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group" type="submit">
+<!-- Spinner Variant Logic -->
+<span class="hidden animate-spin h-5 w-5 border-2 border-on-primary/30 border-t-on-primary rounded-full"></span>
+<span>Login</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</form>
+<!-- Footer Links -->
+<div class="mt-8 text-center">
+<p class="text-sm text-on-surface-variant">
+                        New to NPaxis? 
+                        <a class="text-primary font-bold hover:underline ml-1" href="#">Register as a new user</a>
+</p>
+</div>
+</div>
+<!-- Trust Badge -->
+<div class="mt-8 flex items-center justify-center gap-6 opacity-60 grayscale hover:grayscale-0 transition-all duration-300">
+<span class="material-symbols-outlined text-xl" data-icon="verified_user">verified_user</span>
+<span class="material-symbols-outlined text-xl" data-icon="security">security</span>
+<span class="material-symbols-outlined text-xl" data-icon="health_and_safety">health_and_safety</span>
+</div>
+</div>
+</main>
+<!-- Footer Anchor -->
+<footer class="w-full border-t border-slate-200 bg-[#f7f9fb] flex flex-col md:flex-row justify-between items-center px-8 py-12 mt-auto">
+<p class="text-slate-500 text-sm tracking-wide mb-4 md:mb-0">© 2024 NPaxis Medical Systems. All rights reserved.</p>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="text-slate-500 text-sm hover:text-[#003d9b] underline transition-all" href="#">Privacy Policy</a>
+<a class="text-slate-500 text-sm hover:text-[#003d9b] underline transition-all" href="#">Terms of Service</a>
+<a class="text-slate-500 text-sm hover:text-[#003d9b] underline transition-all" href="#">Security Compliance</a>
+<a class="text-slate-500 text-sm hover:text-[#003d9b] underline transition-all" href="#">Contact Support</a>
+</div>
+</footer>
+</body></html>

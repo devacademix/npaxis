@@ -18,7 +18,7 @@ import java.util.Optional;
 public interface UserRepository extends BaseRepository<User, Long> {
 
     @Modifying
-    @Query(value = "DELETE FROM users WHERE id = ?1", nativeQuery = true)
+    @Query(value = "DELETE FROM users WHERE user_id = ?1", nativeQuery = true)
     @Transactional
     void hardDeleteById(Long id);
 

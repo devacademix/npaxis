@@ -23,9 +23,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -156,12 +158,25 @@ public class PreceptorController {
 
     @Operation(summary = "Submit license for verification", description = "Allows a preceptor to upload license details for verification.")
     @PreAuthorize("#userId == principal.userId")
-    @PostMapping(value = {SUBMIT_LICENSE_API, SUBMIT_LICENSE_API + "/"})
-    public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> submitLicense(
+    @PostMapping(value = {SUBMIT_LICENSE_API, SUBMIT_LICENSE_API + "/"}, consumes = "application/json")
+    public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> submitLicenseJson(
             @PathVariable("userId") Long userId,
             @Valid @RequestBody PreceptorRequestDTO preceptorRequestDto) {
         log.info("Submitting license for preceptor ID: {}", userId);
         PreceptorResponseDTO updatedPreceptor = preceptorService.submitLicense(userId, preceptorRequestDto);
+        return ResponseHandler.generateResponse(updatedPreceptor, "License submitted for verification", true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Submit license file for verification", description = "Allows a preceptor to upload a license file using multipart/form-data.")
+    @PreAuthorize("#userId == principal.userId")
+    @PostMapping(value = {SUBMIT_LICENSE_API, SUBMIT_LICENSE_API + "/"}, consumes = "multipart/form-data")
+    public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> submitLicenseMultipart(
+            @PathVariable("userId") Long userId,
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "licenseNumber", required = false) String licenseNumber,
+            @RequestPart(value = "licenseState", required = false) String licenseState) {
+        log.info("Submitting multipart license for preceptor ID: {}", userId);
+        PreceptorResponseDTO updatedPreceptor = preceptorService.submitLicense(userId, licenseNumber, licenseState, file);
         return ResponseHandler.generateResponse(updatedPreceptor, "License submitted for verification", true, HttpStatus.OK);
     }
 

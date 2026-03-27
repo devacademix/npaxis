@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Preceptor Profile | Clinical Atelier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-container": "#ffc6b2",
+              "inverse-surface": "#2d3133",
+              "error": "#ba1a1a",
+              "outline-variant": "#c3c6d6",
+              "primary-fixed": "#dae2ff",
+              "on-secondary-fixed": "#021945",
+              "tertiary": "#7b2600",
+              "surface-tint": "#0c56d0",
+              "on-secondary": "#ffffff",
+              "inverse-primary": "#b2c5ff",
+              "on-background": "#191c1e",
+              "surface-variant": "#e0e3e5",
+              "on-surface-variant": "#434654",
+              "on-primary": "#ffffff",
+              "secondary-fixed-dim": "#b4c5fb",
+              "secondary-container": "#b6c8fe",
+              "primary-fixed-dim": "#b2c5ff",
+              "on-tertiary": "#ffffff",
+              "on-primary-fixed": "#001848",
+              "surface-container-highest": "#e0e3e5",
+              "tertiary-container": "#a33500",
+              "surface-bright": "#f7f9fb",
+              "background": "#f7f9fb",
+              "secondary-fixed": "#dae2ff",
+              "tertiary-fixed-dim": "#ffb59b",
+              "on-surface": "#191c1e",
+              "on-secondary-container": "#415382",
+              "surface-container-lowest": "#ffffff",
+              "surface-container": "#eceef0",
+              "primary": "#003d9b",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#344573",
+              "on-primary-fixed-variant": "#0040a2",
+              "inverse-on-surface": "#eff1f3",
+              "on-error": "#ffffff",
+              "surface-dim": "#d8dadc",
+              "outline": "#737685",
+              "on-error-container": "#93000a",
+              "primary-container": "#0052cc",
+              "on-tertiary-fixed-variant": "#812800",
+              "surface-container-low": "#f2f4f6",
+              "on-primary-container": "#c4d2ff",
+              "tertiary-fixed": "#ffdbcf",
+              "on-tertiary-fixed": "#380d00",
+              "surface-container-high": "#e6e8ea",
+              "surface": "#f7f9fb",
+              "secondary": "#4c5d8d"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+        }
+        .bg-primary-gradient {
+            background: linear-gradient(135deg, #003d9b 0%, #0052cc 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-[#f7f9fb] dark:bg-slate-900 sticky top-0 z-50">
+<nav class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-bold text-[#003d9b] dark:text-blue-500 font-headline tracking-tight">Clinical Atelier</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-slate-600 dark:text-slate-400 hover:text-[#003d9b] transition-colors font-headline font-bold" href="#">Dashboard</a>
+<a class="text-[#003d9b] dark:text-blue-400 border-b-2 border-[#003d9b] pb-1 font-headline font-bold" href="#">Preceptors</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-[#003d9b] transition-colors font-headline font-bold" href="#">Rotations</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-[#003d9b] transition-colors font-headline font-bold" href="#">Messages</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-600 hover:bg-[#e6e8ea] rounded-lg transition-all">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-600 hover:bg-[#e6e8ea] rounded-lg transition-all">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="professional portrait of a medical professional in a lab coat with a clean clinical background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW7xHRR3uEJ1r30L0EjKvPwbOB6nc1K8gs-exbsssObDwisUNsETgH-wIESZHIvrOXo-jyy7JvNC4jQ8X4RUXXekfkfUEgXZwJ_8b7flIvfIJ6dte16el8CCCCmQvH2SDeLQGnHxKv--O-nM8A6r9k_b3Awz4TsH7gEKgjoIDpjJ6xAkF7OhvEEW4Fcn4GAT_WfrJ7k-uSnoOwEtUoh8hMAXR2KAgrHBo4MimZB210F6YY6SJefQKutPPu-KScKQeTFbRbEg8hsEp7"/>
+</div>
+</div>
+</nav>
+</header>
+<main class="flex-grow max-w-7xl mx-auto w-full px-8 py-10">
+<!-- Profile Header Section (Asymmetric Bento Style) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Primary Identity -->
+<div class="lg:col-span-8 space-y-8">
+<div class="bg-surface-container-lowest rounded-xl p-8 transition-all">
+<div class="flex flex-col md:flex-row gap-8 items-start md:items-center">
+<div class="relative w-32 h-32 md:w-48 md:h-48 rounded-2xl overflow-hidden shrink-0">
+<img alt="Dr. Sarah Chen" class="w-full h-full object-cover" data-alt="Close-up professional portrait of a female Asian doctor smiling in a bright modern medical office with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAu3yq3MKhaCLtFXVg_N11AS0vTj3hgjAD_J1YUvy5UzoTDV4h_LaApKTvTyzbpuzz8zMhZJmyPbmLC-giFS_O9FYy258vCBy7Pis3kifzQKegHmdORRT_3_Cv9sEvI78cV8qlKGtZjUqd5BW0cHoVe06pV88yT95GX9e2JvjQBdyXlzRn4LhparkAZJhFSjQ7O3a7OpeflvhioIi9ZoJf6HZ49OkgW1VArWMoxUw6IPv8D0FRm2408UPRNzfOZnnd21esoe04undG"/>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-2 mb-2">
+<span class="text-primary font-headline font-bold tracking-wider text-xs uppercase bg-secondary-container/30 px-3 py-1 rounded-full">MD • Board Certified</span>
+</div>
+<h1 class="text-4xl font-headline font-extrabold text-on-surface mb-2">Dr. Sarah Chen, MD <span class="material-symbols-outlined text-primary-container align-middle" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span></h1>
+<p class="text-lg text-on-surface-variant font-medium mb-6">Attending Physician • Family Medicine Specialist</p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="stethoscope">stethoscope</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-outline font-bold">Specialty</p>
+<p class="text-sm font-semibold">Family Medicine</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="location_on">location_on</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-outline font-bold">Location</p>
+<p class="text-sm font-semibold">San Francisco, CA</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-outline font-bold">Availability</p>
+<p class="text-sm font-semibold">M, T, W</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid Details -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- About Section -->
+<div class="bg-surface-container-lowest rounded-xl p-8">
+<h3 class="font-headline font-bold text-xl mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="person_search">person_search</span>
+                            About the Preceptor
+                        </h3>
+<p class="text-on-surface-variant leading-relaxed font-body">
+                            Dr. Chen has over 12 years of experience in primary care with a focus on holistic family wellness and preventative screening. She is passionate about mentoring the next generation of Nurse Practitioners, offering a high-volume clinical environment that balances acute visits with chronic disease management.
+                        </p>
+<div class="mt-6 flex flex-wrap gap-2">
+<span class="bg-surface-container-low px-3 py-1.5 rounded-lg text-xs font-semibold text-secondary">Pediatrics</span>
+<span class="bg-surface-container-low px-3 py-1.5 rounded-lg text-xs font-semibold text-secondary">Women's Health</span>
+<span class="bg-surface-container-low px-3 py-1.5 rounded-lg text-xs font-semibold text-secondary">Geriatrics</span>
+</div>
+</div>
+<!-- Clinical Requirements -->
+<div class="bg-surface-container-lowest rounded-xl p-8">
+<h3 class="font-headline font-bold text-xl mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="checklist_rtl">checklist_rtl</span>
+                            Clinical Requirements
+                        </h3>
+<ul class="space-y-4">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm mt-1" data-icon="check_circle">check_circle</span>
+<span class="text-sm text-on-surface-variant font-medium">Updated Immunization Records</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm mt-1" data-icon="check_circle">check_circle</span>
+<span class="text-sm text-on-surface-variant font-medium">Current BLS Certification</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm mt-1" data-icon="check_circle">check_circle</span>
+<span class="text-sm text-on-surface-variant font-medium">Background check clearance</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm mt-1" data-icon="check_circle">check_circle</span>
+<span class="text-sm text-on-surface-variant font-medium">Letter of Good Standing</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Right Column: Actions & Financials -->
+<div class="lg:col-span-4 space-y-8 sticky top-28">
+<!-- Honorarium Card -->
+<div class="bg-primary-gradient rounded-xl p-8 text-white">
+<p class="text-primary-fixed/80 font-headline font-bold text-xs uppercase tracking-[0.2em] mb-2">Estimated Honorarium</p>
+<div class="flex items-baseline gap-2 mb-6">
+<span class="text-4xl font-headline font-extrabold">$500 - $800</span>
+<span class="text-primary-fixed/80 text-sm">/ rotation</span>
+</div>
+<div class="space-y-4">
+<button class="w-full py-4 bg-surface-container-lowest text-primary font-headline font-bold rounded-full flex items-center justify-center gap-2 hover:bg-surface-bright transition-all shadow-lg active:scale-95">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+                            Send Inquiry
+                        </button>
+<button class="w-full py-4 border border-white/30 text-white font-headline font-bold rounded-full flex items-center justify-center gap-2 hover:bg-white/10 transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="favorite">favorite</span>
+                            Save Preceptor
+                        </button>
+</div>
+</div>
+<!-- Contact Section (Standard Case B) -->
+<div class="bg-surface-container-lowest rounded-xl p-8 border-2 border-primary/5">
+<h3 class="font-headline font-bold text-lg mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="contact_mail">contact_mail</span>
+                        Direct Contact
+                    </h3>
+<div class="relative group cursor-not-allowed">
+<div class="space-y-4 filter blur-[6px] select-none opacity-40">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline" data-icon="mail">mail</span>
+<span class="text-sm">sarah.chen@clinic.com</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline" data-icon="call">call</span>
+<span class="text-sm">(415) 555-0198</span>
+</div>
+</div>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<div class="bg-white/90 p-6 rounded-xl shadow-xl border border-outline-variant/30 max-w-[240px]">
+<span class="material-symbols-outlined text-primary mb-2 text-3xl" data-icon="lock">lock</span>
+<p class="text-sm font-bold text-on-surface mb-1">Standard Account</p>
+<p class="text-[11px] text-on-surface-variant mb-4">Upgrade to Premium to reveal direct contact details.</p>
+<button class="w-full py-2.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-container transition-colors">
+                                    Reveal Contact
+                                </button>
+<p class="mt-3 text-[10px] text-primary font-bold hover:underline cursor-pointer">Upgrade to View</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Map/Location Placeholder -->
+<div class="bg-surface-container-low rounded-xl h-48 relative overflow-hidden">
+<img class="w-full h-full object-cover opacity-50 grayscale" data-alt="Simplified minimalist map interface showing San Francisco bay area with a medical icon marker" data-location="San Francisco" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKOG-rfm-5K8JQtDz6c57cdi-AEuewsqH-aqxKvh3B10eXflan72IgAEPXhyuKPRNQCMcwECHqlRTAKop1RolZghSws9W41KI1-NiEmpXHfymzjJw4b3K3oQOK76wdS8pbg16p1GX7iCpyzomJyOuJOr7Nsh-YqTpPmZD7N5JxzBSTUSLwXeEAnZW_m0IjSt1GyL68mr_YK2H-_TxWzL2I7EVi5_pnZetl1GIw0KcAeFCkbCQxUbUKf196SSjbe-8vswJzXFLfh1zZ"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="bg-white p-3 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="location_on" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-[#f2f4f6] dark:bg-slate-950 w-full py-12 px-8 mt-auto border-t border-[#c3c6d6]/20">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex flex-col items-center md:items-start gap-2">
+<div class="font-['Manrope'] font-semibold text-[#191c1e] dark:text-slate-200 text-lg">Clinical Atelier</div>
+<p class="font-['Inter'] text-sm tracking-wide text-slate-500 dark:text-slate-400">© 2024 The Clinical Atelier. Professional Medical Education Systems.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#0052cc] dark:hover:text-blue-300 transition-colors font-['Inter'] text-sm" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#0052cc] dark:hover:text-blue-300 transition-colors font-['Inter'] text-sm" href="#">Terms of Service</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#0052cc] dark:hover:text-blue-300 transition-colors font-['Inter'] text-sm" href="#">Help Center</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-[#0052cc] dark:hover:text-blue-300 transition-colors font-['Inter'] text-sm" href="#">Contact Support</a>
+</div>
+</div>
+</footer>
+</body></html>
