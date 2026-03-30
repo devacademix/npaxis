@@ -17,7 +17,7 @@ target/
 *.iml
 *.iws
 *.ipr
-*.UI/
+
 ## Eclipse / STS
 .apt_generated
 .classpath

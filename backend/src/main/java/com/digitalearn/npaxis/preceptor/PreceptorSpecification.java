@@ -12,8 +12,7 @@ public class PreceptorSpecification {
 
 
     public static Specification<Preceptor> isActive() {
-        // BaseEntity does not persist an `active` column; active records are `deleted = false`.
-        return (root, query, cb) -> cb.isFalse(root.get("deleted"));
+        return (root, query, cb) -> cb.isTrue(root.get("active"));
     }
 
     public static <T> Specification<T> isNotDeleted() {
