@@ -194,6 +194,16 @@ public class AuthServiceImpl implements AuthService {
             user.setAccountEnabled(true);
             user.setEmailVerified(true);
             userRepository.save(user);
+
+            // 3. Send Successful onboarding email.
+            emailService.sendEmail(
+                    user.getEmail(),
+                    EmailTemplate.WELCOME_EMAIL,
+                    Map.of(
+                            "name", user.getDisplayName()
+                    )
+            );
+
             log.info("User account enabled successfully");
             return this.buildAuthResponse(user, servletResponse);
         } else {

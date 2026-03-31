@@ -181,7 +181,7 @@ public class PreceptorController {
     }
 
     @Operation(summary = "Reveal contact information", description = "Reveals the contact details of a preceptor (premium gate).")
-    @PostMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
+    @GetMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
     public ResponseEntity<GenericApiResponse<PreceptorContactResponseDTO>> revealContact(@PathVariable Long userId) {
         log.info("Revealing contact for preceptor ID: {}", userId);
         PreceptorContactResponseDTO preceptorContact = preceptorService.revealContact(userId);

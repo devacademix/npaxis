@@ -110,7 +110,7 @@ const normalizeStatus = (value?: string): string => {
 export const adminService = {
   getStats: async (): Promise<DashboardStats> => {
     try {
-      const statsResponse = await api.get('/admin/stats', authConfig());
+      const statsResponse = await api.get('/analytics/stats', authConfig());
       const stats = unwrapApiData<any>(statsResponse) || {};
       return {
         totalUsers: Number(stats?.totalUsers ?? stats?.users ?? 0),
