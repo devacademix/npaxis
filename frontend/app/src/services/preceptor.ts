@@ -191,7 +191,7 @@ export const preceptorService = {
   },
 
   revealContact: async (id: number | string): Promise<PreceptorContact> => {
-    const response = await api.post(`/preceptors/preceptor-${id}/reveal-contact`, null, authConfig());
+    const response = await api.get(`/preceptors/active/preceptor-${id}/reveal-contact`, authConfig());
     return extractData<PreceptorContact>(response);
   },
 

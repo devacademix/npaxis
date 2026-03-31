@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.preceptor;
 
+import com.digitalearn.npaxis.exceptionhandler.BusinessErrorCodes;
+import com.digitalearn.npaxis.exceptions.BusinessException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -169,8 +171,11 @@ public class PreceptorServiceImpl implements PreceptorService {
         log.debug("Preceptor Service Impl --> Reveal contact for preceptor ID: {}", userId);
         Preceptor preceptor = preceptorRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
-        // In a real application, logic for premium access check would go here.
-        // For now, we return the preceptor DTO which includes the contact details.
+
+        // check if the preceptor has premium or not
+        if(!preceptor.isPremium()){
+            throw new BusinessException(BusinessErrorCodes.PRECEPTOR_NOT_PREMIUM);
+        }
         return PreceptorContactResponseDTO.builder()
                 .phone(preceptor.getPhone())
                 .email(preceptor.getEmail())

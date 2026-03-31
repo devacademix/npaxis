@@ -314,7 +314,7 @@ public class APIConstants {
     public static final String RESTORE_PRECEPTOR_BY_ID_API = "restore/preceptor-{userId}";
     public static final String VERIFY_PRECEPTOR_API = "verify/preceptor-{userId}";
     public static final String SUBMIT_LICENSE_API = "preceptor-{userId}/submit-license";
-    public static final String REVEAL_CONTACT_API = "preceptor-{userId}/reveal-contact";
+    public static final String REVEAL_CONTACT_API = "active/preceptor-{userId}/reveal-contact";
 
     // APIs for Admin Management
     public static final String ADMINISTRATION_API = "administration";
