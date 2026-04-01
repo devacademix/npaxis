@@ -95,7 +95,7 @@ public class Preceptor extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", length = 20)
-    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+    private VerificationStatus verificationStatus = VerificationStatus.NOT_SUBMITTED;
 
     @Column(name = "verification_submitted_at")
     private LocalDateTime verificationSubmittedAt;
