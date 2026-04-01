@@ -1,6 +1,7 @@
 package com.digitalearn.npaxis.user;
 
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
+import com.digitalearn.npaxis.storage.StorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
 
 import java.util.List;
 
@@ -20,6 +23,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final StorageService storageService;
 
     /**
      * Registers a new user by converting the UserRequestDto to a User entity,
@@ -165,5 +169,38 @@ public class UserServiceImpl implements UserService {
     public void hardDeleteUserById(Long userId) {
         log.debug("User Service Impl --> Hard Delete User by ID: {}", userId);
         this.userRepository.hardDeleteById(userId);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO uploadProfilePicture(Long userId, MultipartFile file) {
+        log.debug("User Service Impl --> Upload profile picture for user ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        // If replacing an existing profile picture, delete the old file
+        if (user.getPhotoUrl() != null && !user.getPhotoUrl().isEmpty()) {
+            storageService.deleteFile(user.getPhotoUrl());
+        }
+
+        String photoUrl = storageService.storeFile(file, "profile-pictures", userId.toString());
+        user.setPhotoUrl(photoUrl);
+
+        User savedUser = userRepository.save(user);
+        return userMapper.toUserDTO(savedUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Resource downloadProfilePicture(Long userId) {
+        log.debug("User Service Impl --> Download profile picture for user ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        if (user.getPhotoUrl() == null || user.getPhotoUrl().isEmpty()) {
+            throw new ResourceNotFoundException("Profile picture not found for user ID: " + userId);
+        }
+
+        return storageService.loadFileAsResource(user.getPhotoUrl());
     }
 }
