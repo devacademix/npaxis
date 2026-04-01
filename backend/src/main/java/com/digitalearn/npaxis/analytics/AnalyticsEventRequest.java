@@ -13,4 +13,5 @@ public record AnalyticsEventRequest(
         @NotNull
         Long preceptorId
 
-) {}
+) {
+}

@@ -25,19 +25,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private static final String[] ADMINISTRATION_ONLY_URLS = {"/admin/**"};
+    private static final String[] USER_ONLY_URLS = {"/users/**", "/analytics/**", "/inquiries/**"};
+    private static final String[] PRECEPTOR_ONLY_URLS = {"/preceptors/**"};
+    private static final String[] STUDENT_ONLY_URLS = {"/students/**", "/inquiries/**"};
+    private static final String[] PUBLIC_URLS = {"/", "/auth/**", "/h2-console/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**"};
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthFilter jwtAuthFilter;
 
-    private static final String[] ADMINISTRATION_ONLY_URLS = {"/admin/**"};
-    private static final String[] USER_ONLY_URLS = {"/users/**", "/analytics/**"};
-    private static final String[] PRECEPTOR_ONLY_URLS = {"/preceptors/**"};
-    private static final String[] STUDENT_ONLY_URLS = {"/students/**"};
-    private static final String[] PUBLIC_URLS = {"/", "/auth/**", "/h2-console/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**"};
-
-
-
-     /**
+    /**
      * Configures the security filter chain for the application.
      * Open mode: all endpoints are publicly accessible (dev-only).
      *
@@ -68,9 +65,9 @@ public class SecurityConfig {
                         req -> req.requestMatchers(PUBLIC_URLS).permitAll()
                                 .requestMatchers(ADMINISTRATION_ONLY_URLS).hasRole(RoleName.ROLE_ADMIN.getRoleName())
                                 .requestMatchers(USER_ONLY_URLS).hasAnyRole(RoleName.ROLE_PRECEPTOR.getRoleName(), RoleName.ROLE_STUDENT.getRoleName(), RoleName.ROLE_ADMIN.getRoleName())
+                                .requestMatchers(PRECEPTOR_ONLY_URLS).hasRole(RoleName.ROLE_PRECEPTOR.getRoleName())
                                 .requestMatchers(HttpMethod.GET, "/preceptors/active/**").hasRole(RoleName.ROLE_STUDENT.getRoleName())
                                 .requestMatchers(STUDENT_ONLY_URLS).hasRole(RoleName.ROLE_STUDENT.getRoleName())
-                                .requestMatchers(PRECEPTOR_ONLY_URLS).hasRole(RoleName.ROLE_PRECEPTOR.getRoleName())
                                 .requestMatchers(PUBLIC_URLS).permitAll()
                                 .anyRequest().authenticated()
                 )

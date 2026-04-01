@@ -156,7 +156,8 @@ public class AuthServiceImpl implements AuthService {
         RoleName roleName = switch (roleId.intValue()) {
             case 1 -> RoleName.ROLE_STUDENT;
             case 2 -> RoleName.ROLE_PRECEPTOR;
-            default -> throw new IllegalArgumentException("Invalid role ID provided. Expected 1 (Student) or 2 (Preceptor).");
+            default ->
+                    throw new IllegalArgumentException("Invalid role ID provided. Expected 1 (Student) or 2 (Preceptor).");
         };
 
         return roleRepository.findByRoleName(roleName)

@@ -1,6 +1,7 @@
 # NPAxis Backend
 
-NPAxis is a platform designed to facilitate interactions between students and preceptors (Nurse Practitioners, MDs, etc.). The backend is built using Spring Boot, providing a robust and scalable REST API.
+NPAxis is a platform designed to facilitate interactions between students and preceptors (Nurse Practitioners, MDs,
+etc.). The backend is built using Spring Boot, providing a robust and scalable REST API.
 
 ## 🚀 Features
 
@@ -34,8 +35,9 @@ Follow these steps to get the project running locally:
 
 ### 1. Database Configuration
 
-1.  **Create a Database:** Open your PostgreSQL client (like pgAdmin or psql) and create a database named `npaxis`.
-2.  **Configure Credentials:** Open `src/main/resources/application.yaml` and update the `spring.datasource.username` and `spring.datasource.password` fields with your local PostgreSQL credentials.
+1. **Create a Database:** Open your PostgreSQL client (like pgAdmin or psql) and create a database named `npaxis`.
+2. **Configure Credentials:** Open `src/main/resources/application.yaml` and update the `spring.datasource.username` and
+   `spring.datasource.password` fields with your local PostgreSQL credentials.
 
 ```yaml
 spring:
@@ -47,7 +49,8 @@ spring:
 
 ### 2. Email Configuration (Optional for Local)
 
-The system uses Gmail's SMTP server by default. You can update the credentials in `application.yaml` if you need to test email functionality.
+The system uses Gmail's SMTP server by default. You can update the credentials in `application.yaml` if you need to test
+email functionality.
 
 ```yaml
 spring:
@@ -76,8 +79,10 @@ The application will start on `http://localhost:8080`.
 
 ## 📖 API Documentation
 
-- **Swagger UI:** Once the application is running, you can access the interactive API documentation at: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- **API Reference:** For a detailed breakdown of available endpoints, refer to the [APIs readme.md](./APIs%20readme.md) file.
+- **Swagger UI:** Once the application is running, you can access the interactive API documentation
+  at: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- **API Reference:** For a detailed breakdown of available endpoints, refer to the [APIs readme.md](./APIs%20readme.md)
+  file.
 
 ## 🔑 Initializing the System
 

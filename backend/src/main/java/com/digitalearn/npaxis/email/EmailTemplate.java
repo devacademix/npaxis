@@ -9,7 +9,8 @@ public enum EmailTemplate {
 
     EMAIL_VERIFICATION("email-verification", "Verify Your NPaxis Account"),
     WELCOME_EMAIL("welcome-email", "Welcome to NPaxis Platform"),
-    FORGOT_PASSWORD("forgot-password", "Request to Reset your password.");
+    FORGOT_PASSWORD("forgot-password", "Request to Reset your password."),
+    INQUIRY_EMAIL("inquiry-email", "New Inquiry Message");
 
     private final String templateName;
     private final String subject;

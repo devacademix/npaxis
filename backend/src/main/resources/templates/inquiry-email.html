@@ -1,10 +1,12 @@
 <!DOCTYPE html>
+
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Welcome to NPaxis</title>
+    <title>New Inquiry Received</title>
 
+    ```
     <style>
         body, table, td, a {
             -webkit-text-size-adjust: 100%;
@@ -32,6 +34,8 @@
             }
         }
     </style>
+    ```
+
 </head>
 
 <body>
@@ -40,6 +44,7 @@
     <tr>
         <td align="center" style="padding: 40px 10px;">
 
+            ```
             <table class="email-container" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);"
                    width="600">
 
@@ -56,42 +61,46 @@
                 <tr>
                     <td class="fluid-padding" style="padding: 40px; color: #333;">
                         <h2 style="margin: 0 0 20px; font-size: 22px; color: #1a1a1a;">
-                            Welcome to NPaxis 🎉
+                            New Inquiry Received 📩
                         </h2>
 
                         <p style="font-size: 16px; line-height: 24px; color: #555;">
-                            Hello <strong th:text="${name}">User</strong>,
+                            Hello <strong th:text="${preceptorName}">Preceptor</strong>,
                         </p>
 
                         <p style="font-size: 16px; line-height: 24px; color: #555;">
-                            We’re excited to have you on board! Your account has been successfully created, and you’re
-                            now ready to explore everything NPaxis has to offer.
+                            You have received a new inquiry from a student.
                         </p>
 
                         <p style="font-size: 16px; line-height: 24px; color: #555;">
-                            With NPaxis, you can:
+                            <strong>Student Name:</strong>
+                            <span th:text="${studentName}">Student</span>
                         </p>
 
-                        <ul style="color: #555; font-size: 16px; line-height: 24px; padding-left: 20px;">
-                            <li>Access powerful tools and features</li>
-                            <li>Manage your account seamlessly</li>
-                            <li>Stay productive and organized</li>
-                        </ul>
+                        <p style="font-size: 16px; line-height: 24px; color: #555;">
+                            <strong>Message:</strong>
+                        </p>
+
+                        <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                            <p style="margin: 0; font-size: 15px; color: #333;" th:text="${message}">
+                                Message content goes here.
+                            </p>
+                        </div>
 
                         <!-- CTA Button -->
                         <div style="text-align: center; margin: 30px 0;">
                             <a href="#"
                                style="background-color: #0A2540; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">
-                                Get Started
+                                Respond Now
                             </a>
                         </div>
 
                         <p style="font-size: 14px; color: #777;">
-                            If you have any questions or need assistance, feel free to contact our support team.
+                            Please log in to your account to respond to this inquiry.
                         </p>
 
                         <p style="font-size: 14px; color: #777;">
-                            We’re glad to have you with us! 🚀
+                            Best regards,<br/>NPaxis Team
                         </p>
                     </td>
                 </tr>
@@ -104,7 +113,7 @@
                             Pvt. Ltd. All rights reserved.
                         </p>
                         <p style="font-size: 12px; color: #999; margin: 0;">
-                            You are receiving this email because you signed up for NPaxis.
+                            You are receiving this email because you are a registered preceptor on NPaxis.
                         </p>
                     </td>
                 </tr>
@@ -113,6 +122,8 @@
 
         </td>
     </tr>
+    ```
+
 </table>
 
 </body>
