@@ -155,7 +155,7 @@ public enum BusinessErrorCodes {
      */
     ASYNC_DATA_FETCH_ERROR(4002, HttpStatus.INTERNAL_SERVER_ERROR, "Error fetching data asynchronously."),
 
-     /**
+    /**
      * Indicates that request validation failed.
      */
     VALIDATION_ERROR(4008, HttpStatus.BAD_REQUEST, "Request validation failed."),

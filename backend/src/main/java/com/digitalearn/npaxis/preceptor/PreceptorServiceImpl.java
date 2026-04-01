@@ -61,8 +61,13 @@ public class PreceptorServiceImpl implements PreceptorService {
     @Transactional(readOnly = true)
     public PreceptorResponseDTO getActivePreceptorById(Long userId) {
         log.debug("Preceptor Service Impl --> Get active preceptor by ID: {}", userId);
+
+
         Preceptor preceptor = preceptorRepository.findActiveById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
+
+        log.info("Preceptor: isPremium{}, isVerified: {}", preceptor.isPremium(), preceptor.isVerified());
+
         return preceptorMapper.toPreceptorDTO(preceptor);
     }
 
@@ -173,7 +178,7 @@ public class PreceptorServiceImpl implements PreceptorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
 
         // check if the preceptor has premium or not
-        if(!preceptor.isPremium()){
+        if (!preceptor.isPremium()) {
             throw new BusinessException(BusinessErrorCodes.PRECEPTOR_NOT_PREMIUM);
         }
         return PreceptorContactResponseDTO.builder()

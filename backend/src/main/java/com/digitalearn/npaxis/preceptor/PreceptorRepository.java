@@ -20,11 +20,11 @@ public interface PreceptorRepository extends BaseRepository<Preceptor, Long>, Jp
     Optional<Preceptor> findByUserIdAndIsPremium(Long userId, Boolean isPremium);
 
     @Query("""
-    SELECT e.preceptor.userId, COUNT(e)
-    FROM AnalyticsEvent e
-    WHERE e.eventType = 'INQUIRY_SENT'
-    GROUP BY e.preceptor.userId
-    ORDER BY COUNT(e) DESC
-""")
+                SELECT e.preceptor.userId, COUNT(e)
+                FROM AnalyticsEvent e
+                WHERE e.eventType = 'INQUIRY_SENT'
+                GROUP BY e.preceptor.userId
+                ORDER BY COUNT(e) DESC
+            """)
     List<Object[]> findTopPreceptors(Pageable pageable);
 }

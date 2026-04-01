@@ -316,6 +316,12 @@ public class APIConstants {
     public static final String SUBMIT_LICENSE_API = "preceptor-{userId}/submit-license";
     public static final String REVEAL_CONTACT_API = "active/preceptor-{userId}/reveal-contact";
 
+    // APIs for Inquiry Management
+    public static final String INQUIRIES_BASE_API = "inquiries";
+    public static final String SEND_INQUIRY_API = "send";
+    public static final String GET_INQUIRIES_FOR_USER = "my-inquiries";
+    public static final String MARK_INQUIRY_AS_READ = "/{inquiryId}/read";
+
     // APIs for Admin Management
     public static final String ADMINISTRATION_API = "administration";
     public static final String ADD_ADMIN_API = "/add-admin";
