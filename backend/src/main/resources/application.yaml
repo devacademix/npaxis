@@ -54,3 +54,9 @@ npaxis:
   email:
     from-address: noreply@npaxis.com
     from-name: NPaxis Platform
+  storage:
+    local-directory: uploads
+    allowed-extensions: pdf,png,jpg,jpeg
+    cloud:
+      bucket-name: npaxis-files
+      region: us-east-1

@@ -88,6 +88,10 @@ public interface UserService {
      * @param userId The ID of the user to hard-delete.
      */
     void hardDeleteUserById(Long userId);
+    
+    UserResponseDTO uploadProfilePicture(Long userId, org.springframework.web.multipart.MultipartFile file);
+
+    org.springframework.core.io.Resource downloadProfilePicture(Long userId);
 
     LoggedInUserResponseDTO currentlyLoggedInUser();
 }
