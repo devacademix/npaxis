@@ -23,19 +23,25 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public String generateAndSaveToken(String email) {
-        String generatedOtp = this.generateOtp(6); // generate once
-        Token token = this.generateToken(email, generatedOtp);
-        this.tokenRepository.save(token);
-        return generatedOtp; // return unhashed OTP
+        String generatedOtp = this.generateOtp(6);
+
+        Token existingToken = tokenRepository.findByEmail(email).orElse(null);
+
+        Token token = generateOrUpdateToken(existingToken, email, generatedOtp);
+
+        tokenRepository.save(token);
+
+        return generatedOtp;
     }
 
     @Transactional
     @Override
     public Boolean verifyToken(String email, String otp) {
-        log.info("Verifying otp for user with email: " + email);
+        log.info("Verifying otp for user with email: {}", email);
 
-        Token token = this.tokenRepository.findTopByEmailOrderByCreatedAtDesc(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Otp not found for email: " + email));
+        Token token = this.tokenRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Otp not found for email: " + email));
 
         // check if already verified
         if (token.isVerified()) {
@@ -58,12 +64,18 @@ public class TokenServiceImpl implements TokenService {
     }
 
     //	convert string otp to token
-    private Token generateToken(String email, String otp) {
-        return Token.builder()
-                .hashedOtp(passwordEncoder.encode(otp)) // store hashed
-                .email(email)
-                .expiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRATION_MINUTES))
-                .build();
+    private Token generateOrUpdateToken(Token token, String email, String otp) {
+        if (token == null) {
+            token = new Token();
+            token.setEmail(email);
+        }
+
+        token.setHashedOtp(passwordEncoder.encode(otp));
+        token.setExpiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRATION_MINUTES));
+        token.setVerified(false);
+        token.setVerifiedAt(null);
+
+        return token;
     }
 
     //	generate otp code
