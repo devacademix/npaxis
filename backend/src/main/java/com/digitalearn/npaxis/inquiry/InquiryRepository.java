@@ -2,8 +2,8 @@ package com.digitalearn.npaxis.inquiry;
 
 import com.digitalearn.npaxis.auditing.BaseRepository;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
 
 @Repository
 public interface InquiryRepository extends BaseRepository<Inquiry, Long> {

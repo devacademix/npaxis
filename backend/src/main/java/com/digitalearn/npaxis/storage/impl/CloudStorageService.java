@@ -21,13 +21,13 @@ public class CloudStorageService implements StorageService {
 
     @Override
     public String storeFile(MultipartFile file, String subDirectory, String identifier) {
-        log.info("CloudStorageService: storing file to cloud bucket {}/{}", 
+        log.info("CloudStorageService: storing file to cloud bucket {}/{}",
                 properties.getCloud().getBucketName(), subDirectory);
-        
+
         // Mock cloud storage logic. In a real scenario, upload a file to S3/Cloud storage.
         String fileName = identifier + "-" + UUID.randomUUID() + "-" + file.getOriginalFilename();
         String cloudUrl = "https://" + properties.getCloud().getBucketName() + ".s3.amazonaws.com/" + subDirectory + "/" + fileName;
-        
+
         log.debug("Mock uploaded file to cloud: {}", cloudUrl);
         return cloudUrl;
     }

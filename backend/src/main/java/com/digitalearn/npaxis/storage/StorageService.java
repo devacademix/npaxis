@@ -11,9 +11,9 @@ public interface StorageService {
     /**
      * Stores a file in the configured storage provider.
      *
-     * @param file the file to store
+     * @param file         the file to store
      * @param subDirectory the subdirectory within the storage (e.g., "licenses", "profiles")
-     * @param identifier a unique identifier for the filename (e.g., userId)
+     * @param identifier   a unique identifier for the filename (e.g., userId)
      * @return the URL or path of the stored file
      */
     String storeFile(MultipartFile file, String subDirectory, String identifier);
