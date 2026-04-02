@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_LICENSE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_STUDENT_BY_ID_API;
@@ -42,7 +43,6 @@ import static com.digitalearn.npaxis.utils.APIConstants.RESTORE_PRECEPTOR_BY_ID_
 import static com.digitalearn.npaxis.utils.APIConstants.REVEAL_CONTACT_API;
 import static com.digitalearn.npaxis.utils.APIConstants.SOFT_DELETE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.SUBMIT_LICENSE_API;
-import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_LICENSE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.VERIFY_PRECEPTOR_API;
 
 @RestController

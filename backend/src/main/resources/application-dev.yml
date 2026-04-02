@@ -60,3 +60,10 @@ npaxis:
     cloud:
       bucket-name: npaxis-files
       region: us-east-1
+
+stripe:
+  api-key: sk_test_your_secret_key_here
+  webhook-secret: whsec_your_webhook_secret_here
+  prices:
+    premium-monthly: price_your_monthly_stripe_price_id
+    premium-yearly: price_your_yearly_stripe_price_id

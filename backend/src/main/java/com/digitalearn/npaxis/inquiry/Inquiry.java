@@ -3,7 +3,6 @@ package com.digitalearn.npaxis.inquiry;
 import com.digitalearn.npaxis.auditing.BaseEntity;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.student.Student;
-import com.digitalearn.npaxis.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

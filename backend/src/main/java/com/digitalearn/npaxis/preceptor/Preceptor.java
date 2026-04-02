@@ -102,4 +102,10 @@ public class Preceptor extends BaseEntity {
 
     @Column(name = "verification_reviewed_at")
     private LocalDateTime verificationReviewedAt;
+
+    @Column(name = "stripe_customer_id", length = 100)
+    private String stripeCustomerId;
+
+    @Column(name = "stripe_subscription_id", length = 100)
+    private String stripeSubscriptionId;
 }

@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_PROFILE_PICTURE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_USER_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ALL_ACTIVE_USERS_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ALL_SOFT_DELETED_USERS_API;
@@ -35,9 +36,8 @@ import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_USER_BY_ID_A
 import static com.digitalearn.npaxis.utils.APIConstants.PUT_UPDATE_USER_API;
 import static com.digitalearn.npaxis.utils.APIConstants.RESTORE_USER_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.SOFT_DELETE_USER_BY_ID_API;
-import static com.digitalearn.npaxis.utils.APIConstants.USERS_API;
 import static com.digitalearn.npaxis.utils.APIConstants.UPLOAD_PROFILE_PICTURE_API;
-import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_PROFILE_PICTURE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.USERS_API;
 
 
 @RestController

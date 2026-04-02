@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -22,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 import static com.digitalearn.npaxis.utils.APIConstants.GET_INQUIRIES_FOR_USER;
@@ -58,7 +58,7 @@ public class InquiryController {
                     sort = "createdAt",
                     direction = Sort.Direction.DESC
             ) Pageable pageable
-    ){
+    ) {
 
         Page<InquiryResponseDTO> preceptorEnquiries = inquiryService.getUserEnquiries(user, inquiryStatus, pageable);
 

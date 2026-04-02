@@ -38,7 +38,7 @@ public class LocalStorageService implements StorageService {
             String fileExtension = getFileExtension(originalFilename);
             String safeBaseName = originalFilename.replaceAll("[^a-zA-Z0-9_-]", "_");
             String fileName = identifier + "-" + UUID.randomUUID() + "-" + safeBaseName;
-            
+
             Path targetLocation = uploadPath.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
