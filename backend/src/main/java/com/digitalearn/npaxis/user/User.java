@@ -85,6 +85,9 @@ public class User extends BaseEntity implements UserDetails, Principal {
     @Column(name = "photo_url")
     private String photoUrl;
 
+    @Column(name = "stripe_customer_id", unique = true)
+    private String stripeCustomerId;
+
     @ManyToOne(fetch = FetchType.EAGER, cascade = {
             CascadeType.PERSIST,
             CascadeType.MERGE

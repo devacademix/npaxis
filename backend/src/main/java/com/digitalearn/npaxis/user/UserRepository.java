@@ -55,4 +55,6 @@ public interface UserRepository extends BaseRepository<User, Long> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :startOfMonth")
     Long countNewUsersThisMonth(LocalDateTime startOfMonth);
+
+    Optional<User> findByStripeCustomerId(String stripeCustomerId);
 }
