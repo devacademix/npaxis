@@ -7,6 +7,7 @@ import com.stripe.model.Customer;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.CustomerCreateParams;
+import com.stripe.param.SubscriptionUpdateParams;
 import com.stripe.param.billingportal.SessionCreateParams;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -17,9 +18,6 @@ public class StripeClient {
 
     private final StripeProperties stripeProperties;
 
-    /**
-     * Ensures Stripe SDK is initialized before every call
-     */
     private void init() {
         Stripe.apiKey = stripeProperties.getSecretKey();
         Stripe.setMaxNetworkRetries(stripeProperties.getMaxNetworkRetries());
@@ -49,10 +47,37 @@ public class StripeClient {
         return Subscription.retrieve(subscriptionId);
     }
 
+    /**
+     * 🔥 IMPORTANT: Cancel at period end (NOT immediate cancel)
+     */
     public Subscription cancelSubscription(String subscriptionId) throws StripeException {
         init();
-        Subscription sub = Subscription.retrieve(subscriptionId);
-        return sub.cancel();
+
+        Subscription subscription = Subscription.retrieve(subscriptionId);
+
+        SubscriptionUpdateParams params =
+                SubscriptionUpdateParams.builder()
+                        .setCancelAtPeriodEnd(true)
+                        .build();
+
+        return subscription.update(params);
+    }
+
+    public Subscription updateSubscription(String subscriptionId, String newPriceId) throws StripeException {
+        init();
+
+        Subscription subscription = Subscription.retrieve(subscriptionId);
+
+        SubscriptionUpdateParams params = SubscriptionUpdateParams.builder()
+                .addItem(
+                        SubscriptionUpdateParams.Item.builder()
+                                .setId(subscription.getItems().getData().get(0).getId())
+                                .setPrice(newPriceId)
+                                .build()
+                )
+                .build();
+
+        return subscription.update(params);
     }
 
     public com.stripe.model.billingportal.Session createCustomerPortal(

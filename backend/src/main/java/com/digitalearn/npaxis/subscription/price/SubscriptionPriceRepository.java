@@ -5,4 +5,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SubscriptionPriceRepository extends BaseRepository<SubscriptionPrice, Long> {
+    java.util.Optional<SubscriptionPrice> findByStripePriceId(String stripePriceId);
 }

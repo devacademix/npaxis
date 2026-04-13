@@ -27,4 +27,6 @@ public interface PreceptorRepository extends BaseRepository<Preceptor, Long>, Jp
                 ORDER BY COUNT(e) DESC
             """)
     List<Object[]> findTopPreceptors(Pageable pageable);
+
+    Optional<Preceptor> findByStripeCustomerId(String stripeCustomerId);
 }

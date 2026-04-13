@@ -80,4 +80,19 @@ public class PreceptorSubscription extends BaseEntity {
 
     @Column(name = "access_enabled", nullable = false)
     private boolean accessEnabled = false;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
+    @Column(name = "canceled_reason", length = 255)
+    private String canceledReason;
+
+    @Column(columnDefinition = "TEXT")
+    private String lastPaymentFailureReason;
+
+    @Column(name = "payment_retry_count")
+    private Integer paymentRetryCount = 0;
+
+    @Column(name = "next_billing_date")
+    private LocalDateTime nextBillingDate;
 }
