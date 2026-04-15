@@ -1,4 +1,4 @@
-package com.digitalearn.npaxis.subscription.invoice;
+package com.digitalearn.npaxis.pdf;
 
 /**
  * DTO for subscription invoice email processing.

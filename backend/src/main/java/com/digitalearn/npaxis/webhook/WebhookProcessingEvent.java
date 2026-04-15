@@ -20,6 +20,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+
 @Entity
 @Table(
         name = "webhook_processing_events",
@@ -40,8 +43,8 @@ public class WebhookProcessingEvent extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 255)
-    private String eventId; // Stripe Event ID for idempotency
+    @Column(name = "stripe_event_id", nullable = false, unique = true, length = 120)
+    private String eventId;
 
     @Column(nullable = false, length = 100)
     private String eventType; // e.g., "customer.subscription.created"
@@ -74,5 +77,22 @@ public class WebhookProcessingEvent extends BaseEntity {
 
     @Column(name = "livemode", nullable = false)
     private boolean liveMode = true;
+
+    public void markSucceeded() {
+        this.status = WebhookEventStatus.SUCCEEDED;
+        this.processedAt = LocalDateTime.now(ZoneOffset.UTC);
+        this.errorMessage = null;
+    }
+
+    public void markFailed(String message) {
+        this.status = WebhookEventStatus.FAILED;
+        this.errorMessage = message != null && message.length() > 1000
+                ? message.substring(0, 1000)
+                : message;
+    }
+
+    public void incrementRetry() {
+        this.retryCount++;
+    }
 }
 

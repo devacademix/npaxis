@@ -2,10 +2,8 @@ package com.digitalearn.npaxis.subscription.core;
 
 import com.digitalearn.npaxis.email.EmailService;
 import com.digitalearn.npaxis.email.EmailTemplate;
-import com.digitalearn.npaxis.subscription.billing.invoice.InvoicePdfGenerator;
-import com.digitalearn.npaxis.subscription.invoice.SubscriptionInvoiceEmailDto;
-import lombok.Builder;
-import lombok.Data;
+import com.digitalearn.npaxis.pdf.InvoicePdfService;
+import com.digitalearn.npaxis.pdf.SubscriptionInvoiceEmailDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -14,32 +12,11 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * DTO to hold subscription data for async email processing
- * Avoids lazy loading issues by serializing data in transaction context
- */
-@Data
-@Builder
-class SubscriptionEmailData {
-    private Long preceptorId;
-    private String preceptorName;
-    private String preceptorEmail;
-    private String planName;
-    private String billingInterval;
-    private Long amountInMinorUnits;
-    private String currency;
-    private LocalDateTime currentPeriodStart;
-    private LocalDateTime nextBillingDate;
-    private String oldPlanName;
-    private LocalDateTime canceledAt;
-    private LocalDateTime currentPeriodEnd;
-    private String canceledReason;
-}
+
 
 /**
  * Service for sending subscription-related emails
@@ -53,7 +30,7 @@ public class SubscriptionEmailService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a");
     private final EmailService emailService;
-    private final InvoicePdfGenerator invoicePdfGenerator;
+    private final InvoicePdfService invoicePdfService;
 
     /**
      * Send subscription created email with invoice
@@ -92,7 +69,8 @@ public class SubscriptionEmailService {
             log.info("Sending subscription created email for user: {}", data.getPreceptorId());
 
             // Generate invoice PDF using original subscription object
-            File invoicePdf = invoicePdfGenerator.generateSubscriptionInvoice(subscription, "SUBSCRIPTION_CREATED");
+            String invoicePdfPath = invoicePdfService.generateSubscriptionInvoicePdf(subscription, "SUBSCRIPTION_CREATED");
+            File invoicePdf = new File(invoicePdfPath);
 
             // Prepare email model using DTO data
             Map<String, Object> templateModel = new HashMap<>();
@@ -166,7 +144,8 @@ public class SubscriptionEmailService {
             log.info("Sending subscription upgraded email for user: {}", data.getPreceptorId());
 
             // Generate invoice PDF using original subscription object
-            File invoicePdf = invoicePdfGenerator.generateSubscriptionInvoice(subscription, "SUBSCRIPTION_UPGRADED");
+            String invoicePdfPath = invoicePdfService.generateSubscriptionInvoicePdf(subscription, "SUBSCRIPTION_UPGRADED");
+            File invoicePdf = new File(invoicePdfPath);
 
             // Prepare email model using DTO data
             Map<String, Object> templateModel = new HashMap<>();

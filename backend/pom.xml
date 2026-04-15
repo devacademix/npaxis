@@ -173,17 +173,6 @@
             <version>2.10.1</version>
         </dependency>
 
-        <!-- PDF Generation with Apache PDFBox for HTML to PDF conversion -->
-        <dependency>
-            <groupId>org.apache.pdfbox</groupId>
-            <artifactId>pdfbox</artifactId>
-            <version>3.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.lowagie</groupId>
-            <artifactId>itext</artifactId>
-            <version>2.1.7</version>
-        </dependency>
 
         <!-- OpenHTMLtoPDF for production-grade PDF generation -->
         <dependency>
