@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Subscription Cancellation Confirmation</title>
+
+    <style>
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table, td {
+            border-collapse: collapse !important;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        @media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .fluid-padding {
+                padding: 20px 15px !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<table cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+        <td align="center" style="padding: 40px 10px;">
+
+            <table class="email-container"
+                   style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);"
+                   width="600">
+
+                <!-- Header -->
+                <tr>
+                    <td align="center"
+                        style="background: linear-gradient(135deg, #5a4a2d 0%, #8c7a4a 100%); padding: 30px 20px;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">
+                            NPaxis
+                        </h1>
+                        <p style="color: #e0e0e0; margin: 8px 0 0 0; font-size: 14px;">Subscription Cancellation
+                            Confirmed</p>
+                    </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                    <td class="fluid-padding" style="padding: 40px; color: #333;">
+                        <h2 style="margin: 0 0 20px; font-size: 22px; color: #1a1a1a;">
+                            We've Confirmed Your Cancellation
+                        </h2>
+
+                        <p style="font-size: 16px; line-height: 24px; color: #555;">
+                            Hello <strong th:text="${preceptorName}">Preceptor</strong>,
+                        </p>
+
+                        <p style="font-size: 16px; line-height: 24px; color: #555;">
+                            We've received your subscription cancellation request. Your account has been scheduled for
+                            cancellation, and here are the details:
+                        </p>
+
+                        <!-- Cancellation Details Section -->
+                        <div style="background-color: #fef5f0; border-left: 4px solid #d9534f; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                            <h3 style="margin: 0 0 15px; font-size: 18px; color: #5a4a2d;">Cancellation Details</h3>
+                            <table style="border-collapse: collapse;" width="100%">
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Plan:</strong>
+                                    </td>
+                                    <td align="right" style="padding: 8px 0; color: #333; font-size: 14px;">
+                                        <span th:text="${planName}">Pro Plan</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Cancellation Date:</strong>
+                                    </td>
+                                    <td align="right" style="padding: 8px 0; color: #333; font-size: 14px;">
+                                        <span th:text="${canceledAt}">Jan 15, 2026</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Access Until:</strong>
+                                    </td>
+                                    <td align="right"
+                                        style="padding: 8px 0; color: #d9534f; font-size: 14px; font-weight: bold;">
+                                        <span th:text="${accessUntil}">Feb 01, 2026</span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${canceledReason}">
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Cancellation Reason:</strong>
+                                    </td>
+                                    <td align="right" style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <span th:text="${canceledReason}">User requested</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Grace Period Info -->
+                        <div style="background-color: #f0f8ff; border-left: 4px solid #0A2540; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                            <h3 style="margin: 0 0 10px; font-size: 16px; color: #0A2540;">⏱️ Important Information</h3>
+                            <p style="font-size: 14px; line-height: 20px; color: #333; margin: 0;">
+                                Your premium access will remain active until <strong th:text="${accessUntil}">February
+                                1, 2026</strong> (end of your billing period).
+                                After this date, your account will revert to basic access.
+                            </p>
+                        </div>
+
+                        <!-- What Happens Next -->
+                        <div style="margin: 25px 0;">
+                            <h3 style="margin: 0 0 15px; font-size: 18px; color: #5a4a2d;">What Happens Next?</h3>
+                            <ul style="color: #555; font-size: 14px; line-height: 22px; padding-left: 20px; margin: 0;">
+                                <li>You'll have full access until the end of your billing period</li>
+                                <li>Your account will not be charged after the cancellation date</li>
+                                <li>You can reactivate your subscription anytime from your account settings</li>
+                                <li>Your data will be retained for 30 days</li>
+                            </ul>
+                        </div>
+
+                        <!-- CTA Buttons -->
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="#"
+                               style="background-color: #5a4a2d; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block; margin-right: 10px;">
+                                Manage Subscription
+                            </a>
+                            <a href="#"
+                               style="background-color: #999; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">
+                                Reactivate Plan
+                            </a>
+                        </div>
+
+                        <!-- Feedback Request -->
+                        <p style="font-size: 13px; color: #777; margin: 20px 0 0 0;">
+                            We'd love to know why you're canceling. Please reach out to our support team—we'd like to
+                            help if there's anything we can improve.
+                        </p>
+
+                        <p style="font-size: 14px; color: #777; margin: 15px 0 0 0;">
+                            Thank you for being part of NPaxis. We hope to see you again!
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="background-color: #fcfcfc; border-top: 1px solid #eee; padding: 25px; text-align: center;">
+                        <p style="font-size: 12px; color: #999; margin: 0 0 10px;">
+                            &copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> Digitalearn Solution
+                            Pvt. Ltd. All rights reserved.
+                        </p>
+                        <p style="font-size: 12px; color: #999; margin: 0;">
+                            You can reactivate your subscription from your account settings at any time.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
+

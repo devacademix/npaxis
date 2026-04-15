@@ -2,13 +2,15 @@ package com.digitalearn.npaxis.webhook;
 
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
-import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoice;
 import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoiceRepository;
 import com.digitalearn.npaxis.subscription.billing.invoice.InvoiceStatus;
 import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransaction;
 import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransactionRepository;
 import com.digitalearn.npaxis.subscription.billing.transaction.TransactionStatus;
+import com.digitalearn.npaxis.subscription.core.SubscriptionEmailService;
 import com.digitalearn.npaxis.subscription.core.SubscriptionService;
+import com.digitalearn.npaxis.subscription.invoice.InvoiceService;
+import com.digitalearn.npaxis.subscription.invoice.SubscriptionInvoiceEmailDto;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
@@ -21,9 +23,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,12 +45,20 @@ public class WebhookServiceImpl implements WebhookService {
     // Initial retry delay in minutes
     private static final int INITIAL_RETRY_DELAY_MINUTES = 5;
 
+    // Common log messages
+    private static final String SUB_NO_CUSTOMER_MSG = "Subscription {} has no customer ID, skipping preceptor lookup";
+    private static final String PRECEPTOR_NOT_FOUND_MSG = "Preceptor not found for customer ID: {}";
+    private static final String ERROR_SYNC_SUBSCRIPTION_MSG = "Error syncing subscription from stripe: {}";
+    private static final String INVOICE_NO_CUSTOMER_MSG = "Invoice has no customer ID, cannot process";
+
     private final WebhookProcessingEventRepository webhookEventRepository;
     private final SubscriptionService subscriptionService;
     private final WebhookEventMapper webhookEventMapper;
     private final PreceptorRepository preceptorRepository;
     private final BillingInvoiceRepository billingInvoiceRepository;
     private final BillingTransactionRepository billingTransactionRepository;
+    private final InvoiceService invoiceService;
+    private final SubscriptionEmailService subscriptionEmailService;
 
     @Override
     public void process(Event event, String payload) {
@@ -88,7 +98,7 @@ public class WebhookServiceImpl implements WebhookService {
 
             // Schedule for retry
             webhookEvent.setNextRetryAt(
-                    LocalDateTime.now().plus(INITIAL_RETRY_DELAY_MINUTES, ChronoUnit.MINUTES)
+                    LocalDateTime.now().plusMinutes(INITIAL_RETRY_DELAY_MINUTES)
             );
         }
 
@@ -136,7 +146,7 @@ public class WebhookServiceImpl implements WebhookService {
 
                 // Schedule next retry with exponential backoff
                 int delayMinutes = INITIAL_RETRY_DELAY_MINUTES * (event.getRetryCount() + 1);
-                event.setNextRetryAt(LocalDateTime.now().plus(delayMinutes, ChronoUnit.MINUTES));
+                event.setNextRetryAt(LocalDateTime.now().plusMinutes(delayMinutes));
 
                 webhookEventRepository.save(event);
             }
@@ -157,7 +167,7 @@ public class WebhookServiceImpl implements WebhookService {
     /**
      * Route event processing based on event type
      */
-    private void processEventByType(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
+    private void processEventByType(Event event, WebhookProcessingEvent webhookEvent) {
         String eventType = event.getType();
 
         switch (eventType) {
@@ -205,147 +215,176 @@ public class WebhookServiceImpl implements WebhookService {
                 handlePaymentIntentFailed(event, webhookEvent);
                 break;
 
+            case "charge.succeeded":
+                handleChargeSucceeded(event, webhookEvent);
+                break;
+
+            case "payment_method.attached":
+                handlePaymentMethodAttached(event, webhookEvent);
+                break;
+
+            case "customer.updated":
+                handleCustomerUpdated(event, webhookEvent);
+                break;
+
+            case "payment_intent.created":
+                handlePaymentIntentCreated(event, webhookEvent);
+                break;
+
+            case "invoice_payment.paid":
+                handleInvoicePaymentPaid(event, webhookEvent);
+                break;
+
             default:
                 log.warn("Unhandled webhook event type: {}", eventType);
         }
     }
 
-     /**
-      * Handle subscription.created event
-      */
-     private void handleSubscriptionCreated(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
-         log.info("Processing subscription created event");
+    /**
+     * Handle subscription.created event
+     */
+    private void handleSubscriptionCreated(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing subscription created event");
 
-         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-         if (deserializer.getObject().isPresent()) {
-             Subscription subscription = (Subscription) deserializer.getObject().get();
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        if (deserializer.getObject().isPresent()) {
+            Subscription subscription = (Subscription) deserializer.getObject().get();
 
-             // Store customer ID in webhook event for tracking
-             String customerId = subscription.getCustomer();
-             String stripeSubscriptionId = subscription.getId();
-             webhookEvent.setStripeCustomerId(customerId);
+            // Store customer ID in webhook event for tracking
+            String customerId = subscription.getCustomer();
+            String stripeSubscriptionId = subscription.getId();
+            webhookEvent.setStripeCustomerId(customerId);
 
-             log.debug("Subscription created: id={}, customer={}, status={}",
-                     stripeSubscriptionId, customerId, subscription.getStatus());
+            log.debug("Subscription created: id={}, customer={}, status={}",
+                    stripeSubscriptionId, customerId, subscription.getStatus());
 
-             if (customerId == null) {
-                 log.warn("Subscription {} has no customer ID, skipping preceptor lookup", stripeSubscriptionId);
-             } else {
-                 // Find and update preceptor
-                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
-                 if (preceptor.isPresent()) {
-                     Preceptor p = preceptor.get();
-                     webhookEvent.setPreceptor(p);
-                     log.info("Found preceptor {} for subscription created event", p.getUserId());
-                 } else {
-                     log.warn("Preceptor not found for customer ID: {}", customerId);
-                 }
-             }
+            if (customerId == null) {
+                log.warn(SUB_NO_CUSTOMER_MSG, stripeSubscriptionId);
+            } else {
+                // Find and update preceptor
+                Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
+                if (preceptor.isPresent()) {
+                    Preceptor p = preceptor.get();
+                    webhookEvent.setPreceptor(p);
+                    log.info("Found preceptor {} for subscription created event", p.getUserId());
+                } else {
+                    log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
+                }
+            }
 
-             // Sync local subscription from Stripe to populate PreceptorSubscription table
-             try {
-                 subscriptionService.syncLocalSubscriptionFromStripe(stripeSubscriptionId);
-                 log.info("Subscription created and synced: {}", stripeSubscriptionId);
-             } catch (Exception e) {
-                 log.error("Error syncing subscription from stripe: {}", stripeSubscriptionId, e);
-                 throw e;
-             }
-         }
-     }
-
-     /**
-      * Handle subscription.updated event
-      */
-     private void handleSubscriptionUpdated(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
-         log.info("Processing subscription updated event");
-
-         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-         if (deserializer.getObject().isPresent()) {
-             Subscription subscription = (Subscription) deserializer.getObject().get();
-
-             // Store customer ID in webhook event
-             String customerId = subscription.getCustomer();
-             String stripeSubscriptionId = subscription.getId();
-             webhookEvent.setStripeCustomerId(customerId);
-
-             log.debug("Subscription updated: id={}, customer={}, status={}",
-                     stripeSubscriptionId, customerId, subscription.getStatus());
-
-             if (customerId == null) {
-                 log.warn("Subscription {} has no customer ID, skipping preceptor lookup", stripeSubscriptionId);
-             } else {
-                 // Find preceptor by customer ID
-                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
-                 if (preceptor.isPresent()) {
-                     Preceptor p = preceptor.get();
-                     webhookEvent.setPreceptor(p);
-                     log.info("Found preceptor {} for subscription updated event", p.getUserId());
-                     // Premium status will be set when invoice.paid is received
-                 } else {
-                     log.warn("Preceptor not found for customer ID: {}", customerId);
-                 }
-             }
-
-             try {
-                 subscriptionService.syncLocalSubscriptionFromStripe(stripeSubscriptionId);
-                 log.info("Subscription updated and synced: {}", stripeSubscriptionId);
-             } catch (Exception e) {
-                 log.error("Error syncing subscription from stripe: {}", stripeSubscriptionId, e);
-                 throw e;
-             }
-         }
-     }
-
-     /**
-      * Handle subscription.deleted event
-      */
-     private void handleSubscriptionDeleted(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
-         log.info("Processing subscription deleted event");
-
-         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-         if (deserializer.getObject().isPresent()) {
-             Subscription subscription = (Subscription) deserializer.getObject().get();
-
-             // Store customer ID in webhook event
-             String customerId = subscription.getCustomer();
-             String stripeSubscriptionId = subscription.getId();
-             webhookEvent.setStripeCustomerId(customerId);
-
-             log.debug("Subscription deleted: id={}, customer={}, status={}",
-                     stripeSubscriptionId, customerId, subscription.getStatus());
-
-             if (customerId == null) {
-                 log.warn("Subscription {} has no customer ID, skipping preceptor lookup", stripeSubscriptionId);
-             } else {
-                 // Find and update preceptor - remove premium on delete
-                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
-                 if (preceptor.isPresent()) {
-                     Preceptor p = preceptor.get();
-                     webhookEvent.setPreceptor(p);
-
-                     p.setPremium(false);
-                     preceptorRepository.save(p);
-                     log.info("Removed premium from preceptor {} on subscription deletion", p.getUserId());
-                 } else {
-                     log.warn("Preceptor not found for customer ID: {}", customerId);
-                 }
-             }
-
-             try {
-                 subscriptionService.syncLocalSubscriptionFromStripe(stripeSubscriptionId);
-                 log.info("Subscription deleted and synced: {}", stripeSubscriptionId);
-             } catch (Exception e) {
-                 log.error("Error syncing subscription from stripe: {}", stripeSubscriptionId, e);
-                 throw e;
-             }
-         }
-     }
+            // Sync local subscription from Stripe to populate PreceptorSubscription table
+            try {
+                subscriptionService.syncLocalSubscriptionFromStripe(stripeSubscriptionId);
+                log.info("Subscription created and synced: {}", stripeSubscriptionId);
+            } catch (Exception e) {
+                log.error(ERROR_SYNC_SUBSCRIPTION_MSG, stripeSubscriptionId, e);
+                throw new RuntimeException("Failed to sync subscription", e);
+            }
+        }
+    }
 
     /**
-     * Handle invoice.payment_succeeded event - Save transaction
+     * Handle subscription.updated event
      */
-    private void handleInvoicePaymentSucceeded(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
-        log.info("Processing invoice payment succeeded event");
+    private void handleSubscriptionUpdated(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing subscription updated event");
+
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        if (deserializer.getObject().isPresent()) {
+            Subscription subscription = (Subscription) deserializer.getObject().get();
+
+            // Store customer ID in webhook event
+            String customerId = subscription.getCustomer();
+            String stripeSubscriptionId = subscription.getId();
+            webhookEvent.setStripeCustomerId(customerId);
+
+            log.debug("Subscription updated: id={}, customer={}, status={}",
+                    stripeSubscriptionId, customerId, subscription.getStatus());
+
+            if (customerId == null) {
+                log.warn(SUB_NO_CUSTOMER_MSG, stripeSubscriptionId);
+            } else {
+                // Find preceptor by customer ID
+                Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
+                if (preceptor.isPresent()) {
+                    Preceptor p = preceptor.get();
+                    webhookEvent.setPreceptor(p);
+                    log.info("Found preceptor {} for subscription updated event", p.getUserId());
+                    // Premium status will be set when invoice.paid is received
+                } else {
+                    log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
+                }
+            }
+
+            try {
+                subscriptionService.syncLocalSubscriptionFromStripe(stripeSubscriptionId);
+                log.info("Subscription updated and synced: {}", stripeSubscriptionId);
+            } catch (Exception e) {
+                log.error(ERROR_SYNC_SUBSCRIPTION_MSG, stripeSubscriptionId, e);
+                throw new RuntimeException("Failed to sync subscription", e);
+            }
+        }
+    }
+
+    /**
+     * Handle subscription.deleted event
+     */
+    private void handleSubscriptionDeleted(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing subscription deleted event");
+
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        if (deserializer.getObject().isPresent()) {
+            Subscription subscription = (Subscription) deserializer.getObject().get();
+
+            // Store customer ID in webhook event
+            String customerId = subscription.getCustomer();
+            String stripeSubscriptionId = subscription.getId();
+            webhookEvent.setStripeCustomerId(customerId);
+
+            log.debug("Subscription deleted: id={}, customer={}, status={}",
+                    stripeSubscriptionId, customerId, subscription.getStatus());
+
+            if (customerId == null) {
+                log.warn(SUB_NO_CUSTOMER_MSG, stripeSubscriptionId);
+            } else {
+                // Find and update preceptor - remove premium on delete
+                Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
+                if (preceptor.isPresent()) {
+                    Preceptor p = preceptor.get();
+                    webhookEvent.setPreceptor(p);
+
+                    p.setPremium(false);
+                    preceptorRepository.save(p);
+                    log.info("Removed premium from preceptor {} on subscription deletion", p.getUserId());
+                } else {
+                    log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
+                }
+            }
+
+            try {
+                subscriptionService.syncLocalSubscriptionFromStripe(stripeSubscriptionId);
+                log.info("Subscription deleted and synced: {}", stripeSubscriptionId);
+            } catch (Exception e) {
+                log.error(ERROR_SYNC_SUBSCRIPTION_MSG, stripeSubscriptionId, e);
+                throw new RuntimeException("Failed to sync subscription", e);
+            }
+        }
+    }
+
+    /**
+     * Handle invoice.payment_succeeded event - Save transaction & send email
+     * AUTHORITATIVE EVENT for invoice persistence (uses UPSERT)
+     * Safe for concurrent webhook delivery (idempotent via ON CONFLICT DO UPDATE)
+     * Multiple deliveries of same event result in single invoice record
+     * <p>
+     * FLOW:
+     * 1. Fetch Stripe Invoice (source of truth)
+     * 2. Generate PDF (idempotent - checks if exists)
+     * 3. Create email DTO with detached data (inside transaction)
+     * 4. Send async email with DTO (outside transaction, no Hibernate issues)
+     */
+    private void handleInvoicePaymentSucceeded(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing invoice payment succeeded event (AUTHORITATIVE)");
 
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
         if (deserializer.getObject().isPresent()) {
@@ -355,7 +394,7 @@ public class WebhookServiceImpl implements WebhookService {
             webhookEvent.setStripeCustomerId(customerId);
 
             if (customerId == null) {
-                log.warn("Invoice has no customer ID, cannot process");
+                log.warn(INVOICE_NO_CUSTOMER_MSG);
             } else {
                 // Find preceptor by customer ID
                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
@@ -366,12 +405,34 @@ public class WebhookServiceImpl implements WebhookService {
                     // Save transaction
                     saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
 
-                    // Update invoice record
+                    // UPSERT invoice (PostgreSQL ON CONFLICT DO UPDATE)
+                    // Safe for concurrent webhook events
                     updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
 
-                    log.info("Invoice payment succeeded for preceptor: {}", p.getUserId());
+                    // STEP 1: Generate invoice PDF from Stripe Invoice (idempotent)
+                    String pdfPath = invoiceService.generateInvoicePdf(invoice);
+
+                    // STEP 2: Create email DTO with detached data (inside transaction)
+                    // This data is extracted inside transaction context, preventing lazy-load issues
+                    SubscriptionInvoiceEmailDto emailDto = new SubscriptionInvoiceEmailDto(
+                            p.getUserId(),
+                            p.getName(),
+                            p.getEmail(),
+                            "NPaxis Subscription", // Plan name would come from subscription, but we're using Stripe Invoice directly
+                            pdfPath,
+                            invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "",
+                            invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L,
+                            invoice.getCurrency() != null ? invoice.getCurrency() : "usd",
+                            invoice.getNumber() != null ? invoice.getNumber() : invoice.getId()
+                    );
+
+                    // STEP 3: Send async email (this runs outside transaction, using only the DTO data)
+                    subscriptionEmailService.sendInvoicePaymentEmailAsync(emailDto);
+
+                    log.info("✓ Invoice payment succeeded (UPSERT + EMAIL): preceptor={}, invoiceId={}, status=PAID, pdfPath={}",
+                            p.getUserId(), invoice.getId(), pdfPath);
                 } else {
-                    log.warn("Preceptor not found for customer ID: {}", customerId);
+                    log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
                 }
             }
         }
@@ -380,7 +441,7 @@ public class WebhookServiceImpl implements WebhookService {
     /**
      * Handle invoice.payment_failed event - Save failed transaction
      */
-    private void handleInvoicePaymentFailed(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
+    private void handleInvoicePaymentFailed(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice payment failed event");
 
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
@@ -408,9 +469,12 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     /**
-     * Handle invoice.created event - Save invoice
+     * Handle invoice.created event
+     * NOTE: This is NOT authoritative for invoice persistence
+     * Stripe may send this multiple times with no changes
+     * Only log for visibility - actual persistence done via invoice.payment_succeeded or invoice.paid
      */
-    private void handleInvoiceCreated(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
+    private void handleInvoiceCreated(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice created event");
 
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
@@ -421,7 +485,7 @@ public class WebhookServiceImpl implements WebhookService {
             webhookEvent.setStripeCustomerId(customerId);
 
             if (customerId == null) {
-                log.warn("Invoice has no customer ID, cannot process");
+                log.warn(INVOICE_NO_CUSTOMER_MSG);
             } else {
                 // Find preceptor by customer ID
                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
@@ -429,63 +493,71 @@ public class WebhookServiceImpl implements WebhookService {
                     Preceptor p = preceptor.get();
                     webhookEvent.setPreceptor(p);
 
-                    // Create invoice record
-                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.OPEN);
-
-                    log.info("Invoice created for preceptor: {}", p.getUserId());
+                    // NOTE: Do NOT persist invoice on creation - only log for monitoring
+                    // The invoice will be persisted when invoice.payment_succeeded or invoice.paid is received
+                    log.info("Invoice created (not persisting): invoiceId={}, preceptor={}, amount={} {}",
+                            invoice.getId(), p.getUserId(), invoice.getAmountDue(), invoice.getCurrency());
                 } else {
-                    log.warn("Preceptor not found for customer ID: {}", customerId);
+                    log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
                 }
             }
         }
     }
 
-     /**
-      * Handle invoice.paid event - Set preceptor to premium and save transaction
-      * This is the key event that confirms payment has been completed
-      */
-     private void handleInvoicePaid(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
-         log.info("Processing invoice paid event");
+    /**
+     * Handle invoice.paid event
+     * AUTHORITATIVE EVENT for invoice persistence (uses UPSERT)
+     * Safe for concurrent webhook delivery (idempotent via ON CONFLICT DO UPDATE)
+     * Sets preceptor to premium status on payment confirmation
+     */
+    private void handleInvoicePaid(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing invoice paid event (AUTHORITATIVE)");
 
-         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-         if (deserializer.getObject().isPresent()) {
-             Invoice invoice = (Invoice) deserializer.getObject().get();
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        if (deserializer.getObject().isPresent()) {
+            Invoice invoice = (Invoice) deserializer.getObject().get();
 
-             String customerId = invoice.getCustomer();
-             webhookEvent.setStripeCustomerId(customerId);
+            String customerId = invoice.getCustomer();
+            webhookEvent.setStripeCustomerId(customerId);
 
-             if (customerId == null) {
-                 log.warn("Invoice has no customer ID, skipping preceptor premium update");
-             } else {
-                 // Find preceptor by customer ID
-                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
-                 if (preceptor.isPresent()) {
-                     Preceptor p = preceptor.get();
-                     webhookEvent.setPreceptor(p);
+            if (customerId == null) {
+                log.warn("Invoice has no customer ID, skipping preceptor premium update");
+            } else {
+                // Find preceptor by customer ID
+                Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
+                if (preceptor.isPresent()) {
+                    Preceptor p = preceptor.get();
+                    webhookEvent.setPreceptor(p);
 
-                     // Set preceptor to premium on successful invoice payment
-                     p.setPremium(true);
-                     preceptorRepository.save(p);
-                     log.info("Set preceptor {} to premium on invoice paid", p.getUserId());
+                    // Set preceptor to premium on successful invoice payment
+                    p.setPremium(true);
+                    preceptorRepository.save(p);
+                    log.info("✓ Set preceptor {} to premium (payment confirmed)", p.getUserId());
 
-                     // Save transaction
-                     saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
+                    // Save transaction
+                    saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
 
-                     // Update invoice record - mark as paid
-                     updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
+                    // UPSERT invoice (PostgreSQL ON CONFLICT DO UPDATE)
+                    // Safe for concurrent webhook events
+                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
 
-                     log.info("Invoice marked as paid for preceptor: {}", p.getUserId());
-                 } else {
-                     log.warn("Preceptor not found for customer ID: {}. Premium status not set.", customerId);
-                 }
-             }
-         }
-     }
+                    log.info("✓ Invoice marked as paid (UPSERT): preceptor={}, invoiceId={}, status=PAID",
+                            p.getUserId(), invoice.getId());
+                } else {
+                    log.warn("Preceptor not found for customer ID: {}. Premium status not set.", customerId);
+                }
+            }
+        }
+    }
 
     /**
-     * Handle invoice.finalized event - Invoice is ready for payment
+     * Handle invoice.finalized event
+     * NOTE: This is NOT authoritative for invoice persistence
+     * Only indicates invoice is ready for payment
+     * Actual persistence done via invoice.payment_succeeded or invoice.paid
+     * Log for visibility only
      */
-    private void handleInvoiceFinalized(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
+    private void handleInvoiceFinalized(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice finalized event");
 
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
@@ -496,7 +568,7 @@ public class WebhookServiceImpl implements WebhookService {
             webhookEvent.setStripeCustomerId(customerId);
 
             if (customerId == null) {
-                log.warn("Invoice has no customer ID, cannot process");
+                log.warn(INVOICE_NO_CUSTOMER_MSG);
             } else {
                 // Find preceptor by customer ID
                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
@@ -504,57 +576,57 @@ public class WebhookServiceImpl implements WebhookService {
                     Preceptor p = preceptor.get();
                     webhookEvent.setPreceptor(p);
 
-                    // Update invoice record
-                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.OPEN);
-
-                    log.info("Invoice finalized for preceptor: {}", p.getUserId());
+                    // NOTE: Do NOT persist invoice on finalization
+                    // Only log for monitoring - invoice will be persisted when payment received
+                    log.info("Invoice finalized (not persisting): invoiceId={}, preceptor={}, status=READY_FOR_PAYMENT",
+                            invoice.getId(), p.getUserId());
                 } else {
-                    log.warn("Preceptor not found for customer ID: {}", customerId);
+                    log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
                 }
             }
         }
     }
 
-     /**
-      * Handle checkout.session.completed event
-      */
-     private void handleCheckoutSessionCompleted(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
-         log.info("Processing checkout session completed event");
+    /**
+     * Handle checkout.session.completed event
+     */
+    private void handleCheckoutSessionCompleted(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing checkout session completed event");
 
-         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-         if (deserializer.getObject().isPresent()) {
-             com.stripe.model.checkout.Session session = (com.stripe.model.checkout.Session) deserializer.getObject().get();
-             String subscriptionId = session.getSubscription();
-             String customerId = session.getCustomer();
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        if (deserializer.getObject().isPresent()) {
+            com.stripe.model.checkout.Session session = (com.stripe.model.checkout.Session) deserializer.getObject().get();
+            String subscriptionId = session.getSubscription();
+            String customerId = session.getCustomer();
 
-             webhookEvent.setStripeCustomerId(customerId);
+            webhookEvent.setStripeCustomerId(customerId);
 
-             if (customerId == null) {
-                 log.warn("Checkout session has no customer ID, skipping preceptor lookup");
-             } else {
-                 // Find preceptor by customer ID
-                 Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
-                 if (preceptor.isPresent()) {
-                     Preceptor p = preceptor.get();
-                     webhookEvent.setPreceptor(p);
-                     log.info("Found preceptor {} for checkout session", p.getUserId());
+            if (customerId == null) {
+                log.warn("Checkout session has no customer ID, skipping preceptor lookup");
+            } else {
+                // Find preceptor by customer ID
+                Optional<Preceptor> preceptor = preceptorRepository.findByStripeCustomerId(customerId);
+                if (preceptor.isPresent()) {
+                    Preceptor p = preceptor.get();
+                    webhookEvent.setPreceptor(p);
+                    log.info("Found preceptor {} for checkout session", p.getUserId());
 
-                     // Premium status will be set when invoice.paid is received
-                     if (subscriptionId != null) {
-                         subscriptionService.syncLocalSubscriptionFromStripe(subscriptionId);
-                         log.info("Checkout session completed for preceptor: {} with subscription: {}", p.getUserId(), subscriptionId);
-                     }
-                 } else {
-                     log.warn("Preceptor not found for customer ID: {}", customerId);
-                 }
-             }
-         }
-     }
+                    // Premium status will be set when invoice.paid is received
+                    if (subscriptionId != null) {
+                        subscriptionService.syncLocalSubscriptionFromStripe(subscriptionId);
+                        log.info("Checkout session completed for preceptor: {} with subscription: {}", p.getUserId(), subscriptionId);
+                    }
+                } else {
+                    log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
+                }
+            }
+        }
+    }
 
     /**
      * Handle payment_intent.succeeded event - Payment intent successfully processed
      */
-    private void handlePaymentIntentSucceeded(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
+    private void handlePaymentIntentSucceeded(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing payment intent succeeded event");
 
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
@@ -583,7 +655,7 @@ public class WebhookServiceImpl implements WebhookService {
     /**
      * Handle payment_intent.payment_failed event - Payment intent failed to process
      */
-    private void handlePaymentIntentFailed(Event event, WebhookProcessingEvent webhookEvent) throws Exception {
+    private void handlePaymentIntentFailed(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing payment intent failed event");
 
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
@@ -610,307 +682,261 @@ public class WebhookServiceImpl implements WebhookService {
         }
     }
 
-     /**
-      * Extract data from Stripe invoice using reflection (handles GSON JsonObject)
-      */
-     private String extractStringFromInvoice(Invoice invoice, String fieldName) {
-         try {
-             // Use reflection to avoid GSON type reference in the method signature
-             java.lang.reflect.Method getRawMethod = invoice.getClass().getMethod("getRawJsonObject");
-             Object rawJson = getRawMethod.invoke(invoice);
+    /**
+     * Extract subscription ID from invoice using Stripe SDK
+     */
+    private String extractSubscriptionId(Invoice invoice) {
+        try {
+            Object rawJson = invoice.getRawJsonObject();
+            if (rawJson != null) {
+                Object subValue = rawJson.getClass().getMethod("get", String.class)
+                        .invoke(rawJson, "subscription");
+                return extractStringValue(subValue);
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract subscription ID from invoice: {}", e.getMessage());
+        }
+        return null;
+    }
 
-             if (rawJson == null) {
-                 return null;
-             }
-             // Use reflection to get the method to avoid GSON dependency issues
-             java.lang.reflect.Method getMethod = rawJson.getClass().getMethod("get", String.class);
-             Object value = getMethod.invoke(rawJson, fieldName);
-             if (value != null) {
-                 String strValue = value.toString();
-                 if (!strValue.isEmpty() && !strValue.equals("null")) {
-                     return strValue;
-                 }
-             }
-         } catch (Exception e) {
-             log.debug("Could not extract {} from invoice: {}", fieldName, e.getMessage());
-         }
-         return null;
-     }
+    /**
+     * Extract payment intent ID from invoice using Stripe SDK
+     */
+    private String extractPaymentIntentId(Invoice invoice) {
+        try {
+            Object rawJson = invoice.getRawJsonObject();
+            if (rawJson != null) {
+                Object piValue = rawJson.getClass().getMethod("get", String.class)
+                        .invoke(rawJson, "payment_intent");
+                return extractStringValue(piValue);
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract payment intent ID from invoice: {}", e.getMessage());
+        }
+        return null;
+    }
 
-     /**
-      * Extract a string value from Object (handles both String and JSON representations)
-      */
-     private String extractStringFromObject(Object value) {
-         if (value == null) {
-             return null;
-         }
+    /**
+     * Extract string value from Stripe object field
+     * Handles both String and JSON representations
+     */
+    private String extractStringValue(Object value) {
+        if (value == null) {
+            return null;
+        }
 
-         String stringValue = value.toString().trim();
+        String stringValue = value.toString().trim();
 
-         if (stringValue.isEmpty() || "null".equalsIgnoreCase(stringValue) ||
-             stringValue.equals("JsonNull") || stringValue.equals("{}")) {
-             return null;
-         }
+        if (stringValue.isEmpty() || "null".equalsIgnoreCase(stringValue) ||
+                stringValue.equals("JsonNull") || stringValue.equals("{}")) {
+            return null;
+        }
 
-         // Remove surrounding quotes if it's a quoted string (GSON JsonPrimitive)
-         if (stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
-             stringValue = stringValue.substring(1, stringValue.length() - 1).trim();
-         }
+        // Remove surrounding quotes if present (GSON JsonPrimitive)
+        if (stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
+            stringValue = stringValue.substring(1, stringValue.length() - 1).trim();
+        }
 
-         if (stringValue.isEmpty()) {
-             return null;
-         }
+        return stringValue.isEmpty() ? null : stringValue;
+    }
 
-         // Simple unescape for common JSON escapes
-         return unescapeJsonString(stringValue);
-     }
+    /**
+     * Extract paid timestamp from invoice status transitions
+     */
+    private LocalDateTime extractPaidAtTimestamp(Invoice invoice) {
+        try {
+            Invoice.StatusTransitions transitions = invoice.getStatusTransitions();
+            if (transitions != null && transitions.getPaidAt() != null && transitions.getPaidAt() > 0) {
+                return LocalDateTime.ofInstant(
+                        Instant.ofEpochSecond(transitions.getPaidAt()),
+                        ZoneId.systemDefault()
+                );
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract paid_at from status transitions: {}", e.getMessage());
+        }
+        return LocalDateTime.now();
+    }
 
-     /**
-      * Unescape JSON string literals
-      */
-     private String unescapeJsonString(String jsonString) {
-         if (jsonString == null || !jsonString.contains("\\")) {
-             return jsonString;
-         }
+    /**
+     * Convert Stripe timestamp to LocalDateTime
+     */
+    private LocalDateTime convertStripeTimestamp(Long timestamp) {
+        if (timestamp == null || timestamp <= 0) {
+            return null;
+        }
+        return LocalDateTime.ofInstant(
+                Instant.ofEpochSecond(timestamp),
+                ZoneId.systemDefault()
+        );
+    }
 
-         StringBuilder sb = new StringBuilder();
-         for (int i = 0; i < jsonString.length(); i++) {
-             char c = jsonString.charAt(i);
-             if (c == '\\' && i + 1 < jsonString.length()) {
-                 char nextChar = jsonString.charAt(i + 1);
-                 switch (nextChar) {
-                     case 'n':
-                         sb.append('\n');
-                         i++;
-                         break;
-                     case 'r':
-                         sb.append('\r');
-                         i++;
-                         break;
-                     case 't':
-                         sb.append('\t');
-                         i++;
-                         break;
-                     case '"':
-                         sb.append('"');
-                         i++;
-                         break;
-                     case '\\':
-                         sb.append('\\');
-                         i++;
-                         break;
-                     case '/':
-                         sb.append('/');
-                         i++;
-                         break;
-                     case 'b':
-                         sb.append('\b');
-                         i++;
-                         break;
-                     case 'f':
-                         sb.append('\f');
-                         i++;
-                         break;
-                     default:
-                         sb.append(c);
-                 }
-             } else {
-                 sb.append(c);
-             }
-         }
-         return sb.toString();
-     }
+    /**
+     * Save billing transaction from invoice
+     * Uses Stripe SDK methods to safely extract invoice data
+     */
+    private void saveBillingTransaction(Preceptor preceptor, Invoice invoice, TransactionStatus status) {
+        try {
+            // Extract subscription ID and payment intent ID using Stripe SDK
+            String stripeSubscriptionId = extractSubscriptionId(invoice);
+            String stripePaymentIntentId = extractPaymentIntentId(invoice);
 
-      /**
-       * Save billing transaction from invoice
-       */
-      private void saveBillingTransaction(Preceptor preceptor, Invoice invoice, TransactionStatus status) {
-          try {
-              // Check if transaction already exists by invoice ID
-              Optional<BillingTransaction> existing = billingTransactionRepository
-                      .findByStripeInvoiceId(invoice.getId());
-              if (existing.isPresent()) {
-                  log.info("Transaction already exists for invoice: {}", invoice.getId());
-                  return;
-              }
+            // Check if transaction already exists by payment intent ID (primary unique key)
+            if (stripePaymentIntentId != null && !stripePaymentIntentId.isEmpty()) {
+                Optional<BillingTransaction> existing = billingTransactionRepository
+                        .findByStripePaymentIntentId(stripePaymentIntentId);
+                if (existing.isPresent()) {
+                    log.info("Transaction already exists for payment intent: {}", stripePaymentIntentId);
+                    return;
+                }
+            }
 
-              // Extract subscription ID and payment intent ID from invoice using SDK methods
-              String stripeSubscriptionId = null;
-              String stripePaymentIntentId = null;
+            // Warn if required fields are missing
+            if (stripePaymentIntentId == null || stripePaymentIntentId.isEmpty()) {
+                log.warn("Invoice {} has no payment intent ID, transaction will have null payment_intent", invoice.getId());
+            }
+            if (stripeSubscriptionId == null || stripeSubscriptionId.isEmpty()) {
+                log.warn("Invoice {} has no subscription ID, transaction will have null subscription", invoice.getId());
+            }
 
-              try {
-                  Object rawJson = invoice.getRawJsonObject();
-                  if (rawJson != null) {
-                      // Extract subscription ID
-                      Object subValue = rawJson.getClass().getMethod("get", String.class).invoke(rawJson, "subscription");
-                      if (subValue != null) {
-                          stripeSubscriptionId = extractStringFromObject(subValue);
-                      }
+            // Build and save transaction
+            BillingTransaction transaction = BillingTransaction.builder()
+                    .preceptor(preceptor)
+                    .stripeInvoiceId(invoice.getId())
+                    .stripeSubscriptionId(stripeSubscriptionId)
+                    .stripePaymentIntentId(stripePaymentIntentId)
+                    .amountInMinorUnits(invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L)
+                    .currency(invoice.getCurrency())
+                    .status(status)
+                    .transactionAt(LocalDateTime.now())
+                    .build();
 
-                      // Extract payment intent ID
-                      Object piValue = rawJson.getClass().getMethod("get", String.class).invoke(rawJson, "payment_intent");
-                      if (piValue != null) {
-                          stripePaymentIntentId = extractStringFromObject(piValue);
-                      }
-                  }
-              } catch (Exception e) {
-                  log.debug("Error extracting from invoice raw JSON: {}", e.getMessage());
-              }
+            billingTransactionRepository.save(transaction);
+            log.info("✓ SAVED BillingTransaction: preceptor={}, invoiceId={}, subscriptionId={}, " +
+                            "paymentIntentId={}, amount={}, status={}",
+                    preceptor.getUserId(), invoice.getId(), stripeSubscriptionId,
+                    stripePaymentIntentId, invoice.getAmountPaid(), status);
 
-              log.info("✓ Extracted from invoice {}: subscription={}, payment_intent={}",
-                      invoice.getId(), stripeSubscriptionId, stripePaymentIntentId);
+        } catch (Exception e) {
+            // Log error but don't fail the webhook - constraint violations are expected with duplicate webhook events
+            log.warn("Could not save billing transaction for preceptor: {} - {}", preceptor.getUserId(), e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("Error details:", e);
+            }
+            // Only throw if it's not a constraint violation
+            if (!isConstraintViolation(e)) {
+                throw new RuntimeException("Failed to save billing transaction", e);
+            }
+        }
+    }
 
-              // Validate that we have the required fields
-              if (stripePaymentIntentId == null || stripePaymentIntentId.isEmpty()) {
-                  log.warn("⚠ Invoice {} has NO payment intent ID, transaction will have null payment_intent", invoice.getId());
-              }
-              if (stripeSubscriptionId == null || stripeSubscriptionId.isEmpty()) {
-                  log.warn("⚠ Invoice {} has NO subscription ID, transaction will have null subscription", invoice.getId());
-              }
+    /**
+     * Check if exception is due to constraint violation
+     */
+    private boolean isConstraintViolation(Exception e) {
+        String message = e.getMessage();
+        return message != null && (
+                message.contains("duplicate key") ||
+                        message.contains("Unique") ||
+                        message.contains("constraint")
+        );
+    }
 
-              BillingTransaction transaction = BillingTransaction.builder()
-                      .preceptor(preceptor)
-                      .stripeInvoiceId(invoice.getId())
-                      .stripeSubscriptionId(stripeSubscriptionId)
-                      .stripePaymentIntentId(stripePaymentIntentId)
-                      .amountInMinorUnits(invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L)
-                      .currency(invoice.getCurrency())
-                      .status(status)
-                      .transactionAt(LocalDateTime.now())
-                      .build();
+    /**
+     * UPSERT billing invoice using Stripe SDK
+     * PostgreSQL ON CONFLICT DO UPDATE ensures idempotency
+     * Safe for concurrent webhook events - no SELECT before INSERT
+     */
+    private void updateOrCreateBillingInvoice(Preceptor preceptor, Invoice invoice, InvoiceStatus status) {
+        try {
+            // Extract invoice data using Stripe SDK methods
+            String stripeSubscriptionId = extractSubscriptionId(invoice);
+            LocalDateTime invoiceCreatedAt = convertStripeTimestamp(invoice.getCreated());
+            LocalDateTime invoicePaidAt = (status == InvoiceStatus.PAID) ?
+                    extractPaidAtTimestamp(invoice) : null;
 
-              billingTransactionRepository.save(transaction);
-              log.info("✓ SAVED BillingTransaction for preceptor: {} - " +
-                      "stripeInvoiceId: {}, stripeSubscriptionId: {}, stripePaymentIntentId: {}, amount: {}, status: {}",
-                      preceptor.getUserId(), invoice.getId(), stripeSubscriptionId,
-                      stripePaymentIntentId, invoice.getAmountPaid(), status);
+            // Safe URLs - null if empty
+            String hostedUrl = invoice.getHostedInvoiceUrl();
+            String pdfUrl = invoice.getInvoicePdf();
+            hostedUrl = (hostedUrl != null && !hostedUrl.isEmpty()) ? hostedUrl : null;
+            pdfUrl = (pdfUrl != null && !pdfUrl.isEmpty()) ? pdfUrl : null;
 
-          } catch (Exception e) {
-              log.error("Error saving billing transaction for preceptor: {}", preceptor.getUserId(), e);
-              throw new RuntimeException("Failed to save billing transaction", e);
-          }
-      }
+            // Safe amounts - default to 0 if null
+            Long amountPaid = invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L;
+            Long amountDue = invoice.getAmountDue() != null ? invoice.getAmountDue() : 0L;
 
-     /**
-      * Update or create billing invoice
-      */
-     private void updateOrCreateBillingInvoice(Preceptor preceptor, Invoice invoice, InvoiceStatus status) {
-         try {
-             Optional<BillingInvoice> existing = billingInvoiceRepository.findByStripeInvoiceId(invoice.getId());
+            // UPSERT invoice (PostgreSQL: INSERT ... ON CONFLICT DO UPDATE)
+            billingInvoiceRepository.upsertInvoice(
+                    preceptor.getUserId(),
+                    invoice.getId(),
+                    invoice.getCustomer(),
+                    stripeSubscriptionId,
+                    amountPaid,
+                    amountDue,
+                    invoice.getCurrency(),
+                    status.toString(),
+                    hostedUrl,
+                    pdfUrl,
+                    invoiceCreatedAt,
+                    invoicePaidAt
+            );
 
-             BillingInvoice billingInvoice;
-             if (existing.isPresent()) {
-                 billingInvoice = existing.get();
-                 log.info("Updating existing invoice: {}", invoice.getId());
-             } else {
-                 billingInvoice = BillingInvoice.builder()
-                         .preceptor(preceptor)
-                         .stripeInvoiceId(invoice.getId())
-                         .build();
-                 log.info("Creating new invoice record: {}", invoice.getId());
-             }
+            log.info("✓ UPSERT BillingInvoice: preceptor={}, invoiceId={}, subscriptionId={}, " +
+                            "status={}, paidAt={}", preceptor.getUserId(), invoice.getId(),
+                    stripeSubscriptionId, status, invoicePaidAt);
 
-             billingInvoice.setStripeCustomerId(invoice.getCustomer());
-             billingInvoice.setAmountPaidInMinorUnits(invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L);
-             billingInvoice.setAmountDueInMinorUnits(invoice.getAmountDue() != null ? invoice.getAmountDue() : 0L);
-             billingInvoice.setCurrency(invoice.getCurrency());
-             billingInvoice.setStatus(status);
+        } catch (Exception e) {
+            log.error("Error upserting billing invoice for preceptor: {}", preceptor.getUserId(), e);
+            throw new RuntimeException("Failed to upsert billing invoice", e);
+        }
+    }
 
-             // Set hosted invoice URL from direct method
-             if (invoice.getHostedInvoiceUrl() != null && !invoice.getHostedInvoiceUrl().isEmpty()) {
-                 billingInvoice.setHostedInvoiceUrl(invoice.getHostedInvoiceUrl());
-                 log.debug("Set hosted invoice URL: {}", invoice.getHostedInvoiceUrl());
-             }
+    /**
+     * Handle charge.succeeded event - Payment successfully charged
+     */
+    private void handleChargeSucceeded(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing charge succeeded event");
+        // Informational only - actual payment is tracked via payment_intent.succeeded
+        log.debug("Charge succeeded webhook received - payment intent is the primary tracking event");
+    }
 
-             // Set invoice PDF URL
-             if (invoice.getInvoicePdf() != null && !invoice.getInvoicePdf().isEmpty()) {
-                 billingInvoice.setInvoicePdfUrl(invoice.getInvoicePdf());
-                 log.debug("Set invoice PDF URL: {}", invoice.getInvoicePdf());
-             }
+    /**
+     * Handle payment_method.attached event - Payment method attached to customer
+     */
+    private void handlePaymentMethodAttached(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing payment method attached event");
+        // Informational only - payment method attachment doesn't require action
+        log.debug("Payment method attached webhook received - customer can now use this payment method");
+    }
 
-             // Set stripe subscription ID using raw JSON extraction
-              String stripeSubscriptionId = null;
-              try {
-                  Object rawJson = invoice.getRawJsonObject();
-                  if (rawJson != null) {
-                      Object subValue = rawJson.getClass().getMethod("get", String.class).invoke(rawJson, "subscription");
-                      if (subValue != null) {
-                          stripeSubscriptionId = extractStringFromObject(subValue);
-                      }
-                  }
-              } catch (Exception e) {
-                  log.debug("Could not extract subscription ID from invoice: {}", e.getMessage());
-              }
+    /**
+     * Handle customer.updated event - Customer record updated
+     */
+    private void handleCustomerUpdated(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing customer updated event");
+        // Informational only - we track customer changes via subscription events
+        log.debug("Customer updated webhook received - customer information may have changed");
+    }
 
-              if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
-                  billingInvoice.setStripeSubscriptionId(stripeSubscriptionId);
-                  log.info("✓ Set stripe subscription ID: {}", stripeSubscriptionId);
-              } else {
-                  log.warn("⚠ Invoice has no subscription ID");
-              }
+    /**
+     * Handle payment_intent.created event - Payment intent created (initial state)
+     */
+    private void handlePaymentIntentCreated(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing payment intent created event");
+        // Informational only - we track final payment status via payment_intent.succeeded/failed
+        log.debug("Payment intent created webhook received - payment is pending");
+    }
 
-             // Set invoice created at
-             if (invoice.getCreated() != null) {
-                 billingInvoice.setInvoiceCreatedAt(
-                         LocalDateTime.ofInstant(
-                                 java.time.Instant.ofEpochSecond(invoice.getCreated()),
-                                 ZoneId.systemDefault()
-                         )
-                 );
-             }
-
-             // Set invoice paid at - use status_transitions.paid_at when status is PAID
-             if (status == InvoiceStatus.PAID) {
-                 Long paidAt = null;
-                 try {
-                     // Use reflection to avoid GSON type reference
-                     java.lang.reflect.Method getRawMethod = invoice.getClass().getMethod("getRawJsonObject");
-                     Object rawJson = getRawMethod.invoke(invoice);
-                     if (rawJson != null) {
-                         Object paidAtObj = rawJson.getClass().getMethod("get", String.class).invoke(rawJson, "status_transitions");
-                         if (paidAtObj != null) {
-                             // Try to extract paid_at from transitions object
-                             try {
-                                 Object paidField = paidAtObj.getClass().getMethod("get", String.class).invoke(paidAtObj, "paid_at");
-                                 if (paidField != null && paidField instanceof Number) {
-                                     paidAt = ((Number) paidField).longValue();
-                                 }
-                             } catch (Exception ex) {
-                                 log.debug("Could not extract paid_at from transitions: {}", ex.getMessage());
-                             }
-                         }
-                     }
-                 } catch (Exception e) {
-                     log.debug("Could not extract paid_at timestamp from invoice: {}", e.getMessage());
-                 }
-
-                 if (paidAt != null && paidAt > 0) {
-                     billingInvoice.setInvoicePaidAt(
-                             LocalDateTime.ofInstant(
-                                     java.time.Instant.ofEpochSecond(paidAt),
-                                     ZoneId.systemDefault()
-                             )
-                     );
-                     log.info("Set invoice paid at: {} for invoice: {}", paidAt, invoice.getId());
-                 } else {
-                     // If we couldn't extract paid_at, use current time as fallback
-                     billingInvoice.setInvoicePaidAt(LocalDateTime.now());
-                     log.debug("Could not extract paid_at, using current time as fallback for invoice: {}", invoice.getId());
-                 }
-             }
-
-             billingInvoiceRepository.save(billingInvoice);
-             log.info("✓ SAVED BillingInvoice for preceptor: {} - " +
-                     "stripeInvoiceId: {}, stripeSubscriptionId: {}, hostedInvoiceUrl: {}, invoicePaidAt: {}, status: {}",
-                     preceptor.getUserId(), invoice.getId(), stripeSubscriptionId,
-                     invoice.getHostedInvoiceUrl() != null ? "YES" : "NO", billingInvoice.getInvoicePaidAt(), status);
-
-         } catch (Exception e) {
-             log.error("Error saving billing invoice for preceptor: {}", preceptor.getUserId(), e);
-             throw new RuntimeException("Failed to save billing invoice", e);
-         }
-     }
+    /**
+     * Handle invoice_payment.paid event - Invoice payment processed
+     * Alternative/duplicate of invoice.payment_succeeded - routes to same handler
+     */
+    private void handleInvoicePaymentPaid(Event event, WebhookProcessingEvent webhookEvent) {
+        log.info("Processing invoice payment paid event");
+        handleInvoicePaymentSucceeded(event, webhookEvent);
+    }
 }
+
 
 
 

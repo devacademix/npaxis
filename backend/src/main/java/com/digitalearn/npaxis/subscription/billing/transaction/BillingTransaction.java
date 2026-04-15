@@ -48,7 +48,7 @@ public class BillingTransaction extends BaseEntity {
     @Column(length = 120, unique = true)
     private String stripePaymentIntentId;
 
-    @Column(length = 120, unique = true)
+    @Column(length = 120)
     private String stripeInvoiceId;
 
     @Column(length = 120)
