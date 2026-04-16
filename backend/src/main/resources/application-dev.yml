@@ -42,13 +42,12 @@ spring:
 #    enabled: true
 #    locations: classpath:db/migration
 
-
 security:
-  jwt: # secret: # Ideally provided as an ENV variable
-    secret: 55f6b568ee5951058a9813fa1cccd8e93cebfa442c10651aad2dac810ee1bb924c00d85877131de29b20cf68d2131e0566fcb084ae61f0528a2489c208eb9ac187c2cfd9b09ec390755550246576ef4644b45a926494fd00f8565647cd1ba09c7f3eac55cac8580463ebe7fb15acf33a3ecb612031d747bcd3360a3e7d69985a1185c3128ff823d0a660f98533ffe39bc3a498a996ea0d2fc486983ac4fdd7d1028d16a85c68f566610ffa60e94051ad42bdf66fe4ea2404741a27f4762dbae3965e7987828aea8c7ae403dc2fdbdbb2453f335de5ae70b763981d3175728c7ecf25930e5ec26baaef46a86bd41c8b45aea567ca58dfefe9dafe1e7320d6add34bdb69bff6dd8a07003fe0a0462536cf0d3aea04af5c52c6dda3338224db1a3703b8abb1525722eca93e694ea570d81e1fbbe29502628eda89f8cd8183a03af4e8669800f76924055c232ddcf538da3b202c51da22c437f4cfc6b080e6d3bd03e7284a603140dbcecab5a83f03ba08ebea4f0375170782b5bde3cbff24860dd2cbcf02ecee4bbd26ca3dc6c6eca9ebd13af1fa33936899240fd8e4232ad1730beec53b8ae008af3f19eefb4c0ff22ab81556303dd9e6b3b71abac09e3491f0fedf01fb5228e32083b175318d581a7e973bbdc1820de6d08653e05e2c159900905a3656fcec9486afc8bea19c493ec8198acac94f95b75d1944d80e65fdfecd06 # Ideally provided as an ENV variable
+  jwt:
+    secret: 55f6b568ee5951058a9813fa1cccd8e93cebfa442c10651aad2dac810ee1bb924c00d85877131de29b20cf68d2131e0566fcb084ae61f0528a2489c208eb9ac187c2cfd9b09ec390755550246576ef4644b45a926494fd00f8565647cd1ba09c7f3eac55cac8580463ebe7fb15acf33a3ecb612031d747bcd3360a3e7d69985a1185c3128ff823d0a660f98533ffe39bc3a498a996ea0d2fc486983ac4fdd7d1028d16a85c68f566610ffa60e94051ad42bdf66fe4ea2404741a27f4762dbae3965e7987828aea8c7ae403dc2fdbdbb2453f335de5ae70b763981d3175728c7ecf25930e5ec26baaef46a86bd41c8b45aea567ca58dfefe9dafe1e7320d6add34bdb69bff6dd8a07003fe0a0462536cf0d3aea04af5c52c6dda3338224db1a3703b8abb1525722eca93e694ea570d81e1fbbe29502628eda89f8cd8183a03af4e8669800f76924055c232ddcf538da3b202c51da22c437f4cfc6b080e6d3bd03e7284a603140dbcecab5a83f03ba08ebea4f0375170782b5bde3cbff24860dd2cbcf02ecee4bbd26ca3dc6c6eca9ebd13af1fa33936899240fd8e4232ad1730beec53b8ae008af3f19eefb4c0ff22ab81556303dd9e6b3b71abac09e3491f0fedf01fb5228e32083b175318d581a7e973bbdc1820de6d08653e05e2c159900905a3656fcec9486afc8bea19c493ec8198acac94f95b75d1944d80e65fdfecd06
     expiration:
-      access: 900000       # 15 mins
-      refresh: 604800000   # 7 days
+      access: 900000
+      refresh: 604800000
 
 npaxis:
   email:
@@ -61,9 +60,24 @@ npaxis:
       bucket-name: npaxis-files
       region: us-east-1
 
+payment:
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_your_secret_key_here}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_your_publishable_key_here}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret_here}
+    api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
+    max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
+    connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:10000}
+    success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/subscription/success}
+    cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/subscription/cancel}
+    customer-portal-return-url: ${STRIPE_CUSTOMER_PORTAL_RETURN_URL:http://localhost:5173/dashboard}
+    currency: ${STRIPE_CURRENCY:usd}
+    default-trial-days: ${STRIPE_DEFAULT_TRIAL_DAYS:0}
+
 stripe:
-  api-key: sk_test_your_secret_key_here
-  webhook-secret: whsec_your_webhook_secret_here
+  api-key: ${STRIPE_SECRET_KEY:sk_test_your_secret_key_here}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret_here}
   prices:
-    premium-monthly: price_your_monthly_stripe_price_id
-    premium-yearly: price_your_yearly_stripe_price_id
+    premium-monthly: ${STRIPE_PREMIUM_MONTHLY_PRICE_ID:price_your_monthly_stripe_price_id}
+    premium-yearly: ${STRIPE_PREMIUM_YEARLY_PRICE_ID:price_your_yearly_stripe_price_id}

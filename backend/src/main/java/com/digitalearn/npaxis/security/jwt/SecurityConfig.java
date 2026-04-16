@@ -29,7 +29,7 @@ public class SecurityConfig {
     private static final String[] USER_ONLY_URLS = {"/users/**", "/analytics/**", "/inquiries/**"};
     private static final String[] PRECEPTOR_ONLY_URLS = {"/preceptors/**"};
     private static final String[] STUDENT_ONLY_URLS = {"/students/**", "/inquiries/**"};
-    private static final String[] PUBLIC_URLS = {"/", "/auth/**", "/h2-console/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**"};
+    private static final String[] PUBLIC_URLS = {"/", "/auth/**", "/webhooks/**", "/h2-console/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**"};
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthFilter jwtAuthFilter;
