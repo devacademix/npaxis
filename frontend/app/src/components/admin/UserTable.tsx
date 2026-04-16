@@ -5,7 +5,8 @@ export interface UserTableRow {
   displayName: string;
   email: string;
   role: string;
-  isEnabled: boolean;
+  enabled: boolean;
+  isEnabled?: boolean;
   isDeleted: boolean;
 }
 
@@ -13,9 +14,10 @@ interface UserTableProps {
   users: UserTableRow[];
   isLoading: boolean;
   onViewUser: (user: UserTableRow) => void;
-  onToggleStatus: (user: UserTableRow) => void;
+  onToggleStatus: (user: UserTableRow, targetState: boolean) => void;
   onOpenDeleteModal: (user: UserTableRow) => void;
   onRestoreUser: (user: UserTableRow) => void;
+  actionLoadingId?: number | null;
 }
 
 const UserTable: React.FC<UserTableProps> = ({
@@ -25,6 +27,7 @@ const UserTable: React.FC<UserTableProps> = ({
   onToggleStatus,
   onOpenDeleteModal,
   onRestoreUser,
+  actionLoadingId = null,
 }) => {
   if (isLoading) {
     return (
@@ -62,7 +65,7 @@ const UserTable: React.FC<UserTableProps> = ({
             ) : (
               users.map((user) => {
                 const normalizedRole = user.role.replace('ROLE_', '');
-                const statusText = user.isDeleted || !user.isEnabled ? 'Disabled' : 'Active';
+                const statusText = user.isDeleted || !user.enabled ? 'Disabled' : 'Active';
                 const statusClass =
                   statusText === 'Active'
                     ? 'bg-emerald-100 text-emerald-700'
@@ -84,36 +87,24 @@ const UserTable: React.FC<UserTableProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onViewUser(user)}
-                          className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                        >
-                          View
-                        </button>
-
-                        {user.isDeleted ? (
+                      <div className="flex flex-col gap-2 items-end">
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => onRestoreUser(user)}
-                            className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                            onClick={() => onViewUser(user)}
+                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                           >
-                            Restore
+                            View
                           </button>
-                        ) : (
-                          <>
-                            <label className="inline-flex cursor-pointer items-center">
-                              <input
-                                type="checkbox"
-                                checked={user.isEnabled}
-                                onChange={() => onToggleStatus(user)}
-                                className="peer sr-only"
-                              />
-                              <span className="peer relative h-6 w-11 rounded-full bg-slate-200 transition-colors peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/20">
-                                <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
-                              </span>
-                            </label>
+                          {user.isDeleted ? (
+                            <button
+                              type="button"
+                              onClick={() => onRestoreUser(user)}
+                              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                            >
+                              Restore
+                            </button>
+                          ) : (
                             <button
                               type="button"
                               onClick={() => onOpenDeleteModal(user)}
@@ -121,7 +112,41 @@ const UserTable: React.FC<UserTableProps> = ({
                             >
                               Delete
                             </button>
-                          </>
+                          )}
+                        </div>
+                        {!user.isDeleted && (
+                          <div className="flex items-center gap-2 w-full">
+                            <button
+                              type="button"
+                              disabled={actionLoadingId === user.userId || user.enabled === true}
+                              onClick={() => onToggleStatus(user, true)}
+                              className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:border-slate-300 disabled:opacity-50"
+                            >
+                              {actionLoadingId === user.userId && user.enabled === true ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                                  Enable
+                                </span>
+                              ) : (
+                                'Enable'
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={actionLoadingId === user.userId || user.enabled === false}
+                              onClick={() => onToggleStatus(user, false)}
+                              className="flex-1 rounded-md border border-slate-200 bg-rose-50 px-3 py-1.5 text-[11px] font-semibold text-rose-600 hover:border-rose-300 disabled:opacity-50"
+                            >
+                              {actionLoadingId === user.userId && user.enabled === false ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-rose-500 border-t-transparent" />
+                                  Disable
+                                </span>
+                              ) : (
+                                'Disable'
+                              )}
+                            </button>
+                          </div>
                         )}
                       </div>
                     </td>

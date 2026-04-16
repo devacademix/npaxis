@@ -4,10 +4,10 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
-public interface InquiryMapper {
+public abstract class InquiryMapper {
 
     @Mapping(target = "studentName", source = "student.user.displayName")
-    InquiryResponseDTO toResponseDTO(Inquiry inquiry);
+    public abstract InquiryResponseDTO toResponseDTO(Inquiry inquiry);
 
-    Inquiry toEntity(InquiryRequestDTO requestDTO);
+    public abstract Inquiry toEntity(InquiryRequestDTO requestDTO);
 }
