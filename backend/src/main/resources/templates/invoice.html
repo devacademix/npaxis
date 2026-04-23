@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            background-color: #fff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #0A2540;
+            padding-bottom: 20px;
+        }
+
+        .company-info h1 {
+            color: #0A2540;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .company-info p {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .invoice-title {
+            text-align: right;
+        }
+
+        .invoice-title h2 {
+            color: #0A2540;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .invoice-meta {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            color: #0A2540;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .section-content {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .two-column {
+            display: flex;
+            gap: 40px;
+        }
+
+        .column {
+            flex: 1;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .items-table th {
+            background-color: #f5f5f5;
+            color: #0A2540;
+            text-align: left;
+            padding: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-bottom: 2px solid #0A2540;
+        }
+
+        .items-table td {
+            padding: 12px;
+            font-size: 13px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .items-table .text-right {
+            text-align: right;
+        }
+
+        .summary-table {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .summary-table tr {
+            border: none;
+        }
+
+        .summary-table td {
+            padding: 10px 0;
+            font-size: 13px;
+        }
+
+        .summary-table .label {
+            text-align: right;
+            width: 70%;
+            color: #666;
+        }
+
+        .summary-table .value {
+            text-align: right;
+            width: 30%;
+            font-weight: bold;
+            color: #0A2540;
+        }
+
+        .summary-table .total-row {
+            border-top: 2px solid #0A2540;
+            border-bottom: 2px solid #0A2540;
+            background-color: #f5f5f5;
+            font-size: 16px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+        }
+
+        .note {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-left: 4px solid #0A2540;
+            margin: 20px 0;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .stripe-link {
+            color: #0A2540;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <div class="company-info">
+            <h1>NPaxis</h1>
+            <p>Digitalearn Solution Pvt. Ltd.</p>
+            <p>Professional Preceptor Network</p>
+        </div>
+        <div class="invoice-title">
+            <h2>Invoice</h2>
+            <div class="invoice-meta" th:text="'Invoice #: ' + ${invoiceNumber}"></div>
+            <div class="invoice-meta" th:text="'Date: ' + ${invoiceDate}"></div>
+        </div>
+    </div>
+
+    <!-- Bill To & Subscription Details -->
+    <div class="two-column">
+        <div class="column">
+            <div class="section">
+                <div class="section-title">Bill To</div>
+                <div class="section-content">
+                    <strong th:text="${customerName}"></strong><br/>
+                </div>
+            </div>
+        </div>
+        <div class="column">
+            <div class="section">
+                <div class="section-title">Subscription Details</div>
+                <div class="section-content">
+                    Status: <strong>PAID</strong><br/>
+                    Currency: <strong th:text="${currency}"></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="section">
+        <div class="section-title">Billing Summary</div>
+        <table class="items-table">
+            <thead>
+            <tr>
+                <th>Description</th>
+                <th style="width: 15%;">Quantity</th>
+                <th style="width: 20%;">Unit Price</th>
+                <th class="text-right" style="width: 20%;">Amount</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${items}">
+                <td th:text="${item.description()}"></td>
+                <td th:text="${item.quantity()}"></td>
+                <td th:text="'$' + ${#numbers.formatDecimal(item.pricePerUnit() / 100.0, 0, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currency}"></td>
+                <td class="text-right"><strong
+                        th:text="'$' + ${#numbers.formatDecimal(item.total() / 100.0, 0, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currency}"></strong>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="section">
+        <table class="summary-table">
+            <tr>
+                <td class="label">Subtotal:</td>
+                <td class="value" th:text="'$' + ${amountPaid} + ' ' + ${currency}"></td>
+            </tr>
+            <tr>
+                <td class="label">Tax (0%):</td>
+                <td class="value">$0.00</td>
+            </tr>
+            <tr class="total-row">
+                <td class="label"><strong>Total Due:</strong></td>
+                <td class="value"><strong th:text="'$' + ${amountPaid} + ' ' + ${currency}"></strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Note with Stripe Link -->
+    <div class="note">
+        <strong>Note:</strong> This invoice was generated from your NPaxis subscription payment.
+        <span th:if="${hostedInvoiceUrl != ''}">
+                <br/><a class="stripe-link" target="_blank"
+                        th:href="${hostedInvoiceUrl}">View full invoice on Stripe</a>
+            </span>
+        <br/>For questions about your subscription, please contact our support team.
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>&copy; 2026 Digitalearn Solution Pvt. Ltd. All rights reserved.</p>
+        <p>Thank you for using NPaxis!</p>
+    </div>
+</div>
+</body>
+</html>
+

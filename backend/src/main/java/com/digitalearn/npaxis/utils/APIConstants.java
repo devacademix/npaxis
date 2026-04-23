@@ -96,6 +96,10 @@ public class APIConstants {
      * API endpoint for hard deleting a user by their ID.
      */
     public static final String HARD_DELETE_USER_BY_ID_API = "hard-delete/user-{userId}";
+
+    public static final String UPLOAD_PROFILE_PICTURE_API = "user-{userId}/upload-profile-picture";
+    public static final String DOWNLOAD_PROFILE_PICTURE_API = "user-{userId}/profile-picture";
+
     /**
      * API endpoint for fetching all users including soft-deleted ones.
      */
@@ -314,7 +318,14 @@ public class APIConstants {
     public static final String RESTORE_PRECEPTOR_BY_ID_API = "restore/preceptor-{userId}";
     public static final String VERIFY_PRECEPTOR_API = "verify/preceptor-{userId}";
     public static final String SUBMIT_LICENSE_API = "preceptor-{userId}/submit-license";
-    public static final String REVEAL_CONTACT_API = "preceptor-{userId}/reveal-contact";
+    public static final String DOWNLOAD_LICENSE_API = "preceptor-{userId}/license";
+    public static final String REVEAL_CONTACT_API = "active/preceptor-{userId}/reveal-contact";
+
+    // APIs for Inquiry Management
+    public static final String INQUIRIES_BASE_API = "inquiries";
+    public static final String SEND_INQUIRY_API = "send";
+    public static final String GET_INQUIRIES_FOR_USER = "my-inquiries";
+    public static final String MARK_INQUIRY_AS_READ = "/{inquiryId}/read";
 
     // APIs for Admin Management
     public static final String ADMINISTRATION_API = "administration";

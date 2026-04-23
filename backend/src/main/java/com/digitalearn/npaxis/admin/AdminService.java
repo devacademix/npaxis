@@ -54,4 +54,7 @@ public interface AdminService {
      * @return Success message.
      */
     String toggleUserAccount(Long userId, boolean enabled);
+
+    // Admin Dashboard
+    AdminStatsResponse getAdminStats();
 }

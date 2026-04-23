@@ -4,8 +4,10 @@ import com.digitalearn.npaxis.auditing.BaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -16,4 +18,15 @@ public interface PreceptorRepository extends BaseRepository<Preceptor, Long>, Jp
     Page<Preceptor> findByVerificationStatus(Pageable pageable, VerificationStatus status);
 
     Optional<Preceptor> findByUserIdAndIsPremium(Long userId, Boolean isPremium);
+
+    @Query("""
+                SELECT e.preceptor.userId, COUNT(e)
+                FROM AnalyticsEvent e
+                WHERE e.eventType = 'INQUIRY_SENT'
+                GROUP BY e.preceptor.userId
+                ORDER BY COUNT(e) DESC
+            """)
+    List<Object[]> findTopPreceptors(Pageable pageable);
+
+    Optional<Preceptor> findByStripeCustomerId(String stripeCustomerId);
 }

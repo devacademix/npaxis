@@ -155,68 +155,22 @@ public enum BusinessErrorCodes {
      */
     ASYNC_DATA_FETCH_ERROR(4002, HttpStatus.INTERNAL_SERVER_ERROR, "Error fetching data asynchronously."),
 
-
-    // ===== HL7-Specific Errors =====
     /**
-     * Indicates that HL7 request validation failed.
+     * Indicates that request validation failed.
      */
     VALIDATION_ERROR(4008, HttpStatus.BAD_REQUEST, "Request validation failed."),
     /**
      * Indicates that the file size exceeds the maximum allowed limit.
      */
     FILE_TOO_LARGE(413, HttpStatus.PAYLOAD_TOO_LARGE, "File size exceeds the maximum limit."),
-    /**
-     * Indicates a failure to parse the HL7 message.
-     */
-    HL7_PARSING_FAILED(4001, HttpStatus.BAD_REQUEST, "Failed to parse HL7 message."),
-    /**
-     * Indicates that HL7 message validation failed.
-     */
-    HL7_VALIDATION_ERROR(4002, HttpStatus.BAD_REQUEST, "HL7 message validation failed."),
-    /**
-     * Indicates an error while mapping the HL7 message to an internal structure.
-     */
-    HL7_MAPPING_ERROR(4003, HttpStatus.INTERNAL_SERVER_ERROR, "Error mapping HL7 message to internal structure."),
-    /**
-     * Indicates that the HL7 version is not supported.
-     */
-    HL7_UNSUPPORTED_VERSION(4004, HttpStatus.NOT_IMPLEMENTED, "HL7 version is not supported."),
-    /**
-     * Indicates a failure to construct the HL7 message.
-     */
-    HL7_MESSAGE_BUILD_FAILED(4005, HttpStatus.INTERNAL_SERVER_ERROR, "Failed to construct HL7 message."),
-    /**
-     * Indicates that a required HL7 segment is missing.
-     */
-    HL7_SEGMENT_MISSING(4006, HttpStatus.BAD_REQUEST, "Required HL7 segment is missing."),
-    /**
-     * Indicates that an unsupported HL7 segment was encountered.
-     */
-    HL7_UNSUPPORTED_SEGMENT(4007, HttpStatus.BAD_REQUEST, "Encountered unsupported HL7 segment."),
-    /**
-     * Indicates a failure to parse the HL7 message. (Duplicate, consider consolidating with HL7_PARSING_FAILED)
-     */
-    HL7_PARSING_ERROR(4001, HttpStatus.BAD_REQUEST, "Failed to parse HL7 message."),
-    /**
-     * Indicates a failure to encode the HL7 message.
-     */
-    HL7_ENCODING_ERROR(4002, HttpStatus.INTERNAL_SERVER_ERROR, "Failed to encode HL7 message."),
-    /**
-     * Indicates that a required HL7 field is missing.
-     */
-    HL7_FIELD_MISSING(4005, HttpStatus.BAD_REQUEST, "Required HL7 field is missing."),
-    /**
-     * Indicates that the HL7 message type is not supported.
-     */
-    HL7_MESSAGE_TYPE_NOT_SUPPORTED(4007, HttpStatus.NOT_IMPLEMENTED, "HL7 message type is not supported."),
-    /**
-     * Indicates a failure to communicate with the HL7 endpoint.
-     */
-    HL7_COMMUNICATION_ERROR(4008, HttpStatus.SERVICE_UNAVAILABLE, "Failed to communicate with HL7 endpoint."),
+
     /**
      * Indicates an error during XML marshalling or unmarshalling.
      */
-    JAXB_EXCEPTION_ERROR(4003, HttpStatus.INTERNAL_SERVER_ERROR, "Error during XML marshalling or unmarshalling.");
+    JAXB_EXCEPTION_ERROR(4003, HttpStatus.INTERNAL_SERVER_ERROR, "Error during XML marshalling or unmarshalling."),
+
+    // BUSINESS EXCEPTIONS
+    PRECEPTOR_NOT_PREMIUM(4003, HttpStatus.BAD_REQUEST, "Can not perform this action, this Preceptor is not premium.");
 
     @Getter
     private final int code;

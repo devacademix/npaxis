@@ -5,6 +5,7 @@ public record UserResponseDTO(
         Long userId,
         String displayName,
         String email,
-        String role
+        String role,
+        boolean accountEnabled
 ) {
 }

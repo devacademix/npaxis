@@ -29,7 +29,7 @@ public class Token {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long tokenId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(name = "hashed_otp", nullable = false)

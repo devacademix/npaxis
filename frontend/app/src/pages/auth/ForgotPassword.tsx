@@ -14,9 +14,17 @@ const ForgotPassword: React.FC = () => {
     setError(null);
     setSuccess(false);
 
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError('Please enter your email address.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPassword(normalizedEmail);
       setSuccess(true);
+      setEmail(normalizedEmail);
     } catch (err: any) {
       setError(err.message || 'Failed to initiate password reset.');
     } finally {

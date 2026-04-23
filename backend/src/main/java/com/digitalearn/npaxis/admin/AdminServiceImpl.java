@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.admin;
 
+import com.digitalearn.npaxis.analytics.AnalyticsEventRepository;
+import com.digitalearn.npaxis.analytics.EventType;
 import com.digitalearn.npaxis.exceptions.ResourceAlreadyExistsException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.preceptor.Preceptor;
@@ -8,17 +10,20 @@ import com.digitalearn.npaxis.preceptor.VerificationStatus;
 import com.digitalearn.npaxis.role.Role;
 import com.digitalearn.npaxis.role.RoleName;
 import com.digitalearn.npaxis.role.RoleRepository;
+import com.digitalearn.npaxis.student.StudentRepository;
 import com.digitalearn.npaxis.user.User;
 import com.digitalearn.npaxis.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -29,6 +34,8 @@ public class AdminServiceImpl implements AdminService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PreceptorRepository preceptorRepository;
+    private final StudentRepository studentRepository;
+    private final AnalyticsEventRepository analyticsRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -116,5 +123,65 @@ public class AdminServiceImpl implements AdminService {
         user.setAccountEnabled(enabled);
         userRepository.save(user);
         return "User account " + (enabled ? "enabled" : "disabled") + " successfully";
+    }
+
+    // Admin Dashboard
+    @Override
+    public AdminStatsResponse getAdminStats() {
+
+        // --- Users ---
+        Long totalUsers = userRepository.count();
+        Long totalStudents = studentRepository.count();
+        Long totalPreceptors = preceptorRepository.count();
+
+        LocalDateTime startOfMonth =
+                YearMonth.now().atDay(1).atStartOfDay();
+
+        Long newUsersThisMonth =
+                userRepository.countNewUsersThisMonth(startOfMonth);
+
+        // --- Analytics ---
+        List<Object[]> events = analyticsRepository.countAllEvents();
+
+        long views = 0, contacts = 0, inquiries = 0;
+
+        for (Object[] row : events) {
+            EventType type = (EventType) row[0];
+            long count = (long) row[1];
+
+            switch (type) {
+                case PROFILE_VIEW -> views = count;
+                case CONTACT_REVEAL -> contacts = count;
+                case INQUIRY -> inquiries = count;
+            }
+        }
+
+//         --- Top Preceptors ---
+        List<TopPreceptorDTO> topPreceptors =
+                analyticsRepository.findTopPreceptors(EventType.INQUIRY, PageRequest.of(0, 5))
+                        .stream()
+                        .map(p -> TopPreceptorDTO.builder()
+                                .preceptorId(p.getPreceptorId())
+                                .name(p.getDisplayName())
+                                .inquiries(p.getInquiryCount())
+                                .build())
+                        .toList();
+
+        return AdminStatsResponse.builder()
+                .totalUsers(totalUsers)
+                .totalStudents(totalStudents)
+                .totalPreceptors(totalPreceptors)
+                .newUsersThisMonth(newUsersThisMonth)
+
+                .premiumUsersCount(0L) // placeholder
+                .totalRevenue(0.0)
+                .monthlyRevenue(0.0)
+
+                .totalProfileViews(views)
+                .totalContactReveals(contacts)
+                .totalInquiries(inquiries)
+
+                .topPreceptors(topPreceptors)
+                .build();
     }
 }

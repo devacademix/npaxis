@@ -1,10 +1,17 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { authService } from './services/auth';
 import Login from './pages/auth/Login';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Register from './pages/auth/Register';
 import VerifyOtp from './pages/auth/VerifyOtp';
 import AdminDashboard from './pages/admin/Dashboard';
+import AdminManagement from './pages/admin/Management';
+import StudentManagement from './pages/admin/StudentManagement';
+import PreceptorManagement from './pages/admin/PreceptorManagement';
+import RoleManagement from './pages/admin/RoleManagement';
+import SystemInitialization from './pages/admin/SystemInitialization';
 import PendingPreceptors from './pages/admin/PendingPreceptors';
 import AdminUsers from './pages/admin/Users';
 import AdminRevenue from './pages/admin/Revenue';
@@ -29,6 +36,20 @@ import PublicBrowse from './pages/common/PublicBrowse';
 import About from './pages/common/About';
 
 function App() {
+  useEffect(() => {
+    const refreshSession = async () => {
+      if (!localStorage.getItem('accessToken')) return;
+      try {
+        await authService.refreshSession();
+      } catch (err) {
+        console.warn('Session refresh failed, ignoring:', err);
+      }
+    };
+
+    refreshSession();
+    const intervalId = window.setInterval(refreshSession, 1000 * 60 * 3);
+    return () => window.clearInterval(intervalId);
+  }, []);
   return (
     <Router>
       <Routes>
@@ -51,6 +72,46 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <AdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/students"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <StudentManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/management"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AdminManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/preceptors"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <PreceptorManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/system"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <SystemInitialization />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/roles"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <RoleManagement />
             </ProtectedRoute>
           }
         />

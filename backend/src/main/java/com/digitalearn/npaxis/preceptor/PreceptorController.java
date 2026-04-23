@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,14 +24,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_LICENSE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_STUDENT_BY_ID_API;
@@ -181,10 +183,21 @@ public class PreceptorController {
     }
 
     @Operation(summary = "Reveal contact information", description = "Reveals the contact details of a preceptor (premium gate).")
-    @PostMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
+    @GetMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
     public ResponseEntity<GenericApiResponse<PreceptorContactResponseDTO>> revealContact(@PathVariable Long userId) {
         log.info("Revealing contact for preceptor ID: {}", userId);
         PreceptorContactResponseDTO preceptorContact = preceptorService.revealContact(userId);
         return ResponseHandler.generateResponse(preceptorContact, "Contact revealed successfully", true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Download license file", description = "Downloads the license file of a preceptor.")
+    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
+    @GetMapping(value = {DOWNLOAD_LICENSE_API, DOWNLOAD_LICENSE_API + "/"})
+    public ResponseEntity<org.springframework.core.io.Resource> downloadLicense(@PathVariable Long userId) {
+        log.info("Downloading license for preceptor ID: {}", userId);
+        org.springframework.core.io.Resource resource = preceptorService.downloadLicense(userId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF) // Defaulting to PDF, or detect based on extension
+                .body(resource);
     }
 }

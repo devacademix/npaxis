@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Card from '../../components/Card';
-import { adminService } from '../../services/admin';
+import { type RevenueChartPoint } from '../../components/admin/RevenueChart';
+import { adminService, type PendingPreceptorView } from '../../services/admin';
+import { preceptorService } from '../../services/preceptor';
+import { studentService, type StudentProfile } from '../../services/student';
 
 interface DashboardStats {
   totalUsers: number;
@@ -10,10 +13,85 @@ interface DashboardStats {
   activePreceptors: number;
 }
 
+interface RevenueSourceEntry {
+  label: string;
+  value: number;
+  description: string;
+  colorClass: string;
+}
+
+const getLastMonths = (count = 6) => {
+  const now = new Date();
+  const months = [];
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key: `${date.getFullYear()}-${date.getMonth()}`,
+      label: date.toLocaleString('en-US', { month: 'short' }),
+    });
+  }
+  return months;
+};
+
+const buildGrowthTrend = (pendingPreceptors: PendingPreceptorView[]) => {
+  const months = getLastMonths();
+  const bucket: Record<string, number> = months.reduce((acc, month) => {
+    acc[month.key] = 0;
+    return acc;
+  }, {} as Record<string, number>);
+
+  pendingPreceptors.forEach((item) => {
+    const raw = item.submittedAtRaw;
+    if (!raw) return;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return;
+    const key = `${parsed.getFullYear()}-${parsed.getMonth()}`;
+    if (bucket[key] !== undefined) {
+      bucket[key] += 1;
+    }
+  });
+
+  return months.map((month) => ({
+    label: month.label,
+    value: bucket[month.key] ?? 0,
+  }));
+};
+
+const buildRevenueSources = (students: StudentProfile[], preceptorCount: number): RevenueSourceEntry[] => {
+  const normalizedStudents = students.length;
+  const institutionCount =
+    new Set(students.map((student) => student.university?.trim() || 'Unknown')).size || 1;
+
+  return [
+    {
+      label: 'Students',
+      value: normalizedStudents,
+      description: `${normalizedStudents.toLocaleString()} active learners`,
+      colorClass: 'bg-gradient-to-r from-blue-500 to-blue-400',
+    },
+    {
+      label: 'Preceptors',
+      value: preceptorCount,
+      description: `${preceptorCount.toLocaleString()} providers onboarded`,
+      colorClass: 'bg-gradient-to-r from-indigo-500 to-indigo-400',
+    },
+    {
+      label: 'Institutions',
+      value: institutionCount,
+      description: `${institutionCount.toLocaleString()} unique campuses`,
+      colorClass: 'bg-gradient-to-r from-emerald-500 to-emerald-400',
+    },
+  ];
+};
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [growthTrend, setGrowthTrend] = useState<RevenueChartPoint[]>([]);
+  const [revenueSources, setRevenueSources] = useState<RevenueSourceEntry[]>([]);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(true);
 
   const handleGenerateReport = () => {
     const reportPayload = {
@@ -37,6 +115,21 @@ const Dashboard: React.FC = () => {
     URL.revokeObjectURL(reportUrl);
   };
 
+  const maxTrendValue = useMemo(() => {
+    if (growthTrend.length === 0) return 1;
+    return Math.max(Math.max(...growthTrend.map((point) => point.value)), 1);
+  }, [growthTrend]);
+
+  const revenueTotal = useMemo(
+    () => revenueSources.reduce((sum, source) => sum + source.value, 0),
+    [revenueSources]
+  );
+
+  const displayTrend = useMemo(() => {
+    if (growthTrend.length > 0) return growthTrend;
+    return getLastMonths().map((month) => ({ label: month.label, value: 0 }));
+  }, [growthTrend]);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -44,20 +137,38 @@ const Dashboard: React.FC = () => {
         const response = await adminService.getStats();
         setStats(response);
       } catch (err: any) {
-        // Fallback or error capturing
-        setError(err?.message || "Failed to load dashboard statistics.");
-        
-        // As a temporary fallback if the endpoint doesn't exist, we can show mock data.
-        // But fulfilling the requirement of demonstrating "Error handling":
-        // I will not mock the data in state so that the error state renders, 
-        // to clearly illustrate the error handling. 
-        // Just comment the next line if you want the skeleton error state.
+        setError(err?.message || 'Failed to load dashboard statistics.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const loadInsights = async () => {
+      setInsightsLoading(true);
+      setInsightsError(null);
+      try {
+        const [students, pending, preceptorOverview] = await Promise.all([
+          studentService.getActiveStudents(),
+          adminService.getPendingPreceptors({ size: 120 }),
+          preceptorService.searchPreceptors({ size: 1 }),
+        ]);
+
+        setGrowthTrend(buildGrowthTrend(pending));
+        setRevenueSources(buildRevenueSources(students, preceptorOverview.totalElements));
+      } catch (err: any) {
+        setInsightsError(err?.message || 'Unable to load live insights.');
+        setGrowthTrend(buildGrowthTrend([]));
+        setRevenueSources(buildRevenueSources([], 0));
+      } finally {
+        setInsightsLoading(false);
+      }
+    };
+
+    loadInsights();
   }, []);
 
   const renderSkeletons = () => (
@@ -142,80 +253,82 @@ const Dashboard: React.FC = () => {
             </select>
           </div>
           
-          <div className="h-64 flex items-end justify-between gap-4 relative">
+          <div className="h-64 flex items-end gap-4 relative">
             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
               <div className="border-b border-slate-100 w-full h-0"></div>
               <div className="border-b border-slate-100 w-full h-0"></div>
               <div className="border-b border-slate-100 w-full h-0"></div>
               <div className="border-b border-slate-100 w-full h-0"></div>
             </div>
-            
-            <div className="flex-1 bg-blue-100 rounded-t-lg h-[40%] group relative transition-all hover:h-[45%] hover:bg-blue-600">
-              <span className="hidden group-hover:block absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded">2.4k</span>
-            </div>
-            <div className="flex-1 bg-blue-100 rounded-t-lg h-[55%] group relative transition-all hover:h-[60%] hover:bg-blue-600">
-              <span className="hidden group-hover:block absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded">4.1k</span>
-            </div>
-            <div className="flex-1 bg-blue-100 rounded-t-lg h-[48%] group relative transition-all hover:h-[53%] hover:bg-blue-600">
-              <span className="hidden group-hover:block absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded">3.8k</span>
-            </div>
-            <div className="flex-1 bg-blue-200 rounded-t-lg h-[72%] group relative transition-all hover:h-[77%] hover:bg-blue-600">
-              <span className="hidden group-hover:block absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded">6.2k</span>
-            </div>
-            <div className="flex-1 bg-blue-300 rounded-t-lg h-[85%] group relative transition-all hover:h-[90%] hover:bg-blue-600">
-              <span className="hidden group-hover:block absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded">8.9k</span>
-            </div>
-            <div className="flex-1 bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg h-[95%] group relative transition-all hover:opacity-90">
-              <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] font-bold px-3 py-1.5 rounded-full whitespace-nowrap">Current: 12.4k</span>
-            </div>
+
+            {displayTrend.map((point) => {
+              const heightPercent = Math.min(Math.max((point.value / maxTrendValue) * 100, 5), 100);
+              return (
+                <div key={point.label} className="flex-1 flex flex-col items-center gap-2">
+                  <div
+                    className="relative w-full rounded-t-lg bg-slate-100 transition"
+                    style={{ height: `${heightPercent}%` }}
+                  >
+                    <div className="absolute inset-x-0 bottom-0 rounded-t-lg bg-gradient-to-t from-blue-600 to-blue-400 h-full" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-500">{point.label}</span>
+                  <span className="text-[11px] font-bold text-slate-900">{point.value}</span>
+                </div>
+              );
+            })}
+
+            {insightsLoading && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/80 text-xs font-semibold text-slate-500">
+                Loading growth data...
+              </div>
+            )}
           </div>
-          
+
           <div className="flex justify-between mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            <span>Jan</span>
-            <span>Feb</span>
-            <span>Mar</span>
-            <span>Apr</span>
-            <span>May</span>
-            <span>Jun</span>
+            {displayTrend.map((point) => (
+              <span key={point.label}>{point.label}</span>
+            ))}
           </div>
+          {insightsError && (
+            <p className="mt-3 text-xs font-semibold text-rose-600">{insightsError}</p>
+          )}
         </div>
         
         <div className="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
-          <h4 className="text-lg font-bold text-on-surface mb-8">Revenue Sources</h4>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold text-slate-600 uppercase">Students</span>
-                <span className="text-sm font-bold">$58,243</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400" style={{ width: '63%' }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold text-slate-600 uppercase">Preceptors</span>
-                <span className="text-sm font-bold">$21,208</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500" style={{ width: '23%' }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold text-slate-600 uppercase">Institutions</span>
-                <span className="text-sm font-bold">$12,999</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500" style={{ width: '14%' }}></div>
-              </div>
-            </div>
+          <h4 className="text-lg font-bold text-on-surface mb-6">Revenue Sources</h4>
+          <div className="space-y-5">
+            {revenueSources.map((source) => {
+              const percent = revenueTotal > 0 ? (source.value / revenueTotal) * 100 : 0;
+              return (
+                <div key={source.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <span>{source.label}</span>
+                    <span className="text-slate-700">
+                      {source.value.toLocaleString()} · {percent.toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">{source.description}</p>
+                  <div className="h-2 rounded-full bg-slate-100">
+                    <div
+                      className={`${source.colorClass} h-full rounded-full`}
+                      style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          
+
+          {insightsError && (
+            <div className="mt-8 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+              Unable to load live revenue segments: {insightsError}
+            </div>
+          )}
+
           <div className="mt-10 p-4 rounded-xl bg-blue-50 border border-blue-100">
             <p className="text-[11px] text-blue-800 font-semibold leading-relaxed">
               <span className="material-symbols-outlined text-sm inline-block mr-1">trending_up</span>
-              Institutional revenue has grown by 24% since integrating the hospital portal.
+              Revenue segments are generated from remote data (learners, preceptors, and institutions) and update in real time.
             </p>
           </div>
         </div>

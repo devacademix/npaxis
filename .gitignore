@@ -1,52 +1,8 @@
-# =========================
-# Maven / Java
-# =========================
-target/
-!.mvn/wrapper/maven-wrapper.jar
-
-# Allow target inside src (rare cases)
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-# =========================
-# IDEs
-# =========================
-
-## IntelliJ / WebStorm / etc
-.idea/
-*.iml
-*.iws
-*.ipr
-*.UI/
-## Eclipse / STS
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-## NetBeans
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-## VS Code
-.vscode/
-
-# =========================
-# OS files
-# =========================
-.DS_Store
-Thumbs.db
-
-# =========================
-# Misc
-# =========================
-HELP.md
+/.idea/.gitignore
+/uploads/licenses/4-0146dbc2-7d51-4ede-99aa-a088dedf4f88-sign_jpeg
+/.idea/checkstyle-idea.xml
+/.idea/compiler.xml
+/.idea/encodings.xml
+/.idea/jarRepositories.xml
+/.idea/misc.xml
+/.idea/vcs.xml

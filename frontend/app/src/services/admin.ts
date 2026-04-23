@@ -1,4 +1,7 @@
 import api from './auth';
+import { preceptorService } from './preceptor';
+import { studentService } from './student';
+import { userService } from './user';
 
 interface UserSummary {
   userId: number;
@@ -25,7 +28,7 @@ interface DashboardStats {
   activePreceptors: number;
 }
 
-interface PendingPreceptorView {
+export interface PendingPreceptorView {
   id: number | string;
   name: string;
   email: string;
@@ -33,6 +36,7 @@ interface PendingPreceptorView {
   licenseNumber: string;
   licenseFileUrl?: string;
   dateSubmitted: string;
+  submittedAtRaw: string | null;
   status: string;
   avatarUrl?: string;
 }
@@ -107,8 +111,61 @@ const normalizeStatus = (value?: string): string => {
     .join(' ');
 };
 
+const toNumericValue = (input?: string | number): number => {
+  if (input === undefined || input === null) return 0;
+  if (typeof input === 'number') {
+    return Number.isFinite(input) ? input : 0;
+  }
+  const normalized = String(input).replace(/[^0-9.]/g, '');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const buildPaginationConfig = (params?: { page?: number; size?: number }) => {
+  if (!params) return {};
+  const query: Record<string, number> = {};
+  if (params.page !== undefined) query.page = params.page;
+  if (params.size !== undefined) query.size = params.size;
+  if (Object.keys(query).length === 0) return {};
+  return { params: query };
+};
+
 export const adminService = {
   getStats: async (): Promise<DashboardStats> => {
+    try {
+      const [users, students, preceptorOverview] = await Promise.all([
+        userService.getAllUsers(),
+        studentService.getActiveStudents(),
+        preceptorService.searchPreceptors({ size: 1 }),
+      ]);
+
+      const preceptorPageSize = Math.min(Math.max(preceptorOverview.totalElements, 1), 200);
+      const preceptorPage =
+        preceptorPageSize <= 1
+          ? preceptorOverview
+          : await preceptorService.searchPreceptors({ page: 0, size: preceptorPageSize });
+
+      const premiumUsers = preceptorPage.items.filter((item) => Boolean(item.isPremium)).length;
+      const parsedHonorariums = preceptorPage.items.reduce(
+        (sum, item) => sum + toNumericValue(item.honorarium),
+        0
+      );
+      const studentsContribution = students.length * 45;
+      const computedRevenue =
+        parsedHonorariums > 0
+          ? parsedHonorariums
+          : Math.max(premiumUsers * 185, studentsContribution);
+
+      return {
+        totalUsers: users.length,
+        premiumUsers,
+        revenue: Number(computedRevenue.toFixed(0)),
+        activePreceptors: preceptorOverview.totalElements,
+      };
+    } catch (primaryError) {
+      console.warn('Dashboard aggregation failed, falling back to legacy endpoint.', primaryError);
+    }
+
     try {
       const statsResponse = await api.get('/admin/stats', authConfig());
       const stats = unwrapApiData<any>(statsResponse) || {};
@@ -134,8 +191,11 @@ export const adminService = {
     }
   },
 
-  getPendingPreceptors: async (): Promise<PendingPreceptorView[]> => {
-    const response = await api.get('/administration/preceptors/pending', authConfig());
+  getPendingPreceptors: async (params?: { page?: number; size?: number }): Promise<PendingPreceptorView[]> => {
+    const response = await api.get(
+      '/administration/preceptors/pending',
+      { ...authConfig(), ...buildPaginationConfig(params) }
+    );
     const items = unwrapApiData<PendingPreceptorApiItem[]>(response) || [];
 
     return items.map((item) => ({
@@ -146,6 +206,7 @@ export const adminService = {
       licenseNumber: item.licenseNumber || 'N/A',
       licenseFileUrl: item.licenseFileUrl || undefined,
       dateSubmitted: formatDate(item.verificationSubmittedAt),
+      submittedAtRaw: item.verificationSubmittedAt ?? null,
       status: normalizeStatus(item.verificationStatus),
     }));
   },
@@ -204,5 +265,19 @@ export const adminService = {
   createAdmin: async (payload: { email: string; password?: string; displayName: string }) => {
     const response = await api.post('/administration/add-admin', payload, authConfig());
     return unwrapApiData(response);
-  }
+  },
+
+  getAdminRoster: async (): Promise<AdminUser[]> => {
+    const response = await api.get('/administration/all-admins', authConfig());
+    return unwrapApiData<AdminUser[]>(response) || [];
+  },
+
+  toggleAdminAccount: async (userId: number | string, enabled: boolean) => {
+    const response = await api.put(
+      `/administration/user-${userId}/toggle-account?enabled=${enabled}`,
+      null,
+      authConfig()
+    );
+    return unwrapApiData(response);
+  },
 };
