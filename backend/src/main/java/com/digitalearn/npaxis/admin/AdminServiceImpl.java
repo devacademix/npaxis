@@ -152,13 +152,13 @@ public class AdminServiceImpl implements AdminService {
             switch (type) {
                 case PROFILE_VIEW -> views = count;
                 case CONTACT_REVEAL -> contacts = count;
-                case INQUIRY_SENT -> inquiries = count;
+                case INQUIRY -> inquiries = count;
             }
         }
 
 //         --- Top Preceptors ---
         List<TopPreceptorDTO> topPreceptors =
-                analyticsRepository.findTopPreceptors(EventType.INQUIRY_SENT, PageRequest.of(0, 5))
+                analyticsRepository.findTopPreceptors(EventType.INQUIRY, PageRequest.of(0, 5))
                         .stream()
                         .map(p -> TopPreceptorDTO.builder()
                                 .preceptorId(p.getPreceptorId())

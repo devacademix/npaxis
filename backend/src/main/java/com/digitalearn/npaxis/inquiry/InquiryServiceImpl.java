@@ -116,7 +116,7 @@ public class InquiryServiceImpl implements InquiryService {
     }
 
     private void logAnalyticsEvent(Long preceptorId) {
-        AnalyticsEventRequest analyticsRequest = new AnalyticsEventRequest(EventType.INQUIRY_SENT, preceptorId);
+        AnalyticsEventRequest analyticsRequest = new AnalyticsEventRequest(EventType.INQUIRY, preceptorId);
         analyticsService.logEvent(analyticsRequest);
     }
 }

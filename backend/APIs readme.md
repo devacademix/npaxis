@@ -307,3 +307,233 @@ requirements, and expected outputs.
 | `roleId`      | `Long`   | Unique role identifier.                       |
 | `roleName`    | `String` | Name of the role (STUDENT, PRECEPTOR, ADMIN). |
 | `description` | `String` | Brief description of the role.                |
+
+---
+
+## 8. Subscriptions (`/api/subscriptions`)
+
+| Endpoint              | Method | Description                                                       | Input                              | Output                                      |
+|:---------------------|:-------|:------------------------------------------------------------------|:-----------------------------------|:--------------------------------------------|
+| `/checkout`           | POST   | Initiates subscription via Stripe checkout.                       | `CreateCheckoutSessionRequest`     | `CreateCheckoutSessionResponse`              |
+| `/status`             | GET    | Fetch current subscription details.                               | None                               | `SubscriptionDetailResponse`                 |
+| `/cancel`             | POST   | Cancel subscription at period end (allows usage until expiry).    | None                               | `GenericApiResponse<Void>`                   |
+| `/update`             | PUT    | Change subscription plan or billing interval.                     | `UpdateSubscriptionRequest`        | `GenericApiResponse<Void>`                   |
+| `/history`            | GET    | List past and current subscriptions with pagination.              | Pageable params                    | `Page<SubscriptionHistoryResponse>`          |
+| `/portal`             | GET    | Redirect to Stripe customer portal for billing management.        | None                               | Map with `portalUrl` key                     |
+| `/access-check`       | GET    | Verify if user can access premium features (includes grace period). | None                               | Map with `hasAccess` boolean key             |
+
+### Data Objects
+
+#### `CreateCheckoutSessionRequest`
+
+| Field     | Type   | Description           |
+|:----------|:-------|:----------------------|
+| `priceId` | `Long` | Stripe price ID.      |
+
+#### `CreateCheckoutSessionResponse`
+
+| Field         | Type     | Description               |
+|:--------------|:---------|:--------------------------|
+| `sessionId`   | `String` | Stripe session ID.        |
+| `checkoutUrl` | `String` | Checkout URL for user.    |
+| `customerId`  | `String` | Stripe customer ID.       |
+
+#### `SubscriptionDetailResponse`
+
+| Field                | Type          | Description                        |
+|:---------------------|:--------------|:-----------------------------------|
+| `subscriptionId`     | `Long`        | Unique subscription identifier.    |
+| `planCode`           | `String`      | Plan code.                         |
+| `planName`           | `String`      | Plan name.                         |
+| `billingInterval`    | `String`      | Billing interval (monthly/yearly). |
+| `amountInMinorUnits` | `Long`        | Amount in minor currency units.    |
+| `currency`           | `String`      | Currency code.                     |
+| `status`             | `String`      | Subscription status.               |
+| `accessEnabled`      | `boolean`     | Whether access is enabled.         |
+| `currentPeriodStart` | `LocalDateTime` | Current period start date.       |
+| `currentPeriodEnd`   | `LocalDateTime` | Current period end date.         |
+| `trialEndsAt`        | `LocalDateTime` | Trial end date (if applicable).  |
+| `cancelAtPeriodEnd`  | `boolean`     | Whether cancellation is pending.   |
+| `canceledAt`         | `LocalDateTime` | Cancellation date (if applicable). |
+| `canceledReason`     | `String`      | Reason for cancellation.           |
+
+#### `UpdateSubscriptionRequest`
+
+| Field     | Type   | Description           |
+|:----------|:-------|:----------------------|
+| `priceId` | `Long` | New Stripe price ID.  |
+
+#### `SubscriptionHistoryResponse`
+
+| Field          | Type          | Description              |
+|:---------------|:--------------|:-------------------------|
+| `subscriptionId` | `Long`        | Subscription ID.         |
+| `planCode`     | `String`      | Plan code.               |
+| `planName`     | `String`      | Plan name.               |
+| `status`       | `String`      | Subscription status.     |
+| `startDate`    | `LocalDateTime` | Subscription start date. |
+| `endDate`      | `LocalDateTime` | Subscription end date.  |
+| `cancelReason` | `String`      | Cancellation reason.     |
+
+---
+
+## 9. Subscription Plans (`/subscription-plans`)
+
+| Endpoint | Method | Description                    | Input | Output                          |
+|:---------|:-------|:-------------------------------|:------|:--------------------------------|
+| `/`      | GET    | Get all active subscription plans. | None  | `List<SubscriptionPlanResponse>` |
+
+### Data Objects
+
+#### `SubscriptionPlanResponse`
+
+| Field                    | Type                                  | Description              |
+|:-------------------------|:--------------------------------------|:-------------------------|
+| `subscriptionPlanId`     | `Long`                                | Plan ID.                 |
+| `code`                   | `String`                              | Plan code.               |
+| `name`                   | `String`                              | Plan name.               |
+| `description`            | `String`                              | Plan description.        |
+| `active`                 | `boolean`                             | Whether plan is active.  |
+| `prices`                 | `List<SubscriptionPriceResponse>`     | List of prices.          |
+
+#### `SubscriptionPriceResponse`
+
+| Field                | Type     | Description                        |
+|:---------------------|:---------|:-----------------------------------|
+| `subscriptionPriceId` | `Long`   | Price ID.                          |
+| `billingInterval`    | `String` | Billing interval (monthly/yearly). |
+| `currency`           | `String` | Currency code.                     |
+| `amountInMinorUnits` | `Long`   | Amount in minor currency units.    |
+| `active`             | `boolean` | Whether price is active.           |
+
+---
+
+## 10. Payments (`/api/payments`)
+
+| Endpoint                  | Method | Description                                 | Input                     | Output                      |
+|:-------------------------|:-------|:--------------------------------------------|:--------------------------|:----------------------------|
+| `/create-checkout-session` | POST   | Create a Stripe checkout session for a preceptor. | `CheckoutSessionRequest`  | `CheckoutSessionResponse`   |
+
+### Data Objects
+
+#### `CheckoutSessionRequest`
+
+| Field       | Type             | Description                    |
+|:------------|:-----------------|:-------------------------------|
+| `preceptorId` | `Long`           | Preceptor ID.                  |
+| `billingCycle` | `BillingCycle`   | Billing cycle.                 |
+| `successUrl` | `String`          | URL on successful payment.     |
+| `cancelUrl` | `String`          | URL on canceled payment.       |
+
+#### `CheckoutSessionResponse`
+
+| Field          | Type     | Description               |
+|:---------------|:---------|:--------------------------|
+| `sessionId`    | `String` | Stripe session ID.        |
+| `checkoutUrl`  | `String` | Checkout URL for preceptor. |
+
+---
+
+## 11. Webhooks (`/webhooks`)
+
+| Endpoint   | Method | Description                            | Input                             | Output                              |
+|:-----------|:-------|:---------------------------------------|:----------------------------------|:------------------------------------|
+| `/`        | POST   | Receive Stripe webhook events.         | Raw Stripe event payload (`String`) | `GenericApiResponse<Void>`          |
+| `/events`  | GET    | Get webhook event history (paginated). | Pageable params                   | `Page<WebhookEventResponse>`        |
+
+### Data Objects
+
+#### `WebhookEventResponse`
+
+| Field          | Type          | Description              |
+|:---------------|:--------------|:-------------------------|
+| `eventId`      | `String`      | Webhook event ID.        |
+| `eventType`    | `String`      | Event type.              |
+| `status`       | `String`      | Processing status.       |
+| `processedAt`  | `LocalDateTime` | Processing timestamp.    |
+| `retryCount`   | `Integer`     | Number of retries.       |
+| `errorMessage` | `String`      | Error message (if error).  |
+
+---
+
+## 12. Inquiries (`/inquiries`)
+
+| Endpoint            | Method | Description                                                        | Input                    | Output                                 |
+|:-------------------|:-------|:-------------------------------------------------------------------|:------------------------|:---------------------------------------|
+| `/send`             | POST   | Student sends an inquiry to a preceptor.                           | `InquiryRequestDTO`     | `InquiryResponseDTO`                   |
+| `/my-inquiries`     | GET    | Get all inquiries for the authenticated user, filtered by status.   | `inquiryStatus`, Pageable params | `Page<InquiryResponseDTO>`             |
+| `/{inquiryId}/read` | PATCH  | Mark an inquiry as read.                                           | `inquiryId` (Path)      | `GenericApiResponse<Void>`             |
+
+### Data Objects
+
+#### `InquiryRequestDTO`
+
+| Field        | Type     | Description                  |
+|:-------------|:---------|:-----------------------------|
+| `preceptorId` | `Long`   | ID of the preceptor.         |
+| `subject`    | `String` | Inquiry subject.             |
+| `message`    | `String` | Inquiry message.             |
+
+#### `InquiryResponseDTO`
+
+| Field       | Type          | Description              |
+|:------------|:--------------|:-------------------------|
+| `inquiryId` | `Long`        | Inquiry ID.              |
+| `studentName` | `String`      | Student name.            |
+| `subject`   | `String`      | Inquiry subject.         |
+| `message`   | `String`      | Inquiry message.         |
+| `status`    | `InquiryStatus` | Inquiry status.          |
+| `createdAt` | `LocalDateTime` | Creation timestamp.     |
+
+---
+
+## 13. User Profile Management (`/users`)
+
+| Endpoint                                | Method | Description                          | Input                | Output                |
+|:----------------------------------------|:-------|:-------------------------------------|:---------------------|:----------------------|
+| `/user-{userId}/upload-profile-picture` | PUT    | Upload a user's profile picture.     | `file` (Multipart)   | `UserResponseDTO`     |
+| `/user-{userId}/profile-picture`        | GET    | Download a user's profile picture.   | `userId` (Path)      | Image file (Resource) |
+
+---
+
+## 14. Preceptor License Management (`/preceptors`)
+
+| Endpoint                             | Method | Description                        | Input                          | Output                          |
+|:-------------------------------------|:-------|:-----------------------------------|:-------------------------------|:--------------------------------|
+| `/preceptor-{userId}/license`        | GET    | Download preceptor license file.   | `userId` (Path)                | License file (PDF Resource)     |
+
+---
+
+## 15. System Health (`/`)
+
+| Endpoint | Method | Description          | Input | Output                      |
+|:---------|:-------|:---------------------|:------|:----------------------------|
+| `/`      | GET    | System health check. | None  | `SystemHealthResponse`      |
+
+### Data Objects
+
+#### `SystemHealthResponse`
+
+| Field   | Type     | Description              |
+|:--------|:---------|:-------------------------|
+| `service` | `String` | Service name (e.g., "NPaxis Backend"). |
+| `status` | `String` | Service status (e.g., "UP"). |
+| `auth`  | `String` | Auth configuration status.            |
+| `health` | `String` | URL to health endpoint (e.g., "/actuator/health").    |
+
+---
+
+## Notes
+
+- **Base URL**: All endpoints are prefixed with `/api/v1` except for specific exceptions like `/webhooks`, `/analytics`, `/inquiries`, `/roles`, `/subscription-plans`.
+- **Authentication**: Most endpoints require JWT authentication via the `Authorization` header with a Bearer token.
+- **Pagination**: Endpoints with pageable responses support pagination parameters:
+  - `page`: Page number (0-indexed)
+  - `size`: Number of items per page
+  - `sort`: Sort by field (e.g., `sort=createdAt,desc`)
+- **Multipart Uploads**: Some endpoints support file uploads via `multipart/form-data`.
+- **Response Format**: All responses follow the `GenericApiResponse<T>` wrapper format with:
+  - `data`: Actual response data
+  - `message`: Human-readable message
+  - `success`: Boolean indicating success/failure
+  - `timestamp`: Response timestamp

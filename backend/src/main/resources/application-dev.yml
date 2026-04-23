@@ -9,7 +9,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     show-sql: true
 
   mail:
@@ -62,9 +62,9 @@ npaxis:
 
 payment:
   stripe:
-    secret-key: ${STRIPE_SECRET_KEY:sk_test_your_secret_key_here}
-    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_your_publishable_key_here}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret_here}
+    secret-key:
+    publishable-key:
+    webhook-secret:
     api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
     max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
     connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
@@ -76,7 +76,7 @@ payment:
     default-trial-days: ${STRIPE_DEFAULT_TRIAL_DAYS:0}
 
 stripe:
-  api-key: ${STRIPE_SECRET_KEY:sk_test_your_secret_key_here}
+  api-key:
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret_here}
   prices:
     premium-monthly: ${STRIPE_PREMIUM_MONTHLY_PRICE_ID:price_your_monthly_stripe_price_id}

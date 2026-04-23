@@ -6,12 +6,17 @@ import com.digitalearn.npaxis.pdf.InvoicePdfService;
 import com.digitalearn.npaxis.pdf.SubscriptionInvoiceEmailDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,9 +33,28 @@ import java.util.Map;
 public class SubscriptionEmailService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm a");
+    private static final String PRECEPTOR_NAME_KEY = "preceptorName";
+    private static final String PLAN_NAME_KEY = "planName";
+    private static final String CURRENCY_KEY = "currency";
     private final EmailService emailService;
     private final InvoicePdfService invoicePdfService;
+    private final ObjectProvider<SubscriptionEmailService> selfProvider;
+
+    /**
+     * Convert LocalDateTime to Instant for storage in DTO
+     */
+    private static Instant toInstant(LocalDateTime localDateTime) {
+        return localDateTime != null ? localDateTime.toInstant(ZoneOffset.UTC) : null;
+    }
+
+    /**
+     * Format date from Instant to display string
+     */
+    private String formatInstantToDate(Instant instant) {
+        if (instant == null) return null;
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        return localDateTime.format(DATE_FORMATTER);
+    }
 
     /**
      * Send subscription created email with invoice
@@ -48,12 +72,12 @@ public class SubscriptionEmailService {
                     .billingInterval(subscription.getPrice().getBillingInterval().toString())
                     .amountInMinorUnits(subscription.getPrice().getAmountInMinorUnits())
                     .currency(subscription.getPrice().getCurrency())
-                    .currentPeriodStart(subscription.getCurrentPeriodStart())
-                    .nextBillingDate(subscription.getNextBillingDate())
+                    .currentPeriodStart(toInstant(subscription.getCurrentPeriodStart()))
+                    .nextBillingDate(toInstant(subscription.getNextBillingDate()))
                     .build();
 
             // Send async email with detached data
-            sendSubscriptionCreatedEmailAsync(subscription, data);
+            selfProvider.getObject().sendSubscriptionCreatedEmailAsync(subscription, data);
         } catch (Exception e) {
             log.error("Error preparing subscription created email", e);
         }
@@ -74,13 +98,13 @@ public class SubscriptionEmailService {
 
             // Prepare email model using DTO data
             Map<String, Object> templateModel = new HashMap<>();
-            templateModel.put("preceptorName", data.getPreceptorName());
-            templateModel.put("planName", data.getPlanName());
+            templateModel.put(PRECEPTOR_NAME_KEY, data.getPreceptorName());
+            templateModel.put(PLAN_NAME_KEY, data.getPlanName());
             templateModel.put("billingInterval", formatBillingInterval(data.getBillingInterval()));
             templateModel.put("amount", formatAmount(data.getAmountInMinorUnits()));
-            templateModel.put("currency", data.getCurrency().toUpperCase());
-            templateModel.put("periodStart", data.getCurrentPeriodStart().format(DATE_FORMATTER));
-            templateModel.put("nextBillingDate", data.getNextBillingDate().format(DATE_FORMATTER));
+            templateModel.put(CURRENCY_KEY, data.getCurrency().toUpperCase());
+            templateModel.put("periodStart", formatInstantToDate(data.getCurrentPeriodStart()));
+            templateModel.put("nextBillingDate", formatInstantToDate(data.getNextBillingDate()));
 
             // Send email with attachment
             emailService.sendEmailWithAttachment(
@@ -104,7 +128,7 @@ public class SubscriptionEmailService {
      */
     @Async
     public void sendSubscriptionCreatedEmail(PreceptorSubscription subscription) {
-        sendSubscriptionCreatedEmailWrapper(subscription);
+        selfProvider.getObject().sendSubscriptionCreatedEmailWrapper(subscription);
     }
 
     /**
@@ -124,11 +148,11 @@ public class SubscriptionEmailService {
                     .billingInterval(subscription.getPrice().getBillingInterval().toString())
                     .amountInMinorUnits(subscription.getPrice().getAmountInMinorUnits())
                     .currency(subscription.getPrice().getCurrency())
-                    .nextBillingDate(subscription.getNextBillingDate())
+                    .nextBillingDate(toInstant(subscription.getNextBillingDate()))
                     .build();
 
             // Send async email with detached data
-            sendSubscriptionUpgradedEmailAsync(subscription, previousSubscription, data);
+            selfProvider.getObject().sendSubscriptionUpgradedEmailAsync(subscription, previousSubscription, data);
         } catch (Exception e) {
             log.error("Error preparing subscription upgraded email", e);
         }
@@ -149,14 +173,14 @@ public class SubscriptionEmailService {
 
             // Prepare email model using DTO data
             Map<String, Object> templateModel = new HashMap<>();
-            templateModel.put("preceptorName", data.getPreceptorName());
+            templateModel.put(PRECEPTOR_NAME_KEY, data.getPreceptorName());
             templateModel.put("oldPlanName", data.getOldPlanName());
             templateModel.put("newPlanName", data.getPlanName());
             templateModel.put("billingInterval", formatBillingInterval(data.getBillingInterval()));
             templateModel.put("newAmount", formatAmount(data.getAmountInMinorUnits()));
             templateModel.put("oldAmount", formatAmount(previousSubscription.getPrice().getAmountInMinorUnits()));
-            templateModel.put("currency", data.getCurrency().toUpperCase());
-            templateModel.put("nextBillingDate", data.getNextBillingDate().format(DATE_FORMATTER));
+            templateModel.put(CURRENCY_KEY, data.getCurrency().toUpperCase());
+            templateModel.put("nextBillingDate", formatInstantToDate(data.getNextBillingDate()));
 
             // Send email with attachment
             emailService.sendEmailWithAttachment(
@@ -180,7 +204,7 @@ public class SubscriptionEmailService {
      */
     @Async
     public void sendSubscriptionUpgradedEmail(PreceptorSubscription subscription, PreceptorSubscription previousSubscription) {
-        sendSubscriptionUpgradedEmailWrapper(subscription, previousSubscription);
+        selfProvider.getObject().sendSubscriptionUpgradedEmailWrapper(subscription, previousSubscription);
     }
 
     /**
@@ -196,13 +220,13 @@ public class SubscriptionEmailService {
                     .preceptorName(subscription.getPreceptor().getName())
                     .preceptorEmail(subscription.getPreceptor().getEmail())
                     .planName(subscription.getPlan().getName())
-                    .canceledAt(subscription.getCanceledAt())
-                    .currentPeriodEnd(subscription.getCurrentPeriodEnd())
+                    .canceledAt(toInstant(subscription.getCanceledAt()))
+                    .currentPeriodEnd(toInstant(subscription.getCurrentPeriodEnd()))
                     .canceledReason(subscription.getCanceledReason())
                     .build();
 
             // Send async email with detached data
-            sendSubscriptionCanceledEmailAsync(data);
+            selfProvider.getObject().sendSubscriptionCanceledEmailAsync(data);
         } catch (Exception e) {
             log.error("Error preparing subscription canceled email", e);
         }
@@ -219,10 +243,10 @@ public class SubscriptionEmailService {
 
             // Prepare email model using DTO data
             Map<String, Object> templateModel = new HashMap<>();
-            templateModel.put("preceptorName", data.getPreceptorName());
-            templateModel.put("planName", data.getPlanName());
-            templateModel.put("canceledAt", data.getCanceledAt().format(DATE_FORMATTER));
-            templateModel.put("accessUntil", data.getCurrentPeriodEnd().format(DATE_FORMATTER));
+            templateModel.put(PRECEPTOR_NAME_KEY, data.getPreceptorName());
+            templateModel.put(PLAN_NAME_KEY, data.getPlanName());
+            templateModel.put("canceledAt", formatInstantToDate(data.getCanceledAt()));
+            templateModel.put("accessUntil", formatInstantToDate(data.getCurrentPeriodEnd()));
             templateModel.put("canceledReason", data.getCanceledReason() != null ? data.getCanceledReason() : "User requested cancellation");
 
             // Send email
@@ -245,7 +269,7 @@ public class SubscriptionEmailService {
      */
     @Async
     public void sendSubscriptionCanceledEmail(PreceptorSubscription subscription) {
-        sendSubscriptionCanceledEmailWrapper(subscription);
+        selfProvider.getObject().sendSubscriptionCanceledEmailWrapper(subscription);
     }
 
     /**
@@ -274,10 +298,10 @@ public class SubscriptionEmailService {
 
             // Prepare email model using DTO data (no DB access - no Hibernate session)
             Map<String, Object> templateModel = new HashMap<>();
-            templateModel.put("preceptorName", dto.preceptorName());
-            templateModel.put("planName", dto.planName());
+            templateModel.put(PRECEPTOR_NAME_KEY, dto.preceptorName());
+            templateModel.put(PLAN_NAME_KEY, dto.planName());
             templateModel.put("amount", formatAmount(dto.amountPaidInMinorUnits()));
-            templateModel.put("currency", dto.currency().toUpperCase());
+            templateModel.put(CURRENCY_KEY, dto.currency().toUpperCase());
             templateModel.put("invoiceNumber", dto.invoiceNumber());
             templateModel.put("hostedInvoiceUrl", dto.hostedInvoiceUrl());
 

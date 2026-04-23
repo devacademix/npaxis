@@ -63,10 +63,11 @@ public class SecurityConfig {
                 // === URL Auth Rules===
                 .authorizeHttpRequests(
                         req -> req.requestMatchers(PUBLIC_URLS).permitAll()
+                                .requestMatchers(HttpMethod.GET, "/preceptors/active/**").hasRole(RoleName.ROLE_STUDENT.getRoleName())
+                                .requestMatchers(HttpMethod.GET, "/preceptors/search/**").hasRole(RoleName.ROLE_STUDENT.getRoleName())
                                 .requestMatchers(ADMINISTRATION_ONLY_URLS).hasRole(RoleName.ROLE_ADMIN.getRoleName())
                                 .requestMatchers(USER_ONLY_URLS).hasAnyRole(RoleName.ROLE_PRECEPTOR.getRoleName(), RoleName.ROLE_STUDENT.getRoleName(), RoleName.ROLE_ADMIN.getRoleName())
                                 .requestMatchers(PRECEPTOR_ONLY_URLS).hasRole(RoleName.ROLE_PRECEPTOR.getRoleName())
-                                .requestMatchers(HttpMethod.GET, "/preceptors/active/**").hasRole(RoleName.ROLE_STUDENT.getRoleName())
                                 .requestMatchers(STUDENT_ONLY_URLS).hasRole(RoleName.ROLE_STUDENT.getRoleName())
                                 .requestMatchers(PUBLIC_URLS).permitAll()
                                 .anyRequest().authenticated()

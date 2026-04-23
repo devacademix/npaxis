@@ -53,7 +53,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             switch (type) {
                 case PROFILE_VIEW -> views = count;
                 case CONTACT_REVEAL -> contacts = count;
-                case INQUIRY_SENT -> inquiries = count;
+                case INQUIRY -> inquiries = count;
             }
         }
 

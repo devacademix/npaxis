@@ -43,7 +43,7 @@ public class WebhookProcessingEvent extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "stripe_event_id", nullable = false, unique = true, length = 120)
+    @Column(name = "event_id", nullable = false, unique = true, length = 120)
     private String eventId;
 
     @Column(nullable = false, length = 100)

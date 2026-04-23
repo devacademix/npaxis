@@ -7,5 +7,5 @@ public enum EventType {
 
     PROFILE_VIEW,
     CONTACT_REVEAL,
-    INQUIRY_SENT
+    INQUIRY
 }
