@@ -37,7 +37,7 @@ public interface InvoicePdfService {
      * Builds an InvoicePdfRequest internally and delegates to generateInvoicePdf().
      *
      * @param subscription The preceptor subscription
-     * @param eventType The subscription event type (SUBSCRIPTION_CREATED, SUBSCRIPTION_UPGRADED, etc.)
+     * @param eventType    The subscription event type (SUBSCRIPTION_CREATED, SUBSCRIPTION_UPGRADED, etc.)
      * @return File path/URL where the PDF is stored
      * @throws InvoicePdfException if generation or storage fails
      */

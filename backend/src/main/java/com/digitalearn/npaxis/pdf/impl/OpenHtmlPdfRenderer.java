@@ -1,9 +1,9 @@
 package com.digitalearn.npaxis.pdf.impl;
 
+import com.digitalearn.npaxis.pdf.PdfGenerationService;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import com.digitalearn.npaxis.pdf.PdfGenerationService;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -59,7 +59,7 @@ public class OpenHtmlPdfRenderer implements PdfGenerationService {
      * - Page layout
      * - Styling
      *
-     * @param htmlContent The HTML content to render
+     * @param htmlContent  The HTML content to render
      * @param outputStream The output stream to write PDF bytes to
      * @throws IOException if rendering fails
      */

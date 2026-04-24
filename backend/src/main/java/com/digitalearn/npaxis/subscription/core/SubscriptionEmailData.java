@@ -15,6 +15,7 @@ public class SubscriptionEmailData {
     private final String oldPlanName;
     private final String billingInterval;
     private final Long amountInMinorUnits;
+    private final Long oldAmountInMinorUnits;  // For subscription upgrade emails
     private final String currency;
     private final Instant currentPeriodStart;
     private final Instant nextBillingDate;

@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-
 /**
  * Service for sending subscription-related emails
  * Keeps email logic loosely coupled from subscription business logic
@@ -58,10 +57,12 @@ public class SubscriptionEmailService {
 
     /**
      * Send subscription created email with invoice
-     * This method extracts data in a transactional context to avoid lazy loading issues
+     * CRITICAL: This method is called directly from transactional webhook context
+     * It extracts data while entities are still attached, then passes DTO to async method
+     * DO NOT mark this as @Async - it must run in the webhook transaction
      */
     @Transactional(readOnly = true)
-    public void sendSubscriptionCreatedEmailWrapper(PreceptorSubscription subscription) {
+    public void sendSubscriptionCreatedEmail(PreceptorSubscription subscription) {
         try {
             // Initialize all lazy-loaded data in transaction context
             SubscriptionEmailData data = SubscriptionEmailData.builder()
@@ -76,7 +77,7 @@ public class SubscriptionEmailService {
                     .nextBillingDate(toInstant(subscription.getNextBillingDate()))
                     .build();
 
-            // Send async email with detached data
+            // Send async email with detached data (subscription object NOT passed to async)
             selfProvider.getObject().sendSubscriptionCreatedEmailAsync(subscription, data);
         } catch (Exception e) {
             log.error("Error preparing subscription created email", e);
@@ -84,12 +85,27 @@ public class SubscriptionEmailService {
     }
 
     /**
+     * Legacy wrapper method - kept for backward compatibility
+     */
+    @Transactional(readOnly = true)
+    public void sendSubscriptionCreatedEmailWrapper(PreceptorSubscription subscription) {
+        sendSubscriptionCreatedEmail(subscription);
+    }
+
+    /**
      * Send subscription created email with invoice (async)
+     * CRITICAL: This method only receives DTO - NO entity objects for lazy-loaded access
      */
     @Async
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void sendSubscriptionCreatedEmailAsync(PreceptorSubscription subscription, SubscriptionEmailData data) {
         try {
+            // Validate email address before attempting to send
+            if (data.getPreceptorEmail() == null || data.getPreceptorEmail().isBlank()) {
+                log.error("Cannot send subscription created email - preceptor email is null or blank for user: {}", data.getPreceptorId());
+                return;
+            }
+
             log.info("Sending subscription created email for user: {}", data.getPreceptorId());
 
             // Generate invoice PDF using original subscription object
@@ -123,22 +139,19 @@ public class SubscriptionEmailService {
         }
     }
 
-    /**
-     * Legacy method for backward compatibility - delegates to wrapper
-     */
-    @Async
-    public void sendSubscriptionCreatedEmail(PreceptorSubscription subscription) {
-        selfProvider.getObject().sendSubscriptionCreatedEmailWrapper(subscription);
-    }
 
     /**
      * Send subscription upgraded email with invoice
-     * This method extracts data in a transactional context to avoid lazy loading issues
+     * CRITICAL: This method is called directly from transactional webhook context
+     * It extracts data while entities are still attached, then passes DTO to async method
+     * DO NOT mark this as @Async - it must run in the webhook transaction
      */
     @Transactional(readOnly = true)
-    public void sendSubscriptionUpgradedEmailWrapper(PreceptorSubscription subscription, PreceptorSubscription previousSubscription) {
+    public void sendSubscriptionUpgradedEmail(PreceptorSubscription subscription, PreceptorSubscription previousSubscription) {
         try {
             // Initialize all lazy-loaded data in transaction context
+            // CRITICAL: Extract ALL data from entities while they're attached
+            // The async method will NOT have access to entities - only to this DTO
             SubscriptionEmailData data = SubscriptionEmailData.builder()
                     .preceptorId(subscription.getPreceptor().getUserId())
                     .preceptorName(subscription.getPreceptor().getName())
@@ -147,38 +160,52 @@ public class SubscriptionEmailService {
                     .oldPlanName(previousSubscription.getPlan().getName())
                     .billingInterval(subscription.getPrice().getBillingInterval().toString())
                     .amountInMinorUnits(subscription.getPrice().getAmountInMinorUnits())
+                    .oldAmountInMinorUnits(previousSubscription.getPrice().getAmountInMinorUnits())
                     .currency(subscription.getPrice().getCurrency())
                     .nextBillingDate(toInstant(subscription.getNextBillingDate()))
                     .build();
 
-            // Send async email with detached data
-            selfProvider.getObject().sendSubscriptionUpgradedEmailAsync(subscription, previousSubscription, data);
+            // Send async email with detached data (entities NOT passed to async)
+            // Note: previousSubscription is NOT passed to async - only DTO
+            selfProvider.getObject().sendSubscriptionUpgradedEmailAsync(data);
         } catch (Exception e) {
             log.error("Error preparing subscription upgraded email", e);
         }
     }
 
     /**
+     * Legacy wrapper method - kept for backward compatibility
+     */
+    @Transactional(readOnly = true)
+    public void sendSubscriptionUpgradedEmailWrapper(PreceptorSubscription subscription, PreceptorSubscription previousSubscription) {
+        sendSubscriptionUpgradedEmail(subscription, previousSubscription);
+    }
+
+    /**
      * Send subscription upgraded email with invoice (async)
+     * CRITICAL: This method only receives DTO - NO entity objects
+     * All entity access must happen in sync method before calling this
      */
     @Async
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public void sendSubscriptionUpgradedEmailAsync(PreceptorSubscription subscription, PreceptorSubscription previousSubscription, SubscriptionEmailData data) {
+    public void sendSubscriptionUpgradedEmailAsync(SubscriptionEmailData data) {
         try {
+            // Validate email address before attempting to send
+            if (data.getPreceptorEmail() == null || data.getPreceptorEmail().isBlank()) {
+                log.error("Cannot send subscription upgraded email - preceptor email is null or blank for user: {}", data.getPreceptorId());
+                return;
+            }
+
             log.info("Sending subscription upgraded email for user: {}", data.getPreceptorId());
 
-            // Generate invoice PDF using original subscription object
-            String invoicePdfPath = invoicePdfService.generateSubscriptionInvoicePdf(subscription, "SUBSCRIPTION_UPGRADED");
-            File invoicePdf = new File(invoicePdfPath);
-
-            // Prepare email model using DTO data
+            // Prepare email model using ONLY DTO data (no Hibernate session, no entity access)
             Map<String, Object> templateModel = new HashMap<>();
             templateModel.put(PRECEPTOR_NAME_KEY, data.getPreceptorName());
             templateModel.put("oldPlanName", data.getOldPlanName());
             templateModel.put("newPlanName", data.getPlanName());
             templateModel.put("billingInterval", formatBillingInterval(data.getBillingInterval()));
             templateModel.put("newAmount", formatAmount(data.getAmountInMinorUnits()));
-            templateModel.put("oldAmount", formatAmount(previousSubscription.getPrice().getAmountInMinorUnits()));
+            templateModel.put("oldAmount", formatAmount(data.getOldAmountInMinorUnits()));
             templateModel.put(CURRENCY_KEY, data.getCurrency().toUpperCase());
             templateModel.put("nextBillingDate", formatInstantToDate(data.getNextBillingDate()));
 
@@ -187,8 +214,8 @@ public class SubscriptionEmailService {
                     data.getPreceptorEmail(),
                     EmailTemplate.SUBSCRIPTION_UPGRADED,
                     templateModel,
-                    invoicePdf,
-                    "NPaxis_Upgrade_Invoice_" + data.getPreceptorId() + ".pdf"
+                    null,  // No PDF for upgrade emails
+                    null
             );
 
             log.info("Subscription upgraded email sent successfully for user: {}", data.getPreceptorId());
@@ -199,20 +226,15 @@ public class SubscriptionEmailService {
         }
     }
 
-    /**
-     * Legacy method for backward compatibility - delegates to wrapper
-     */
-    @Async
-    public void sendSubscriptionUpgradedEmail(PreceptorSubscription subscription, PreceptorSubscription previousSubscription) {
-        selfProvider.getObject().sendSubscriptionUpgradedEmailWrapper(subscription, previousSubscription);
-    }
 
     /**
      * Send subscription canceled email
-     * This method extracts data in a transactional context to avoid lazy loading issues
+     * CRITICAL: This method is called directly from transactional webhook context
+     * It extracts data while entities are still attached, then passes DTO to async method
+     * DO NOT mark this as @Async - it must run in the webhook transaction
      */
     @Transactional(readOnly = true)
-    public void sendSubscriptionCanceledEmailWrapper(PreceptorSubscription subscription) {
+    public void sendSubscriptionCanceledEmail(PreceptorSubscription subscription) {
         try {
             // Initialize all lazy-loaded data in transaction context
             SubscriptionEmailData data = SubscriptionEmailData.builder()
@@ -225,11 +247,19 @@ public class SubscriptionEmailService {
                     .canceledReason(subscription.getCanceledReason())
                     .build();
 
-            // Send async email with detached data
+            // Send async email with detached data (subscription object NOT passed to async)
             selfProvider.getObject().sendSubscriptionCanceledEmailAsync(data);
         } catch (Exception e) {
             log.error("Error preparing subscription canceled email", e);
         }
+    }
+
+    /**
+     * Legacy wrapper method - kept for backward compatibility
+     */
+    @Transactional(readOnly = true)
+    public void sendSubscriptionCanceledEmailWrapper(PreceptorSubscription subscription) {
+        sendSubscriptionCanceledEmail(subscription);
     }
 
     /**
@@ -239,6 +269,12 @@ public class SubscriptionEmailService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void sendSubscriptionCanceledEmailAsync(SubscriptionEmailData data) {
         try {
+            // Validate email address before attempting to send
+            if (data.getPreceptorEmail() == null || data.getPreceptorEmail().isBlank()) {
+                log.error("Cannot send subscription canceled email - preceptor email is null or blank for user: {}", data.getPreceptorId());
+                return;
+            }
+
             log.info("Sending subscription canceled email for user: {}", data.getPreceptorId());
 
             // Prepare email model using DTO data
@@ -264,13 +300,6 @@ public class SubscriptionEmailService {
         }
     }
 
-    /**
-     * Legacy method for backward compatibility - delegates to wrapper
-     */
-    @Async
-    public void sendSubscriptionCanceledEmail(PreceptorSubscription subscription) {
-        selfProvider.getObject().sendSubscriptionCanceledEmailWrapper(subscription);
-    }
 
     /**
      * Send invoice payment succeeded email with Stripe Invoice PDF attachment.
@@ -294,6 +323,13 @@ public class SubscriptionEmailService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void sendInvoicePaymentEmailAsync(SubscriptionInvoiceEmailDto dto) {
         try {
+            // Validate email address before attempting to send
+            if (dto.email() == null || dto.email().isBlank()) {
+                log.error("Cannot send invoice payment email - preceptor email is null or blank for preceptor: {}, invoice: {}",
+                        dto.preceptorId(), dto.invoiceNumber());
+                return;
+            }
+
             log.info("Sending invoice payment email for user: {} with invoice: {}", dto.preceptorId(), dto.invoiceNumber());
 
             // Prepare email model using DTO data (no DB access - no Hibernate session)

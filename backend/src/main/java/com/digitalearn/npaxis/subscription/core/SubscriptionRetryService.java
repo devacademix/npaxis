@@ -1,9 +1,6 @@
 package com.digitalearn.npaxis.subscription.core;
 
 import com.digitalearn.npaxis.preceptor.Preceptor;
-import com.digitalearn.npaxis.subscription.core.PreceptorSubscription;
-import com.digitalearn.npaxis.subscription.core.PreceptorSubscriptionRepository;
-import com.digitalearn.npaxis.subscription.core.SubscriptionStatus;
 import com.digitalearn.npaxis.subscription.price.SubscriptionPrice;
 import com.digitalearn.npaxis.subscription.price.SubscriptionPriceRepository;
 import jakarta.persistence.EntityManager;
@@ -56,6 +53,7 @@ public class SubscriptionRetryService {
                 .orElseThrow(() -> new IllegalStateException("Price not found: " + stripePriceId));
 
         subscription.setPrice(price);
+        subscription.setPlan(price.getPlan());  // Extract plan from price (NOT NULL constraint)
         subscription.setStatus(status);
         subscription.setCancelAtPeriodEnd(cancelAtPeriodEnd);
         subscription.setCurrentPeriodStart(currentPeriodStart);
@@ -89,6 +87,7 @@ public class SubscriptionRetryService {
                     .orElseThrow(() -> new IllegalStateException(
                             "Price not found: " + stripePriceId));
             existing.setPrice(freshPrice);
+            existing.setPlan(freshPrice.getPlan());  // Extract plan from price (NOT NULL constraint)
 
             subscriptionRepository.save(existing);
         }

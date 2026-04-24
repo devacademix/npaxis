@@ -1,5 +1,8 @@
 package com.digitalearn.npaxis.webhook;
 
+import com.digitalearn.npaxis.pdf.InvoicePdfRequest;
+import com.digitalearn.npaxis.pdf.InvoicePdfService;
+import com.digitalearn.npaxis.pdf.SubscriptionInvoiceEmailDto;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoiceRepository;
@@ -9,9 +12,6 @@ import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransactio
 import com.digitalearn.npaxis.subscription.billing.transaction.TransactionStatus;
 import com.digitalearn.npaxis.subscription.core.SubscriptionEmailService;
 import com.digitalearn.npaxis.subscription.core.SubscriptionService;
-import com.digitalearn.npaxis.pdf.InvoicePdfRequest;
-import com.digitalearn.npaxis.pdf.InvoicePdfService;
-import com.digitalearn.npaxis.pdf.SubscriptionInvoiceEmailDto;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
@@ -962,11 +962,14 @@ public class WebhookServiceImpl implements WebhookService {
 
     /**
      * Handle invoice_payment.paid event - Invoice payment processed
-     * Alternative/duplicate of invoice.payment_succeeded - routes to same handler
+     * NOTE: This event contains InvoicePayment object (different from Invoice)
+     * Do NOT route to handleInvoicePaymentSucceeded which expects Invoice
+     * Instead, we rely on invoice.payment_succeeded which has the proper Invoice data
      */
     private void handleInvoicePaymentPaid(Event event, WebhookProcessingEvent webhookEvent) {
-        log.info("Processing invoice payment paid event");
-        handleInvoicePaymentSucceeded(event, webhookEvent);
+        log.info("Processing invoice_payment.paid event - skipping to avoid ClassCastException");
+        log.debug("This event contains InvoicePayment data type. Using invoice.payment_succeeded (Invoice) for authoritative processing");
+        // Do nothing - invoice.payment_succeeded is the authoritative event for invoice payment success
     }
 
     /**

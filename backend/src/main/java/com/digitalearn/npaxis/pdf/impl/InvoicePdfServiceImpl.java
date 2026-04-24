@@ -1,10 +1,10 @@
 package com.digitalearn.npaxis.pdf.impl;
 
-import com.digitalearn.npaxis.storage.StorageService;
-import com.digitalearn.npaxis.subscription.core.PreceptorSubscription;
 import com.digitalearn.npaxis.pdf.InvoicePdfRequest;
 import com.digitalearn.npaxis.pdf.InvoicePdfService;
 import com.digitalearn.npaxis.pdf.PdfGenerationService;
+import com.digitalearn.npaxis.storage.StorageService;
+import com.digitalearn.npaxis.subscription.core.PreceptorSubscription;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -133,14 +133,14 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
             context.put("amount", String.format("%.2f", amountInCurrency));
             context.put("currency", currency);
 
-                    // Create request and generate PDF
-                    InvoicePdfRequest request = InvoicePdfRequest.builder()
-                            .invoiceId(subscription.getPreceptorSubscriptionId().toString())
-                            .invoiceNumber(invoiceNumber)
-                            .customerName(preceptorName)
-                            .invoiceDate(invoiceDate)
-                            .templateContext(context)
-                            .build();
+            // Create request and generate PDF
+            InvoicePdfRequest request = InvoicePdfRequest.builder()
+                    .invoiceId(subscription.getPreceptorSubscriptionId().toString())
+                    .invoiceNumber(invoiceNumber)
+                    .customerName(preceptorName)
+                    .invoiceDate(invoiceDate)
+                    .templateContext(context)
+                    .build();
 
             return generateInvoicePdf(request);
 

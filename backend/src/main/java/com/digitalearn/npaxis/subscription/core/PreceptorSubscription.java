@@ -45,7 +45,7 @@ public class PreceptorSubscription extends BaseEntity {
     private Long preceptorSubscriptionId;
 
     @OneToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "preceptor_id", nullable = false, unique = true)
+    @JoinColumn(name = "preceptor_id", nullable = false)
     private Preceptor preceptor;
 
     @ManyToOne(fetch = FetchType.LAZY)
