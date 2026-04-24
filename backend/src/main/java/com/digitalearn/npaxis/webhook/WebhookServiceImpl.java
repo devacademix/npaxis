@@ -1,8 +1,6 @@
 package com.digitalearn.npaxis.webhook;
 
-import com.digitalearn.npaxis.pdf.InvoicePdfRequest;
-import com.digitalearn.npaxis.pdf.InvoicePdfService;
-import com.digitalearn.npaxis.pdf.SubscriptionInvoiceEmailDto;
+
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoiceRepository;
@@ -58,7 +56,6 @@ public class WebhookServiceImpl implements WebhookService {
     private final PreceptorRepository preceptorRepository;
     private final BillingInvoiceRepository billingInvoiceRepository;
     private final BillingTransactionRepository billingTransactionRepository;
-    private final InvoicePdfService invoicePdfService;
     private final SubscriptionEmailService subscriptionEmailService;
 
     @Override
@@ -377,12 +374,6 @@ public class WebhookServiceImpl implements WebhookService {
      * AUTHORITATIVE EVENT for invoice persistence (uses UPSERT)
      * Safe for concurrent webhook delivery (idempotent via ON CONFLICT DO UPDATE)
      * Multiple deliveries of same event result in single invoice record
-     * <p>
-     * FLOW:
-     * 1. Fetch Stripe Invoice (source of truth)
-     * 2. Generate PDF (idempotent - checks if exists)
-     * 3. Create email DTO with detached data (inside transaction)
-     * 4. Send async email with DTO (outside transaction, no Hibernate issues)
      */
     private void handleInvoicePaymentSucceeded(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice payment succeeded event (AUTHORITATIVE)");
@@ -410,60 +401,25 @@ public class WebhookServiceImpl implements WebhookService {
                     // Safe for concurrent webhook events
                     updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
 
-                    // STEP 1: Generate invoice PDF from Stripe Invoice (idempotent)
-                    // Build request from Stripe Invoice data
+                    // Extract invoice data for email
                     String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
-                    String customerName = invoice.getCustomerName() != null ? invoice.getCustomerName() : "Customer";
-                    String invoiceDate = LocalDateTime.ofInstant(
-                            Instant.ofEpochSecond(invoice.getCreated()),
-                            ZoneId.systemDefault()
-                    ).format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy hh:mm a"));
+                    String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
+                    Long amountPaid = invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L;
+                    String currency = invoice.getCurrency() != null ? invoice.getCurrency() : "usd";
 
-                    java.util.Map<String, Object> context = new java.util.HashMap<>();
-                    context.put("customerName", customerName);
-                    context.put("currency", invoice.getCurrency() != null ? invoice.getCurrency().toUpperCase() : "USD");
-                    context.put("amountPaid", formatAmount(invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L));
-                    context.put("invoiceNumber", invoiceNumber);
-                    context.put("items", extractInvoiceLineItems(invoice));
-                    context.put("hostedInvoiceUrl", invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "");
-
-                    InvoicePdfRequest pdfRequest = InvoicePdfRequest.builder()
-                            .invoiceId(invoice.getId())
-                            .invoiceNumber(invoiceNumber)
-                            .customerName(customerName)
-                            .invoiceDate(invoiceDate)
-                            .templateContext(context)
-                            .build();
-
-                    String pdfPath;
-                    try {
-                        pdfPath = invoicePdfService.generateInvoicePdf(pdfRequest);
-                    } catch (InvoicePdfService.InvoicePdfException e) {
-                        log.error("Error generating invoice PDF for invoice {}: {}", invoice.getId(), e.getMessage(), e);
-                        // Don't fail the webhook if PDF generation fails
-                        // The invoice is already saved to DB; email will be sent without PDF
-                        pdfPath = null;
-                    }
-
-                    // STEP 2: Create email DTO with detached data (inside transaction)
-                    // This data is extracted inside transaction context, preventing lazy-load issues
-                    SubscriptionInvoiceEmailDto emailDto = new SubscriptionInvoiceEmailDto(
+                    // Send async email (without PDF attachment)
+                    subscriptionEmailService.sendInvoicePaymentEmailAsync(
                             p.getUserId(),
                             p.getName(),
                             p.getEmail(),
-                            "NPaxis Subscription", // Plan name would come from subscription, but we're using Stripe Invoice directly
-                            pdfPath != null ? pdfPath : "", // Use empty string if PDF generation failed
-                            invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "",
-                            invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L,
-                            invoice.getCurrency() != null ? invoice.getCurrency() : "usd",
-                            invoice.getNumber() != null ? invoice.getNumber() : invoice.getId()
+                            amountPaid,
+                            currency,
+                            invoiceNumber,
+                            hostedInvoiceUrl
                     );
 
-                    // STEP 3: Send async email (this runs outside transaction, using only the DTO data)
-                    subscriptionEmailService.sendInvoicePaymentEmailAsync(emailDto);
-
-                    log.info("✓ Invoice payment succeeded (UPSERT + EMAIL): preceptor={}, invoiceId={}, status=PAID, pdfPath={}",
-                            p.getUserId(), invoice.getId(), pdfPath);
+                    log.info("✓ Invoice payment succeeded (UPSERT + EMAIL): preceptor={}, invoiceId={}, status=PAID",
+                            p.getUserId(), invoice.getId());
                 } else {
                     log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
                 }
@@ -973,65 +929,11 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     /**
-     * Extract line items from Stripe Invoice.
-     */
-    private java.util.List<InvoiceLineItemDto> extractInvoiceLineItems(Invoice stripeInvoice) {
-        java.util.List<InvoiceLineItemDto> items = new java.util.ArrayList<>();
-
-        try {
-            if (stripeInvoice.getLines() != null && stripeInvoice.getLines().getData() != null) {
-                for (com.stripe.model.InvoiceLineItem lineItem : stripeInvoice.getLines().getData()) {
-                    String description = "Subscription";
-                    if (lineItem.getDescription() != null) {
-                        description = lineItem.getDescription();
-                    }
-
-                    Long quantity = lineItem.getQuantity() != null ? lineItem.getQuantity() : 1L;
-                    Long pricePerUnit = lineItem.getAmount() != null ? lineItem.getAmount() : 0L;
-                    Long total = lineItem.getAmount() != null ? lineItem.getAmount() : 0L;
-
-                    items.add(new InvoiceLineItemDto(
-                            description,
-                            quantity,
-                            pricePerUnit,
-                            total
-                    ));
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Error extracting line items from invoice: {}", e.getMessage());
-        }
-
-        // Fallback: add single item if no line items found
-        if (items.isEmpty()) {
-            items.add(new InvoiceLineItemDto(
-                    "Subscription",
-                    1L,
-                    stripeInvoice.getAmountPaid() != null ? stripeInvoice.getAmountPaid() : 0L,
-                    stripeInvoice.getAmountPaid() != null ? stripeInvoice.getAmountPaid() : 0L
-            ));
-        }
-
-        return items;
-    }
-
-    /**
      * Format amount from minor units to currency format.
      */
     private String formatAmount(Long amountInMinorUnits) {
         double amount = amountInMinorUnits / 100.0;
         return String.format("%.2f", amount);
-    }
-
-    /**
-     * DTO for invoice line items.
-     */
-    private record InvoiceLineItemDto(
-            String description,
-            Long quantity,
-            Long pricePerUnit,
-            Long total
-    ) {
     }
 }
 

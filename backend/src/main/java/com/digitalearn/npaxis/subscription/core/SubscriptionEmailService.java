@@ -2,8 +2,6 @@ package com.digitalearn.npaxis.subscription.core;
 
 import com.digitalearn.npaxis.email.EmailService;
 import com.digitalearn.npaxis.email.EmailTemplate;
-import com.digitalearn.npaxis.pdf.InvoicePdfService;
-import com.digitalearn.npaxis.pdf.SubscriptionInvoiceEmailDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -12,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -36,7 +33,6 @@ public class SubscriptionEmailService {
     private static final String PLAN_NAME_KEY = "planName";
     private static final String CURRENCY_KEY = "currency";
     private final EmailService emailService;
-    private final InvoicePdfService invoicePdfService;
     private final ObjectProvider<SubscriptionEmailService> selfProvider;
 
     /**
@@ -93,7 +89,7 @@ public class SubscriptionEmailService {
     }
 
     /**
-     * Send subscription created email with invoice (async)
+     * Send subscription created email (async)
      * CRITICAL: This method only receives DTO - NO entity objects for lazy-loaded access
      */
     @Async
@@ -108,10 +104,6 @@ public class SubscriptionEmailService {
 
             log.info("Sending subscription created email for user: {}", data.getPreceptorId());
 
-            // Generate invoice PDF using original subscription object
-            String invoicePdfPath = invoicePdfService.generateSubscriptionInvoicePdf(subscription, "SUBSCRIPTION_CREATED");
-            File invoicePdf = new File(invoicePdfPath);
-
             // Prepare email model using DTO data
             Map<String, Object> templateModel = new HashMap<>();
             templateModel.put(PRECEPTOR_NAME_KEY, data.getPreceptorName());
@@ -122,13 +114,11 @@ public class SubscriptionEmailService {
             templateModel.put("periodStart", formatInstantToDate(data.getCurrentPeriodStart()));
             templateModel.put("nextBillingDate", formatInstantToDate(data.getNextBillingDate()));
 
-            // Send email with attachment
-            emailService.sendEmailWithAttachment(
+            // Send email without attachment
+            emailService.sendEmail(
                     data.getPreceptorEmail(),
                     EmailTemplate.SUBSCRIPTION_CREATED,
-                    templateModel,
-                    invoicePdf,
-                    "NPaxis_Invoice_" + data.getPreceptorId() + ".pdf"
+                    templateModel
             );
 
             log.info("Subscription created email sent successfully for user: {}", data.getPreceptorId());
@@ -302,75 +292,45 @@ public class SubscriptionEmailService {
 
 
     /**
-     * Send invoice payment succeeded email with Stripe Invoice PDF attachment.
-     * <p>
-     * This method accepts a DTO containing all necessary data (extracted inside transaction).
-     * It runs async without any Hibernate session, preventing lazy-loading errors.
-     * <p>
-     * DTO-BASED ASYNC DESIGN (CRITICAL FOR ASYNC SAFETY):
-     * 1. Webhook handler extracts data INSIDE transaction → creates DTO
-     * 2. DTO is detached and passed to this async method
-     * 3. This method runs in separate thread with NO Hibernate session
-     * 4. Email is sent with PDF attachment from file system
-     * 5. No lazy-loading, no Hibernate session leaks
-     * <p>
-     * IDEMPOTENT & CONCURRENT-SAFE:
-     * - If PDF doesn't exist, email is sent without attachment
-     * - Each webhook creates independent email task
-     * - Safe for concurrent webhook delivery
+     * Send invoice payment email (async, without PDF)
+     * Called when invoice payment succeeds
      */
     @Async
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public void sendInvoicePaymentEmailAsync(SubscriptionInvoiceEmailDto dto) {
+    public void sendInvoicePaymentEmailAsync(Long preceptorId, String preceptorName, String preceptorEmail,
+                                            Long amountPaidInMinorUnits, String currency, String invoiceNumber,
+                                            String hostedInvoiceUrl) {
         try {
             // Validate email address before attempting to send
-            if (dto.email() == null || dto.email().isBlank()) {
+            if (preceptorEmail == null || preceptorEmail.isBlank()) {
                 log.error("Cannot send invoice payment email - preceptor email is null or blank for preceptor: {}, invoice: {}",
-                        dto.preceptorId(), dto.invoiceNumber());
+                        preceptorId, invoiceNumber);
                 return;
             }
 
-            log.info("Sending invoice payment email for user: {} with invoice: {}", dto.preceptorId(), dto.invoiceNumber());
+            log.info("Sending invoice payment email for user: {} with invoice: {}", preceptorId, invoiceNumber);
 
-            // Prepare email model using DTO data (no DB access - no Hibernate session)
+            // Prepare email model
             Map<String, Object> templateModel = new HashMap<>();
-            templateModel.put(PRECEPTOR_NAME_KEY, dto.preceptorName());
-            templateModel.put(PLAN_NAME_KEY, dto.planName());
-            templateModel.put("amount", formatAmount(dto.amountPaidInMinorUnits()));
-            templateModel.put(CURRENCY_KEY, dto.currency().toUpperCase());
-            templateModel.put("invoiceNumber", dto.invoiceNumber());
-            templateModel.put("hostedInvoiceUrl", dto.hostedInvoiceUrl());
+            templateModel.put(PRECEPTOR_NAME_KEY, preceptorName);
+            templateModel.put("amount", formatAmount(amountPaidInMinorUnits));
+            templateModel.put(CURRENCY_KEY, currency.toUpperCase());
+            templateModel.put("invoiceNumber", invoiceNumber);
+            templateModel.put("hostedInvoiceUrl", hostedInvoiceUrl);
 
-            // Check if PDF file exists on file system
-            File invoicePdf = new File(dto.invoicePdfPath());
-            if (invoicePdf.exists()) {
-                // SEND WITH ATTACHMENT
-                emailService.sendEmailWithAttachment(
-                        dto.email(),
-                        EmailTemplate.INVOICE_PAYMENT,
-                        templateModel,
-                        invoicePdf,
-                        "NPaxis_Invoice_" + dto.invoiceNumber() + ".pdf"
-                );
-                log.info("✓ Invoice payment email sent successfully WITH PDF for preceptor: {}, invoice: {}",
-                        dto.preceptorId(), dto.invoiceNumber());
-            } else {
-                // SEND WITHOUT ATTACHMENT if PDF not found (still delivers payment confirmation)
-                log.warn("Invoice PDF not found at {}, sending email without attachment for preceptor: {}",
-                        dto.invoicePdfPath(), dto.preceptorId());
-                emailService.sendEmail(
-                        dto.email(),
-                        EmailTemplate.INVOICE_PAYMENT,
-                        templateModel
-                );
-                log.info("✓ Invoice payment email sent successfully (no PDF) for preceptor: {}, invoice: {}",
-                        dto.preceptorId(), dto.invoiceNumber());
-            }
+            // Send email without attachment
+            emailService.sendEmail(
+                    preceptorEmail,
+                    EmailTemplate.INVOICE_PAYMENT,
+                    templateModel
+            );
+
+            log.info("✓ Invoice payment email sent successfully for preceptor: {}, invoice: {}",
+                    preceptorId, invoiceNumber);
 
         } catch (Exception e) {
-            log.error("Error sending invoice payment email for preceptor: {}", dto.preceptorId(), e);
+            log.error("Error sending invoice payment email for preceptor: {}", preceptorId, e);
             // Don't throw exception - email failures shouldn't break subscription flow
-            // In production, consider logging to DLQ table for manual retry
         }
     }
 
