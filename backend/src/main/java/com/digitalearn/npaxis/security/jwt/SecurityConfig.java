@@ -47,6 +47,7 @@ public class SecurityConfig {
         log.warn("Configuring SecurityFilterChain in OPEN mode (authentication disabled).");
         httpSecurity
 
+
                 // === HEADERS ===
                 .headers(headers -> headers.frameOptions(frameOptionsConfig -> {
                     frameOptionsConfig.disable();
@@ -65,6 +66,7 @@ public class SecurityConfig {
                         req -> req.requestMatchers(PUBLIC_URLS).permitAll()
                                 .requestMatchers(HttpMethod.GET, "/preceptors/active/**").hasRole(RoleName.ROLE_STUDENT.getRoleName())
                                 .requestMatchers(HttpMethod.GET, "/preceptors/search/**").hasRole(RoleName.ROLE_STUDENT.getRoleName())
+                                .requestMatchers("/administration/**").hasRole(RoleName.ROLE_ADMIN.getRoleName())
                                 .requestMatchers(ADMINISTRATION_ONLY_URLS).hasRole(RoleName.ROLE_ADMIN.getRoleName())
                                 .requestMatchers(USER_ONLY_URLS).hasAnyRole(RoleName.ROLE_PRECEPTOR.getRoleName(), RoleName.ROLE_STUDENT.getRoleName(), RoleName.ROLE_ADMIN.getRoleName())
                                 .requestMatchers(PRECEPTOR_ONLY_URLS).hasRole(RoleName.ROLE_PRECEPTOR.getRoleName())
