@@ -160,5 +160,37 @@ public class AdminPreceptorController {
                 .header("Content-Disposition", "attachment; filename=\"license.pdf\"")
                 .body(resource);
     }
+
+    @Operation(summary = "View license image (admin - for web display)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(ADMIN_PRECEPTOR_LICENSE_REVIEW_API)
+    public ResponseEntity<org.springframework.core.io.Resource> viewLicenseImage(
+            @PathVariable Long userId) {
+        log.info("Admin viewing license image - userId: {}", userId);
+        org.springframework.core.io.Resource resource = adminService.viewLicenseImageAsAdmin(userId);
+
+        // Determine content type based on file extension
+        String contentType = "application/pdf"; // default
+        try {
+            String path = resource.getFile().getAbsolutePath();
+            if (path.toLowerCase().endsWith(".png")) {
+                contentType = "image/png";
+            } else if (path.toLowerCase().endsWith(".jpg") || path.toLowerCase().endsWith(".jpeg")) {
+                contentType = "image/jpeg";
+            } else if (path.toLowerCase().endsWith(".gif")) {
+                contentType = "image/gif";
+            } else if (path.toLowerCase().endsWith(".webp")) {
+                contentType = "image/webp";
+            }
+        } catch (Exception e) {
+            log.debug("Could not determine file type, using default PDF type");
+        }
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "inline") // inline for browser display, not download
+                .header("Cache-Control", "public, max-age=3600")
+                .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                .body(resource);
+    }
 }
 

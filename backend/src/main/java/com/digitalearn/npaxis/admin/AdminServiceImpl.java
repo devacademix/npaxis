@@ -440,6 +440,28 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
+    @Override
+    public org.springframework.core.io.Resource viewLicenseImageAsAdmin(Long userId) {
+        log.info("Admin viewing license image for preceptor - userId: {}", userId);
+        Preceptor preceptor = preceptorRepository.findActiveById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
+        if (preceptor.getLicenseFileUrl() == null || preceptor.getLicenseFileUrl().isEmpty()) {
+            throw new ResourceNotFoundException("License file not found for preceptor with ID: " + userId);
+        }
+        try {
+            Path path = Paths.get(preceptor.getLicenseFileUrl());
+            org.springframework.core.io.FileSystemResource resource = new org.springframework.core.io.FileSystemResource(path.toFile());
+            if (!resource.exists()) {
+                throw new ResourceNotFoundException("License file not accessible");
+            }
+            log.info("✓ License image retrieved for display: preceptor={}, file={}", userId, path.getFileName());
+            return resource;
+        } catch (Exception e) {
+            log.error("Error viewing license image for preceptor {}: {}", userId, e.getMessage());
+            throw new ResourceNotFoundException("Error retrieving license image: " + e.getMessage());
+        }
+    }
+
     // Helper methods
     private AdminPreceptorListDTO mapPreceptorToListDTO(Preceptor preceptor) {
         return new AdminPreceptorListDTO(

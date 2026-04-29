@@ -200,4 +200,35 @@ public class PreceptorController {
                 .contentType(MediaType.APPLICATION_PDF) // Defaulting to PDF, or detect based on extension
                 .body(resource);
     }
+
+    @Operation(summary = "View license image", description = "View/preview license image for a preceptor (display in browser, not download).")
+    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
+    @GetMapping(value = {"/preceptor-{userId}/license/view", "/preceptor-{userId}/license/view/"})
+    public ResponseEntity<org.springframework.core.io.Resource> viewLicenseImage(@PathVariable Long userId) {
+        log.info("Viewing license image for preceptor ID: {}", userId);
+        org.springframework.core.io.Resource resource = preceptorService.downloadLicense(userId);
+
+        // Determine content type based on file extension
+        String contentType = "application/pdf"; // default
+        try {
+            String path = resource.getFile().getAbsolutePath();
+            if (path.toLowerCase().endsWith(".png")) {
+                contentType = "image/png";
+            } else if (path.toLowerCase().endsWith(".jpg") || path.toLowerCase().endsWith(".jpeg")) {
+                contentType = "image/jpeg";
+            } else if (path.toLowerCase().endsWith(".gif")) {
+                contentType = "image/gif";
+            } else if (path.toLowerCase().endsWith(".webp")) {
+                contentType = "image/webp";
+            }
+        } catch (Exception e) {
+            log.debug("Could not determine file type, using default PDF type");
+        }
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "inline") // inline for browser display, not download
+                .header("Cache-Control", "public, max-age=3600")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(resource);
+    }
 }

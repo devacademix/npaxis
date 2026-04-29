@@ -168,4 +168,10 @@ public interface AdminService {
      * Download license file with audit logging
      */
     org.springframework.core.io.Resource downloadLicenseAsAdmin(Long userId);
+
+    /**
+     * View/preview license image (returns resource with proper content type for web display)
+     * Can display PDF, PNG, JPG, etc. in browser
+     */
+    org.springframework.core.io.Resource viewLicenseImageAsAdmin(Long userId);
 }
