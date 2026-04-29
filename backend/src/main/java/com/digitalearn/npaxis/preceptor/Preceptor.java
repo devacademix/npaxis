@@ -108,4 +108,18 @@ public class Preceptor extends BaseEntity {
 
     @Column(name = "stripe_subscription_id", length = 100)
     private String stripeSubscriptionId;
+
+    // --- License Correction Workflow ---
+
+    @Column(columnDefinition = "TEXT")
+    private String correctionRequestedReason;
+
+    @Column(name = "correction_requested_at")
+    private LocalDateTime correctionRequestedAt;
+
+    @Column(name = "resubmitted_at")
+    private LocalDateTime resubmittedAt;
+
+    @Column(name = "verification_attempts")
+    private Integer verificationAttempts = 0;
 }

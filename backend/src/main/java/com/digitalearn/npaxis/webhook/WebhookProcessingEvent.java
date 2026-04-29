@@ -79,13 +79,13 @@ public class WebhookProcessingEvent extends BaseEntity {
     private boolean liveMode = true;
 
     public void markSucceeded() {
-        this.status = WebhookEventStatus.SUCCEEDED;
+        this.status = WebhookEventStatus.SUCCESS;
         this.processedAt = LocalDateTime.now(ZoneOffset.UTC);
         this.errorMessage = null;
     }
 
     public void markFailed(String message) {
-        this.status = WebhookEventStatus.FAILED;
+        this.status = WebhookEventStatus.FAILED_RETRYING;
         this.errorMessage = message != null && message.length() > 1000
                 ? message.substring(0, 1000)
                 : message;

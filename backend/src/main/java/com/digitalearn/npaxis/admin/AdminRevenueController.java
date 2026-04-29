@@ -21,12 +21,13 @@ import java.util.List;
 
 import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_REVENUE_BY_PRECEPTOR_API;
 import static com.digitalearn.npaxis.utils.APIConstants.ADMINISTRATION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
 
 /**
  * Admin controller for revenue and billing reports
  */
 @RestController
-@RequestMapping(ADMINISTRATION_API)
+@RequestMapping(BASE_API + "/" + ADMINISTRATION_API)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Admin Revenue Management", description = "Admin-only APIs for revenue and billing reports")

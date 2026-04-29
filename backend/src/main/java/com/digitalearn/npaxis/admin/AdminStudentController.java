@@ -24,7 +24,7 @@ import static com.digitalearn.npaxis.utils.APIConstants.*;
  * Admin controller for student management operations
  */
 @RestController
-@RequestMapping(ADMINISTRATION_API)
+@RequestMapping(BASE_API + "/" + ADMINISTRATION_API)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Admin Student Management", description = "Admin-only APIs for student management")

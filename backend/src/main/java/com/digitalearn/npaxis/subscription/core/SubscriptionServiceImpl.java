@@ -60,7 +60,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
             String stripeCustomerId = preceptor.getStripeCustomerId();
             if (stripeCustomerId == null) {
-                Customer customer = stripeClient.createCustomer(preceptor.getEmail());
+                Customer customer = stripeClient.createCustomer(preceptor.getUser().getEmail());
                 stripeCustomerId = customer.getId();
                 preceptor.setStripeCustomerId(stripeCustomerId);
                 preceptorRepository.save(preceptor);

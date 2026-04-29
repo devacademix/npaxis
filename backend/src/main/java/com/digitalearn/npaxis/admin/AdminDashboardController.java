@@ -28,7 +28,7 @@ import static com.digitalearn.npaxis.utils.APIConstants.*;
  * Admin controller for dashboard, settings, and analytics
  */
 @RestController
-@RequestMapping(ADMINISTRATION_API)
+@RequestMapping(BASE_API + "/" + ADMINISTRATION_API)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Admin Dashboard & Settings", description = "Admin-only APIs for dashboard and system settings")

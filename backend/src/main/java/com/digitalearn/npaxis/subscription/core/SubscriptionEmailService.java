@@ -71,7 +71,7 @@ public class SubscriptionEmailService {
             SubscriptionEmailData data = SubscriptionEmailData.builder()
                     .preceptorId(subscription.getPreceptor().getUserId())
                     .preceptorName(subscription.getPreceptor().getName())
-                    .preceptorEmail(subscription.getPreceptor().getEmail())
+                    .preceptorEmail(subscription.getPreceptor().getUser().getEmail())
                     .planName(subscription.getPlan().getName())
                     .billingInterval(subscription.getPrice().getBillingInterval().toString())
                     .amountInMinorUnits(subscription.getPrice().getAmountInMinorUnits())

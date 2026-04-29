@@ -83,14 +83,14 @@ public class WebhookServiceImpl implements WebhookService {
             processEventByType(event, webhookEvent);
 
             // Mark as successfully processed
-            webhookEvent.setStatus(WebhookEventStatus.SUCCEEDED);
+            webhookEvent.setStatus(WebhookEventStatus.SUCCESS);
             webhookEvent.setProcessedAt(LocalDateTime.now());
             log.info("Event processed successfully: {}", event.getId());
 
         } catch (Exception e) {
             log.error("Error processing webhook event: {}", event.getId(), e);
 
-            webhookEvent.setStatus(WebhookEventStatus.FAILED);
+            webhookEvent.setStatus(WebhookEventStatus.FAILED_RETRYING);
             webhookEvent.setErrorMessage(e.getMessage());
             webhookEvent.setRetryCount(0);
 
@@ -110,7 +110,7 @@ public class WebhookServiceImpl implements WebhookService {
 
         LocalDateTime now = LocalDateTime.now();
         List<WebhookProcessingEvent> failedEvents = webhookEventRepository
-                .findByStatusAndNextRetryAtBefore(WebhookEventStatus.FAILED, now);
+                .findByStatusAndNextRetryAtBefore(WebhookEventStatus.FAILED_RETRYING, now);
 
         log.info("Found {} failed events to retry", failedEvents.size());
 
@@ -130,7 +130,7 @@ public class WebhookServiceImpl implements WebhookService {
                 processEventByType(stripeEvent, event);
 
                 // Mark as successfully processed
-                event.setStatus(WebhookEventStatus.SUCCEEDED);
+                event.setStatus(WebhookEventStatus.SUCCESS);
                 event.setProcessedAt(LocalDateTime.now());
                 webhookEventRepository.save(event);
 
@@ -416,7 +416,7 @@ public class WebhookServiceImpl implements WebhookService {
                     subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
                             p.getUserId(),
                             p.getName(),
-                            p.getEmail(),
+                            p.getUser().getEmail(),
                             invoiceNumber,
                             amountPaid,
                             currency,
@@ -551,7 +551,7 @@ public class WebhookServiceImpl implements WebhookService {
                     subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
                             p.getUserId(),
                             p.getName(),
-                            p.getEmail(),
+                            p.getUser().getEmail(),
                             invoiceNumber,
                             amountPaid,
                             currency,
