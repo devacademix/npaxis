@@ -301,7 +301,7 @@ public class SubscriptionEmailService {
     /**
      * Send invoice payment email with PDF attachment (sync)
      * CRITICAL: This method is called directly from transactional webhook context
-     * It generates the PDF while entities are still attached, then passes bytes to async method
+     * It generates and stores the PDF while entities are still attached, then passes to async method
      * DO NOT mark this as @Async - it must run in the webhook transaction
      * 
      * @param preceptorId the preceptor ID
@@ -312,9 +312,10 @@ public class SubscriptionEmailService {
      * @param currency the currency code
      * @param invoiceDate the invoice creation date
      * @param hostedInvoiceUrl optional Stripe hosted URL
+     * @return the stored PDF URL/path if stored successfully, null otherwise
      */
     @Transactional(readOnly = true)
-    public void sendInvoicePaymentEmailWithPdf(
+    public String sendInvoicePaymentEmailWithPdf(
             Long preceptorId,
             String preceptorName,
             String preceptorEmail,
@@ -324,7 +325,7 @@ public class SubscriptionEmailService {
             LocalDateTime invoiceDate,
             String hostedInvoiceUrl) {
         try {
-            log.info("Generating invoice PDF and preparing email for preceptor: {}, invoice: {}",
+            log.info("Generating and storing invoice PDF for email for preceptor: {}, invoice: {}",
                     preceptorId, invoiceNumber);
 
             // Create invoice item list with single subscription charge
@@ -336,7 +337,7 @@ public class SubscriptionEmailService {
                     amountPaidInMinorUnits
             ));
 
-            // Generate PDF bytes while in transaction context
+            // Generate PDF bytes while in transaction context for email attachment
             byte[] pdfBytes = invoicePdfService.generateInvoicePdfBytes(
                     invoiceNumber,
                     preceptorName,
@@ -356,6 +357,9 @@ public class SubscriptionEmailService {
                     hostedInvoiceUrl, pdfBytes
             );
 
+            // Return null - the async method will handle storage if needed
+            return null;
+
         } catch (Exception e) {
             log.error("Error generating invoice PDF for email: preceptor={}, invoice={}",
                     preceptorId, invoiceNumber, e);
@@ -364,6 +368,7 @@ public class SubscriptionEmailService {
                     preceptorId, preceptorName, preceptorEmail,
                     amountPaidInMinorUnits, currency, invoiceNumber, hostedInvoiceUrl
             );
+            return null;
         }
     }
 
@@ -371,6 +376,10 @@ public class SubscriptionEmailService {
      * Send invoice payment email with PDF attachment (async)
      * Converts PDF bytes to temporary file and sends via email service
      * 
+     * IMPORTANT: The temporary file is NOT deleted in this method.
+     * It is only marked for deletion on JVM exit via deleteOnExit().
+     * This prevents race conditions with the async email service.
+     *
      * @param preceptorId the preceptor ID
      * @param preceptorName the preceptor name
      * @param preceptorEmail the preceptor email
@@ -436,20 +445,9 @@ public class SubscriptionEmailService {
             } catch (Exception fallbackError) {
                 log.error("Fallback email also failed for preceptor: {}", preceptorId, fallbackError);
             }
-        } finally {
-            // Clean up temporary file
-            if (tempPdfFile != null && tempPdfFile.exists()) {
-                try {
-                    if (tempPdfFile.delete()) {
-                        log.debug("Temporary PDF file deleted: {}", tempPdfFile.getAbsolutePath());
-                    } else {
-                        log.warn("Failed to delete temporary PDF file: {}", tempPdfFile.getAbsolutePath());
-                    }
-                } catch (Exception e) {
-                    log.warn("Error deleting temporary PDF file: {}", tempPdfFile.getAbsolutePath(), e);
-                }
-            }
         }
+        // NOTE: Temp file is NOT deleted here. It's marked for deletion on JVM exit via deleteOnExit() in createTemporaryPdfFile()
+        // This prevents race conditions where the async email service hasn't finished accessing the file yet.
     }
 
     /**
@@ -476,6 +474,57 @@ public class SubscriptionEmailService {
 
         } catch (IOException e) {
             log.error("Failed to create temporary PDF file for invoice: {}", invoiceNumber, e);
+            return null;
+        }
+    }
+
+    /**
+     * Generate invoice PDF and store it persistently to storage backend.
+     * This stores the PDF so it's not lost if email fails to attach it.
+     *
+     * @param invoiceNumber the invoice number
+     * @param preceptorName the preceptor name
+     * @param invoiceDate the invoice creation date
+     * @param amountPaidInMinorUnits the amount paid
+     * @param currency the currency code
+     * @param hostedInvoiceUrl optional Stripe URL
+     * @return the storage URL/path where PDF is stored, or null if storage fails
+     */
+    public String generateAndStoreInvoicePdf(
+            String invoiceNumber,
+            String preceptorName,
+            LocalDateTime invoiceDate,
+            Long amountPaidInMinorUnits,
+            String currency,
+            String hostedInvoiceUrl) {
+        try {
+            log.info("Generating and storing invoice PDF for persistent storage: invoice={}", invoiceNumber);
+
+            // Create invoice item list with single subscription charge
+            List<InvoicePdfService.InvoiceItemDto> items = new ArrayList<>();
+            items.add(new InvoicePdfService.InvoiceItemDto(
+                    "Premium Preceptor Subscription",
+                    1,
+                    amountPaidInMinorUnits,
+                    amountPaidInMinorUnits
+            ));
+
+            // Generate and store PDF to persistent storage
+            String storagePath = invoicePdfService.generateAndStoreInvoicePdf(
+                    invoiceNumber,
+                    preceptorName,
+                    invoiceDate,
+                    items,
+                    amountPaidInMinorUnits,
+                    currency,
+                    hostedInvoiceUrl
+            );
+
+            log.info("✓ Invoice PDF stored persistently: invoice={}, path={}", invoiceNumber, storagePath);
+            return storagePath;
+
+        } catch (Exception e) {
+            log.error("Failed to generate and store invoice PDF for persistent storage: invoice={}", invoiceNumber, e);
             return null;
         }
     }

@@ -398,11 +398,7 @@ public class WebhookServiceImpl implements WebhookService {
                     // Save transaction
                     saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
 
-                    // UPSERT invoice (PostgreSQL ON CONFLICT DO UPDATE)
-                    // Safe for concurrent webhook events
-                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
-
-                    // Extract invoice data for email with PDF
+                    // Extract invoice data for PDF generation and storage
                     String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
                     String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
                     Long amountPaid = invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L;
@@ -411,6 +407,20 @@ public class WebhookServiceImpl implements WebhookService {
                     LocalDateTime invoiceCreatedAtDt = invoiceCreatedAt != null ?
                             LocalDateTime.ofInstant(java.time.Instant.ofEpochSecond(invoiceCreatedAt), ZoneId.systemDefault())
                             : LocalDateTime.now();
+
+                    // Generate, store PDF persistently, and get storage URL
+                    String invoicePdfUrl = subscriptionEmailService.generateAndStoreInvoicePdf(
+                            invoiceNumber,
+                            p.getName(),
+                            invoiceCreatedAtDt,
+                            amountPaid,
+                            currency,
+                            hostedInvoiceUrl
+                    );
+
+                    // UPSERT invoice WITH stored PDF URL (PostgreSQL ON CONFLICT DO UPDATE)
+                    // Safe for concurrent webhook events
+                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID, invoicePdfUrl);
 
                     // Send async email WITH PDF attachment
                     subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
@@ -424,8 +434,8 @@ public class WebhookServiceImpl implements WebhookService {
                             hostedInvoiceUrl
                     );
 
-                    log.info("✓ Invoice payment succeeded (UPSERT + EMAIL WITH PDF): preceptor={}, invoiceId={}, status=PAID",
-                            p.getUserId(), invoice.getId());
+                    log.info("✓ Invoice payment succeeded (UPSERT + EMAIL WITH PDF): preceptor={}, invoiceId={}, status=PAID, pdfUrl={}",
+                            p.getUserId(), invoice.getId(), invoicePdfUrl);
                 } else {
                     log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
                 }
@@ -533,11 +543,7 @@ public class WebhookServiceImpl implements WebhookService {
                     // Save transaction
                     saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
 
-                    // UPSERT invoice (PostgreSQL ON CONFLICT DO UPDATE)
-                    // Safe for concurrent webhook events
-                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
-
-                    // Extract invoice data for email with PDF
+                    // Extract invoice data for PDF generation and storage
                     String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
                     String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
                     Long amountPaid = invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L;
@@ -546,6 +552,20 @@ public class WebhookServiceImpl implements WebhookService {
                     LocalDateTime invoiceCreatedAtDt = invoiceCreatedAt != null ?
                             LocalDateTime.ofInstant(java.time.Instant.ofEpochSecond(invoiceCreatedAt), ZoneId.systemDefault())
                             : LocalDateTime.now();
+
+                    // Generate, store PDF persistently, and get storage URL
+                    String invoicePdfUrl = subscriptionEmailService.generateAndStoreInvoicePdf(
+                            invoiceNumber,
+                            p.getName(),
+                            invoiceCreatedAtDt,
+                            amountPaid,
+                            currency,
+                            hostedInvoiceUrl
+                    );
+
+                    // UPSERT invoice WITH stored PDF URL (PostgreSQL ON CONFLICT DO UPDATE)
+                    // Safe for concurrent webhook events
+                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID, invoicePdfUrl);
 
                     // Send async email WITH PDF attachment
                     subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
@@ -559,8 +579,8 @@ public class WebhookServiceImpl implements WebhookService {
                             hostedInvoiceUrl
                     );
 
-                    log.info("✓ Invoice marked as paid (UPSERT + EMAIL WITH PDF): preceptor={}, invoiceId={}, status=PAID",
-                            p.getUserId(), invoice.getId());
+                    log.info("✓ Invoice marked as paid (UPSERT + EMAIL WITH PDF): preceptor={}, invoiceId={}, status=PAID, pdfUrl={}",
+                            p.getUserId(), invoice.getId(), invoicePdfUrl);
                 } else {
                     log.warn("Preceptor not found for customer ID: {}. Premium status not set.", customerId);
                 }
