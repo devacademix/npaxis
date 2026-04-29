@@ -2,6 +2,7 @@ package com.digitalearn.npaxis.subscription.core;
 
 import com.digitalearn.npaxis.email.EmailService;
 import com.digitalearn.npaxis.email.EmailTemplate;
+import com.digitalearn.npaxis.subscription.invoice.service.InvoicePdfService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -10,12 +11,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -34,6 +40,7 @@ public class SubscriptionEmailService {
     private static final String CURRENCY_KEY = "currency";
     private final EmailService emailService;
     private final ObjectProvider<SubscriptionEmailService> selfProvider;
+    private final InvoicePdfService invoicePdfService;
 
     /**
      * Convert LocalDateTime to Instant for storage in DTO
@@ -292,14 +299,196 @@ public class SubscriptionEmailService {
 
 
     /**
+     * Send invoice payment email with PDF attachment (sync)
+     * CRITICAL: This method is called directly from transactional webhook context
+     * It generates the PDF while entities are still attached, then passes bytes to async method
+     * DO NOT mark this as @Async - it must run in the webhook transaction
+     * 
+     * @param preceptorId the preceptor ID
+     * @param preceptorName the preceptor name
+     * @param preceptorEmail the preceptor email
+     * @param invoiceNumber the invoice number
+     * @param amountPaidInMinorUnits the amount paid in minor units
+     * @param currency the currency code
+     * @param invoiceDate the invoice creation date
+     * @param hostedInvoiceUrl optional Stripe hosted URL
+     */
+    @Transactional(readOnly = true)
+    public void sendInvoicePaymentEmailWithPdf(
+            Long preceptorId,
+            String preceptorName,
+            String preceptorEmail,
+            String invoiceNumber,
+            Long amountPaidInMinorUnits,
+            String currency,
+            LocalDateTime invoiceDate,
+            String hostedInvoiceUrl) {
+        try {
+            log.info("Generating invoice PDF and preparing email for preceptor: {}, invoice: {}",
+                    preceptorId, invoiceNumber);
+
+            // Create invoice item list with single subscription charge
+            List<InvoicePdfService.InvoiceItemDto> items = new ArrayList<>();
+            items.add(new InvoicePdfService.InvoiceItemDto(
+                    "Premium Preceptor Subscription",
+                    1,
+                    amountPaidInMinorUnits,
+                    amountPaidInMinorUnits
+            ));
+
+            // Generate PDF bytes while in transaction context
+            byte[] pdfBytes = invoicePdfService.generateInvoicePdfBytes(
+                    invoiceNumber,
+                    preceptorName,
+                    invoiceDate,
+                    items,
+                    amountPaidInMinorUnits,
+                    currency,
+                    hostedInvoiceUrl
+            );
+
+            log.info("Invoice PDF generated: {} bytes for invoice: {}", pdfBytes.length, invoiceNumber);
+
+            // Call async method to send email with PDF
+            selfProvider.getObject().sendInvoicePaymentEmailWithPdfAsync(
+                    preceptorId, preceptorName, preceptorEmail,
+                    amountPaidInMinorUnits, currency, invoiceNumber,
+                    hostedInvoiceUrl, pdfBytes
+            );
+
+        } catch (Exception e) {
+            log.error("Error generating invoice PDF for email: preceptor={}, invoice={}",
+                    preceptorId, invoiceNumber, e);
+            // Still send email without PDF on PDF generation failure
+            selfProvider.getObject().sendInvoicePaymentEmailAsync(
+                    preceptorId, preceptorName, preceptorEmail,
+                    amountPaidInMinorUnits, currency, invoiceNumber, hostedInvoiceUrl
+            );
+        }
+    }
+
+    /**
+     * Send invoice payment email with PDF attachment (async)
+     * Converts PDF bytes to temporary file and sends via email service
+     * 
+     * @param preceptorId the preceptor ID
+     * @param preceptorName the preceptor name
+     * @param preceptorEmail the preceptor email
+     * @param amountPaidInMinorUnits the amount paid
+     * @param currency the currency code
+     * @param invoiceNumber the invoice number
+     * @param hostedInvoiceUrl optional Stripe URL
+     * @param pdfBytes the PDF content as bytes
+     */
+    @Async
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void sendInvoicePaymentEmailWithPdfAsync(Long preceptorId, String preceptorName, String preceptorEmail,
+                                                    Long amountPaidInMinorUnits, String currency, String invoiceNumber,
+                                                    String hostedInvoiceUrl, byte[] pdfBytes) {
+        File tempPdfFile = null;
+        try {
+            // Validate email address
+            if (preceptorEmail == null || preceptorEmail.isBlank()) {
+                log.error("Cannot send invoice payment email - preceptor email is null or blank for preceptor: {}, invoice: {}",
+                        preceptorId, invoiceNumber);
+                return;
+            }
+
+            log.info("Sending invoice payment email with PDF attachment for user: {} with invoice: {}", preceptorId, invoiceNumber);
+
+            // Create temporary file from PDF bytes
+            tempPdfFile = createTemporaryPdfFile(pdfBytes, invoiceNumber);
+            
+            if (tempPdfFile == null || !tempPdfFile.exists()) {
+                log.warn("Failed to create temporary PDF file, sending email without attachment");
+                sendInvoicePaymentEmailAsync(preceptorId, preceptorName, preceptorEmail,
+                        amountPaidInMinorUnits, currency, invoiceNumber, hostedInvoiceUrl);
+                return;
+            }
+
+            // Prepare email model
+            Map<String, Object> templateModel = new HashMap<>();
+            templateModel.put(PRECEPTOR_NAME_KEY, preceptorName);
+            templateModel.put("amount", formatAmount(amountPaidInMinorUnits));
+            templateModel.put(CURRENCY_KEY, currency.toUpperCase());
+            templateModel.put("invoiceNumber", invoiceNumber);
+            templateModel.put("hostedInvoiceUrl", hostedInvoiceUrl);
+
+            // Send email with PDF attachment
+            String attachmentFileName = "Invoice-" + invoiceNumber + ".pdf";
+            emailService.sendEmailWithAttachment(
+                    preceptorEmail,
+                    EmailTemplate.INVOICE_PAYMENT,
+                    templateModel,
+                    tempPdfFile,
+                    attachmentFileName
+            );
+
+            log.info("✓ Invoice payment email with PDF sent successfully for preceptor: {}, invoice: {}",
+                    preceptorId, invoiceNumber);
+
+        } catch (Exception e) {
+            log.error("Error sending invoice payment email with PDF for preceptor: {}", preceptorId, e);
+            // Fallback: send email without attachment
+            try {
+                sendInvoicePaymentEmailAsync(preceptorId, preceptorName, preceptorEmail,
+                        amountPaidInMinorUnits, currency, invoiceNumber, hostedInvoiceUrl);
+            } catch (Exception fallbackError) {
+                log.error("Fallback email also failed for preceptor: {}", preceptorId, fallbackError);
+            }
+        } finally {
+            // Clean up temporary file
+            if (tempPdfFile != null && tempPdfFile.exists()) {
+                try {
+                    if (tempPdfFile.delete()) {
+                        log.debug("Temporary PDF file deleted: {}", tempPdfFile.getAbsolutePath());
+                    } else {
+                        log.warn("Failed to delete temporary PDF file: {}", tempPdfFile.getAbsolutePath());
+                    }
+                } catch (Exception e) {
+                    log.warn("Error deleting temporary PDF file: {}", tempPdfFile.getAbsolutePath(), e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Create a temporary file from PDF bytes
+     * 
+     * @param pdfBytes the PDF content as bytes
+     * @param invoiceNumber the invoice number (used for naming)
+     * @return temporary File object, or null if creation fails
+     */
+    private File createTemporaryPdfFile(byte[] pdfBytes, String invoiceNumber) {
+        try {
+            // Create temporary file with meaningful name
+            File tempFile = File.createTempFile("invoice-" + invoiceNumber + "-", ".pdf");
+            tempFile.deleteOnExit(); // Ensure deletion on JVM exit as fallback
+
+            // Write bytes to file
+            try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+                fos.write(pdfBytes);
+                fos.flush();
+            }
+
+            log.debug("Temporary PDF file created: {} ({} bytes)", tempFile.getAbsolutePath(), pdfBytes.length);
+            return tempFile;
+
+        } catch (IOException e) {
+            log.error("Failed to create temporary PDF file for invoice: {}", invoiceNumber, e);
+            return null;
+        }
+    }
+
+    /**
      * Send invoice payment email (async, without PDF)
      * Called when invoice payment succeeds
      */
     @Async
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void sendInvoicePaymentEmailAsync(Long preceptorId, String preceptorName, String preceptorEmail,
-                                            Long amountPaidInMinorUnits, String currency, String invoiceNumber,
-                                            String hostedInvoiceUrl) {
+                                             Long amountPaidInMinorUnits, String currency, String invoiceNumber,
+                                             String hostedInvoiceUrl) {
         try {
             // Validate email address before attempting to send
             if (preceptorEmail == null || preceptorEmail.isBlank()) {

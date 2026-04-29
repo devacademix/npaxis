@@ -370,10 +370,11 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     /**
-     * Handle invoice.payment_succeeded event - Save transaction & send email
+     * Handle invoice.payment_succeeded event - Save transaction & send email with PDF attachment
      * AUTHORITATIVE EVENT for invoice persistence (uses UPSERT)
      * Safe for concurrent webhook delivery (idempotent via ON CONFLICT DO UPDATE)
      * Multiple deliveries of same event result in single invoice record
+     * Sends email with invoice PDF as attachment using invoice-payment.html template
      */
     private void handleInvoicePaymentSucceeded(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice payment succeeded event (AUTHORITATIVE)");
@@ -401,24 +402,29 @@ public class WebhookServiceImpl implements WebhookService {
                     // Safe for concurrent webhook events
                     updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
 
-                    // Extract invoice data for email
+                    // Extract invoice data for email with PDF
                     String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
                     String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
                     Long amountPaid = invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L;
                     String currency = invoice.getCurrency() != null ? invoice.getCurrency() : "usd";
+                    Long invoiceCreatedAt = invoice.getCreated();
+                    LocalDateTime invoiceCreatedAtDt = invoiceCreatedAt != null ?
+                            LocalDateTime.ofInstant(java.time.Instant.ofEpochSecond(invoiceCreatedAt), ZoneId.systemDefault())
+                            : LocalDateTime.now();
 
-                    // Send async email (without PDF attachment)
-                    subscriptionEmailService.sendInvoicePaymentEmailAsync(
+                    // Send async email WITH PDF attachment
+                    subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
                             p.getUserId(),
                             p.getName(),
                             p.getEmail(),
+                            invoiceNumber,
                             amountPaid,
                             currency,
-                            invoiceNumber,
+                            invoiceCreatedAtDt,
                             hostedInvoiceUrl
                     );
 
-                    log.info("✓ Invoice payment succeeded (UPSERT + EMAIL): preceptor={}, invoiceId={}, status=PAID",
+                    log.info("✓ Invoice payment succeeded (UPSERT + EMAIL WITH PDF): preceptor={}, invoiceId={}, status=PAID",
                             p.getUserId(), invoice.getId());
                 } else {
                     log.warn(PRECEPTOR_NOT_FOUND_MSG, customerId);
@@ -494,10 +500,11 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     /**
-     * Handle invoice.paid event
+     * Handle invoice.paid event - Mark invoice as paid, set premium status, send email with PDF
      * AUTHORITATIVE EVENT for invoice persistence (uses UPSERT)
      * Safe for concurrent webhook delivery (idempotent via ON CONFLICT DO UPDATE)
      * Sets preceptor to premium status on payment confirmation
+     * Sends email with invoice PDF as attachment using invoice-payment.html template
      */
     private void handleInvoicePaid(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice paid event (AUTHORITATIVE)");
@@ -530,7 +537,29 @@ public class WebhookServiceImpl implements WebhookService {
                     // Safe for concurrent webhook events
                     updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
 
-                    log.info("✓ Invoice marked as paid (UPSERT): preceptor={}, invoiceId={}, status=PAID",
+                    // Extract invoice data for email with PDF
+                    String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
+                    String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
+                    Long amountPaid = invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L;
+                    String currency = invoice.getCurrency() != null ? invoice.getCurrency() : "usd";
+                    Long invoiceCreatedAt = invoice.getCreated();
+                    LocalDateTime invoiceCreatedAtDt = invoiceCreatedAt != null ?
+                            LocalDateTime.ofInstant(java.time.Instant.ofEpochSecond(invoiceCreatedAt), ZoneId.systemDefault())
+                            : LocalDateTime.now();
+
+                    // Send async email WITH PDF attachment
+                    subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
+                            p.getUserId(),
+                            p.getName(),
+                            p.getEmail(),
+                            invoiceNumber,
+                            amountPaid,
+                            currency,
+                            invoiceCreatedAtDt,
+                            hostedInvoiceUrl
+                    );
+
+                    log.info("✓ Invoice marked as paid (UPSERT + EMAIL WITH PDF): preceptor={}, invoiceId={}, status=PAID",
                             p.getUserId(), invoice.getId());
                 } else {
                     log.warn("Preceptor not found for customer ID: {}. Premium status not set.", customerId);
@@ -837,6 +866,20 @@ public class WebhookServiceImpl implements WebhookService {
      * Safe for concurrent webhook events - no SELECT before INSERT
      */
     private void updateOrCreateBillingInvoice(Preceptor preceptor, Invoice invoice, InvoiceStatus status) {
+        updateOrCreateBillingInvoice(preceptor, invoice, status, null);
+    }
+
+    /**
+     * UPSERT billing invoice using Stripe SDK with optional PDF URL
+     * PostgreSQL ON CONFLICT DO UPDATE ensures idempotency
+     * Safe for concurrent webhook events - no SELECT before INSERT
+     *
+     * @param preceptor     the preceptor
+     * @param invoice       the Stripe invoice
+     * @param status        the invoice status
+     * @param invoicePdfUrl optional URL/path to generated PDF
+     */
+    private void updateOrCreateBillingInvoice(Preceptor preceptor, Invoice invoice, InvoiceStatus status, String invoicePdfUrl) {
         try {
             // Extract invoice data using Stripe SDK methods
             String stripeSubscriptionId = extractSubscriptionId(invoice);
@@ -846,7 +889,7 @@ public class WebhookServiceImpl implements WebhookService {
 
             // Safe URLs - null if empty
             String hostedUrl = invoice.getHostedInvoiceUrl();
-            String pdfUrl = invoice.getInvoicePdf();
+            String pdfUrl = invoicePdfUrl != null ? invoicePdfUrl : invoice.getInvoicePdf();
             hostedUrl = (hostedUrl != null && !hostedUrl.isEmpty()) ? hostedUrl : null;
             pdfUrl = (pdfUrl != null && !pdfUrl.isEmpty()) ? pdfUrl : null;
 
@@ -871,8 +914,9 @@ public class WebhookServiceImpl implements WebhookService {
             );
 
             log.info("✓ UPSERT BillingInvoice: preceptor={}, invoiceId={}, subscriptionId={}, " +
-                            "status={}, paidAt={}", preceptor.getUserId(), invoice.getId(),
-                    stripeSubscriptionId, status, invoicePaidAt);
+                            "status={}, paidAt={}, pdfUrl={}",
+                    preceptor.getUserId(), invoice.getId(),
+                    stripeSubscriptionId, status, invoicePaidAt, pdfUrl);
 
         } catch (Exception e) {
             log.error("Error upserting billing invoice for preceptor: {}", preceptor.getUserId(), e);
@@ -936,10 +980,3 @@ public class WebhookServiceImpl implements WebhookService {
         return String.format("%.2f", amount);
     }
 }
-
-
-
-
-
-
-

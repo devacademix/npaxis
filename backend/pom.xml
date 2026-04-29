@@ -164,11 +164,28 @@
             <groupId>com.stripe</groupId>
             <artifactId>stripe-java</artifactId>
             <version>32.0.0</version>
-        </dependency>        <!-- GSON for JSON handling -->
+        </dependency>
+
+        <!-- GSON for JSON handling -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
+        </dependency>
+
+        <!-- PDF Generation: Flying Saucer (industry-standard HTML to PDF) -->
+        <!-- Source: https://mvnrepository.com/artifact/org.xhtmlrenderer/core-renderer -->
+        <dependency>
+            <groupId>org.xhtmlrenderer</groupId>
+            <artifactId>core-renderer</artifactId>
+            <version>R8</version>
+        </dependency>
+
+        <!-- PDF Box backend for Flying Saucer -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.28</version>
         </dependency>
 
     </dependencies>

@@ -24,4 +24,3 @@ public interface WebhookEventHandler {
      */
     void handle(Event event, WebhookProcessingEvent webhookRecord);
 }
-

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8"/>
+
     <style>
         * {
             margin: 0;
@@ -10,7 +11,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             color: #333;
             background-color: #fff;
         }
@@ -21,13 +22,24 @@
             padding: 40px;
         }
 
+        /* Header */
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 40px;
+            width: 100%;
             border-bottom: 2px solid #0A2540;
             padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+
+        .header-table {
+            width: 100%;
+        }
+
+        .header-left {
+            text-align: left;
+        }
+
+        .header-right {
+            text-align: right;
         }
 
         .company-info h1 {
@@ -39,10 +51,6 @@
         .company-info p {
             color: #666;
             font-size: 12px;
-        }
-
-        .invoice-title {
-            text-align: right;
         }
 
         .invoice-title h2 {
@@ -57,6 +65,7 @@
             margin-bottom: 5px;
         }
 
+        /* Sections */
         .section {
             margin-bottom: 30px;
         }
@@ -76,19 +85,23 @@
             line-height: 1.6;
         }
 
+        /* Two Column Layout (PDF Safe) */
         .two-column {
-            display: flex;
-            gap: 40px;
+            width: 100%;
         }
 
-        .column {
-            flex: 1;
+        .two-column td {
+            vertical-align: top;
+            width: 50%;
+            padding-right: 20px;
         }
 
+        /* Table */
         .items-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            page-break-inside: avoid;
         }
 
         .items-table th {
@@ -97,7 +110,6 @@
             text-align: left;
             padding: 12px;
             font-size: 12px;
-            font-weight: bold;
             border-bottom: 2px solid #0A2540;
         }
 
@@ -107,21 +119,18 @@
             border-bottom: 1px solid #eee;
         }
 
-        .items-table tr:last-child td {
-            border-bottom: none;
+        .items-table tr {
+            page-break-inside: avoid;
         }
 
-        .items-table .text-right {
+        .text-right {
             text-align: right;
         }
 
+        /* Summary */
         .summary-table {
             width: 100%;
             margin-top: 20px;
-        }
-
-        .summary-table tr {
-            border: none;
         }
 
         .summary-table td {
@@ -149,6 +158,22 @@
             font-size: 16px;
         }
 
+        /* Note */
+        .note {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-left: 4px solid #0A2540;
+            margin: 20px 0;
+            font-size: 12px;
+        }
+
+        .stripe-link {
+            color: #0A2540;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        /* Footer */
         .footer {
             margin-top: 40px;
             padding-top: 20px;
@@ -158,79 +183,89 @@
             color: #999;
         }
 
-        .note {
-            background-color: #f0f8ff;
-            padding: 15px;
-            border-left: 4px solid #0A2540;
-            margin: 20px 0;
-            font-size: 12px;
-            color: #333;
+        /* Page Numbers */
+        @page {
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
         }
 
-        .stripe-link {
-            color: #0A2540;
-            text-decoration: none;
-            font-weight: bold;
-        }
     </style>
 </head>
+
 <body>
 <div class="container">
+
     <!-- Header -->
     <div class="header">
-        <div class="company-info">
-            <h1>NPaxis</h1>
-            <p>Digitalearn Solution Pvt. Ltd.</p>
-            <p>Professional Preceptor Network</p>
-        </div>
-        <div class="invoice-title">
-            <h2>Invoice</h2>
-            <div class="invoice-meta" th:text="'Invoice #: ' + ${invoiceNumber}"></div>
-            <div class="invoice-meta" th:text="'Date: ' + ${invoiceDate}"></div>
-        </div>
+        <table class="header-table">
+            <tr>
+                <td class="header-left company-info">
+                    <h1>NPaxis</h1>
+                    <p>Digitalearn Solution Pvt. Ltd.</p>
+                    <p>Professional Preceptor Network</p>
+                </td>
+                <td class="header-right invoice-title">
+                    <h2>Invoice</h2>
+                    <div class="invoice-meta" th:text="'Invoice #: ' + ${invoiceNumber}"></div>
+                    <div class="invoice-meta"
+                         th:text="'Date: ' + ${#temporals.format(invoiceDate, 'dd MMM yyyy')}"></div>
+                </td>
+            </tr>
+        </table>
     </div>
 
-    <!-- Bill To & Subscription Details -->
-    <div class="two-column">
-        <div class="column">
-            <div class="section">
-                <div class="section-title">Bill To</div>
-                <div class="section-content">
-                    <strong th:text="${customerName}"></strong><br/>
+    <!-- Billing -->
+    <table class="two-column">
+        <tr>
+            <td>
+                <div class="section">
+                    <div class="section-title">Bill To</div>
+                    <div class="section-content">
+                        <strong th:text="${customerName}"></strong>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="column">
-            <div class="section">
-                <div class="section-title">Subscription Details</div>
-                <div class="section-content">
-                    Status: <strong>PAID</strong><br/>
-                    Currency: <strong th:text="${currency}"></strong>
-                </div>
-            </div>
-        </div>
-    </div>
+            </td>
 
-    <!-- Items Table -->
+            <td>
+                <div class="section">
+                    <div class="section-title">Subscription Details</div>
+                    <div class="section-content">
+                        Status: <strong>PAID</strong><br/>
+                        Currency: <strong th:text="${currency}"></strong>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Items -->
     <div class="section">
         <div class="section-title">Billing Summary</div>
+
         <table class="items-table">
             <thead>
             <tr>
                 <th>Description</th>
-                <th style="width: 15%;">Quantity</th>
-                <th style="width: 20%;">Unit Price</th>
-                <th class="text-right" style="width: 20%;">Amount</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th class="text-right">Amount</th>
             </tr>
             </thead>
+
             <tbody>
             <tr th:each="item : ${items}">
                 <td th:text="${item.description()}"></td>
                 <td th:text="${item.quantity()}"></td>
-                <td th:text="'$' + ${#numbers.formatDecimal(item.pricePerUnit() / 100.0, 0, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currency}"></td>
-                <td class="text-right"><strong
-                        th:text="'$' + ${#numbers.formatDecimal(item.total() / 100.0, 0, 'DEFAULT', 2, 'DEFAULT')} + ' ' + ${currency}"></strong>
-                </td>
+
+                <td th:text="${currencySymbol + ' ' +
+                    #numbers.formatDecimal(item.pricePerUnit() / 100.0, 1, 2)}"></td>
+
+                <td class="text-right"
+                    th:text="${currencySymbol + ' ' +
+                    #numbers.formatDecimal(item.total() / 100.0, 1, 2)}"></td>
             </tr>
             </tbody>
         </table>
@@ -241,27 +276,37 @@
         <table class="summary-table">
             <tr>
                 <td class="label">Subtotal:</td>
-                <td class="value" th:text="'$' + ${amountPaid} + ' ' + ${currency}"></td>
+                <td class="value"
+                    th:text="${currencySymbol + ' ' +
+                    #numbers.formatDecimal(amountPaid / 100.0, 1, 2)}"></td>
             </tr>
+
             <tr>
-                <td class="label">Tax (0%):</td>
+                <td class="label">Tax:</td>
                 <td class="value">$0.00</td>
             </tr>
+
             <tr class="total-row">
-                <td class="label"><strong>Total Due:</strong></td>
-                <td class="value"><strong th:text="'$' + ${amountPaid} + ' ' + ${currency}"></strong></td>
+                <td class="label"><strong>Total Paid:</strong></td>
+                <td class="value"
+                    th:text="${currencySymbol + ' ' +
+                    #numbers.formatDecimal(amountPaid / 100.0, 1, 2)}"></td>
             </tr>
         </table>
     </div>
 
-    <!-- Note with Stripe Link -->
+    <!-- Note -->
     <div class="note">
         <strong>Note:</strong> This invoice was generated from your NPaxis subscription payment.
-        <span th:if="${hostedInvoiceUrl != ''}">
-                <br/><a class="stripe-link" target="_blank"
-                        th:href="${hostedInvoiceUrl}">View full invoice on Stripe</a>
-            </span>
-        <br/>For questions about your subscription, please contact our support team.
+
+        <span th:if="${hostedInvoiceUrl != null}">
+            <br/>
+            <a class="stripe-link" target="_blank" th:href="${hostedInvoiceUrl}">
+                View full invoice on Stripe
+            </a>
+        </span>
+
+        <br/>For questions, contact support.
     </div>
 
     <!-- Footer -->
@@ -269,7 +314,7 @@
         <p>&#169; 2026 Digitalearn Solution Pvt. Ltd. All rights reserved.</p>
         <p>Thank you for using NPaxis!</p>
     </div>
+
 </div>
 </body>
 </html>
-
