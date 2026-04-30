@@ -1,6 +1,7 @@
 package com.digitalearn.npaxis.admin;
 
 import com.digitalearn.npaxis.admin.dto.WebhookEventDetailDTO;
+import com.digitalearn.npaxis.admin.dto.WebhookMetricsDTO;
 import com.digitalearn.npaxis.common.responses.GenericApiResponse;
 import com.digitalearn.npaxis.common.responses.ResponseHandler;
 import com.digitalearn.npaxis.webhook.WebhookEventResponse;
@@ -14,11 +15,20 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.digitalearn.npaxis.utils.APIConstants.*;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMINISTRATION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_DETAIL_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_HISTORY_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_METRICS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_RETRY_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
 
 /**
  * Admin controller for webhook management operations
@@ -30,18 +40,22 @@ import static com.digitalearn.npaxis.utils.APIConstants.*;
 @Tag(name = "Admin Webhook Management", description = "Admin-only APIs for webhook administration")
 public class AdminWebhookController {
 
+    private final AdminWebhookService adminWebhookService;
+
     @Operation(summary = "Get webhook event history")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping(ADMIN_WEBHOOK_HISTORY_API)
     public ResponseEntity<GenericApiResponse<List<WebhookEventResponse>>> getWebhookHistory(
             @PageableDefault(size = 50) Pageable pageable) {
         log.info("Admin fetching webhook event history");
-        // Placeholder - would integrate with WebhookService
-        return ResponseHandler.generateResponse(
-                List.of(),
+        Page<WebhookEventResponse> events = adminWebhookService.getWebhookEventHistory(pageable);
+        return ResponseHandler.generatePaginatedResponse(
+                events,
+                events.getContent(),
                 "Webhook history fetched successfully",
                 true,
-                HttpStatus.OK);
+                HttpStatus.OK
+        );
     }
 
     @Operation(summary = "Retry failed webhook event")
@@ -50,12 +64,13 @@ public class AdminWebhookController {
     public ResponseEntity<GenericApiResponse<String>> retryWebhookEvent(
             @PathVariable String eventId) {
         log.info("Admin retrying webhook event - eventId: {}", eventId);
-        // Placeholder - would integrate with WebhookService
+        String result = adminWebhookService.retryWebhookEvent(eventId);
         return ResponseHandler.generateResponse(
-                "Webhook event retry initiated",
+                result,
                 "Webhook event retry initiated successfully",
                 true,
-                HttpStatus.OK);
+                HttpStatus.OK
+        );
     }
 
     @Operation(summary = "Get webhook event details")
@@ -64,12 +79,27 @@ public class AdminWebhookController {
     public ResponseEntity<GenericApiResponse<WebhookEventDetailDTO>> getWebhookEventDetail(
             @PathVariable String eventId) {
         log.info("Admin fetching webhook event detail - eventId: {}", eventId);
-        // Placeholder - would integrate with WebhookService
+        WebhookEventDetailDTO detail = adminWebhookService.getWebhookEventDetail(eventId);
         return ResponseHandler.generateResponse(
-                null,
+                detail,
                 "Webhook event detail fetched successfully",
                 true,
-                HttpStatus.OK);
+                HttpStatus.OK
+        );
+    }
+
+    @Operation(summary = "Get webhook metrics and statistics")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(ADMIN_WEBHOOK_METRICS_API)
+    public ResponseEntity<GenericApiResponse<WebhookMetricsDTO>> getWebhookMetrics() {
+        log.info("Admin fetching webhook metrics");
+        WebhookMetricsDTO metrics = adminWebhookService.getWebhookMetrics();
+        return ResponseHandler.generateResponse(
+                metrics,
+                "Webhook metrics fetched successfully",
+                true,
+                HttpStatus.OK
+        );
     }
 }
 

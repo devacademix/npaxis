@@ -2,7 +2,7 @@ package com.digitalearn.npaxis.preceptor;
 
 /**
  * Verification status enum for preceptor license workflow.
- *
+ * <p>
  * Transition rules:
  * NOT_SUBMITTED → PENDING (preceptor submits)
  * PENDING → APPROVED | REJECTED | CORRECTION_REQUESTED (admin reviews)

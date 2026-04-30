@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_REVENUE_BY_PRECEPTOR_API;
 import static com.digitalearn.npaxis.utils.APIConstants.ADMINISTRATION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_REVENUE_BY_PRECEPTOR_API;
 import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
 
 /**

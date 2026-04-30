@@ -81,6 +81,13 @@ public class InquiryServiceImpl implements InquiryService {
                     : inquiryRepository.findByStudent_User_UserIdAndStatus(currentUser.getUserId(), status, pageable);
 
         } else if (currentUser.getRole().getRoleName() == RoleName.ROLE_PRECEPTOR) {
+            // Verify that the preceptor is premium before allowing them to view inquiries
+            Preceptor preceptor = preceptorRepository.findById(currentUser.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + currentUser.getUserId()));
+
+            if (!preceptor.isPremium()) {
+                throw new BusinessException(BusinessErrorCodes.PRECEPTOR_NOT_PREMIUM);
+            }
 
             page = (status == null)
                     ? inquiryRepository.findByPreceptor_User_UserId(currentUser.getUserId(), pageable)

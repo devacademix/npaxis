@@ -46,7 +46,6 @@ public interface PreceptorSubscriptionRepository extends BaseRepository<Precepto
      * @param currentPeriodStart   start of current billing period
      * @param currentPeriodEnd     end of current billing period
      * @param nextBillingDate      next billing date
-     * @param lastModifiedAt       timestamp of update
      */
     @Modifying
     @Query(value = """
@@ -77,4 +76,9 @@ public interface PreceptorSubscriptionRepository extends BaseRepository<Precepto
             @Param("currentPeriodEnd") LocalDateTime currentPeriodEnd,
             @Param("nextBillingDate") LocalDateTime nextBillingDate
     );
+
+    long countByStatusAndDeletedFalse(SubscriptionStatus status);
+
+    long countByStatusInAndDeletedFalse(List<SubscriptionStatus> statuses);
+
 }

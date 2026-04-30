@@ -79,7 +79,7 @@ public class StudentController {
     }
 
     @Operation(summary = "Fetch all active students", description = "Retrieves a list of all active students.")
-    @GetMapping(value = {"", "/", GET_ALL_ACTIVE_STUDENTS_API, GET_ALL_ACTIVE_STUDENTS_API + "/"})
+    @GetMapping(value = {"", GET_ALL_ACTIVE_STUDENTS_API})
     public ResponseEntity<GenericApiResponse<List<StudentResponseDTO>>> getAllActiveStudents() {
         log.info("Fetching all active students");
         List<StudentResponseDTO> students = studentService.getAllActiveStudents();
@@ -87,7 +87,7 @@ public class StudentController {
     }
 
     @Operation(summary = "Fetch student by ID", description = "Retrieves an active student by their unique user ID.")
-    @GetMapping(value = {GET_ACTIVE_STUDENT_BY_ID_API, GET_ACTIVE_STUDENT_BY_ID_API + "/"})
+    @GetMapping(value = GET_ACTIVE_STUDENT_BY_ID_API)
     public ResponseEntity<GenericApiResponse<StudentResponseDTO>> getActiveStudentById(@PathVariable Long userId) {
         log.info("Fetching active student with ID: {}", userId);
         StudentResponseDTO student = studentService.getActiveStudentById(userId);
@@ -96,7 +96,7 @@ public class StudentController {
 
     @Operation(summary = "Update student details", description = "Updates the details of an existing student.")
     @PreAuthorize("#userId == principal.userId")
-    @PutMapping(value = {PUT_UPDATE_STUDENT_API, PUT_UPDATE_STUDENT_API + "/"})
+    @PutMapping(value = PUT_UPDATE_STUDENT_API)
     public ResponseEntity<GenericApiResponse<StudentResponseDTO>> updateStudent(
             @PathVariable("userId") Long userId,
             @Valid @RequestBody StudentRequestDTO studentRequestDto) {
@@ -107,7 +107,7 @@ public class StudentController {
 
     @Operation(summary = "Soft delete student", description = "Deactivates a student by their unique user ID.")
     @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
-    @DeleteMapping(value = {SOFT_DELETE_STUDENT_BY_ID_API, SOFT_DELETE_STUDENT_BY_ID_API + "/"})
+    @DeleteMapping(value = SOFT_DELETE_STUDENT_BY_ID_API)
     public ResponseEntity<GenericApiResponse<Object>> softDeleteStudent(@PathVariable Long userId) {
         log.info("Soft deleting student with ID: {}", userId);
         studentService.softDeleteStudent(userId);
@@ -116,7 +116,7 @@ public class StudentController {
 
     @Operation(summary = "Hard delete student", description = "Permanently deletes a student by their unique user ID.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping(value = {HARD_DELETE_STUDENT_BY_ID_API, HARD_DELETE_STUDENT_BY_ID_API + "/"})
+    @DeleteMapping(value = HARD_DELETE_STUDENT_BY_ID_API)
     public ResponseEntity<GenericApiResponse<Object>> hardDeleteStudent(@PathVariable Long userId) {
         log.info("Hard deleting student with ID: {}", userId);
         studentService.hardDeleteStudent(userId);
@@ -125,7 +125,7 @@ public class StudentController {
 
     @Operation(summary = "Restore student", description = "Restores a soft-deleted student.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping(value = {RESTORE_STUDENT_BY_ID_API, RESTORE_STUDENT_BY_ID_API + "/"})
+    @PutMapping(value = RESTORE_STUDENT_BY_ID_API)
     public ResponseEntity<GenericApiResponse<Object>> restoreStudent(@PathVariable Long userId) {
         log.info("Restoring student with ID: {}", userId);
         studentService.restoreStudent(userId);
@@ -134,7 +134,7 @@ public class StudentController {
 
     @Operation(summary = "Save preceptor to bookmarks", description = "Saves a preceptor to student's bookmarks.")
     @PreAuthorize("#userId == principal.userId")
-    @PostMapping(value = {SAVE_PRECEPTOR_API, SAVE_PRECEPTOR_API + "/"})
+    @PostMapping(value = SAVE_PRECEPTOR_API)
     public ResponseEntity<GenericApiResponse<Object>> savePreceptor(
             @PathVariable Long userId,
             @PathVariable Long preceptorId) {
@@ -145,7 +145,7 @@ public class StudentController {
 
     @Operation(summary = "Get all saved preceptors", description = "Retrieves all preceptors saved by the student.")
     @PreAuthorize("#userId == principal.userId")
-    @GetMapping(value = {GET_SAVED_PRECEPTORS_API, GET_SAVED_PRECEPTORS_API + "/"})
+    @GetMapping(value = GET_SAVED_PRECEPTORS_API)
     public ResponseEntity<GenericApiResponse<List<PreceptorResponseDTO>>> getSavedPreceptors(@PathVariable Long userId) {
         log.info("Fetching saved preceptors for student ID: {}", userId);
         List<PreceptorResponseDTO> savedPreceptors = studentService.getSavedPreceptors(userId);

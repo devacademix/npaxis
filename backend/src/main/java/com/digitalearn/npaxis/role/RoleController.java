@@ -13,11 +13,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.digitalearn.npaxis.utils.APIConstants.*;
+import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_ROLE_BY_ID_API;
+import static com.digitalearn.npaxis.utils.APIConstants.GET_ALL_ACTIVE_ROLES_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ROLES_API;
 
 
 @RequiredArgsConstructor
@@ -34,7 +43,7 @@ public class RoleController {
             @ApiResponse(responseCode = "404", description = "Not Found - No active roles found"),
             @ApiResponse(responseCode = "403", description = "Forbidden - Access denied")
     })
-    @GetMapping(value = {GET_ALL_ACTIVE_ROLES_API, GET_ALL_ACTIVE_ROLES_API + "/"})
+    @GetMapping(value = GET_ALL_ACTIVE_ROLES_API)
     public ResponseEntity<GenericApiResponse<List<RoleResponseDTO>>> getAllActiveRoles() {
         log.info("Role Controller --> Retrieve all active roles.");
         return ResponseHandler.generateResponse(roleService.getAllActiveRoles(), "Active roles fetched successfully", true, HttpStatus.OK);
@@ -47,7 +56,7 @@ public class RoleController {
             @ApiResponse(responseCode = "404", description = "Not Found - Role not found"),
             @ApiResponse(responseCode = "403", description = "Forbidden - Access denied")
     })
-    @GetMapping(value = {GET_ACTIVE_ROLE_BY_ID_API, GET_ACTIVE_ROLE_BY_ID_API + "/"})
+    @GetMapping(value = GET_ACTIVE_ROLE_BY_ID_API)
     public ResponseEntity<GenericApiResponse<RoleResponseDTO>> getActiveRoleById(@PathVariable Long roleId) {
         return ResponseHandler.generateResponse(this.roleService.getActiveRoleById(roleId), "Role fetched successfully", true, HttpStatus.OK);
 

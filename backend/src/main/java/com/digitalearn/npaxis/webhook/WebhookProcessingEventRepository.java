@@ -81,10 +81,10 @@ public interface WebhookProcessingEventRepository extends BaseRepository<Webhook
     // ========================
 
     @Query("""
-    SELECT w FROM WebhookProcessingEvent w
-    WHERE w.status IN :statuses
-    ORDER BY w.createdAt ASC
-""")
+                SELECT w FROM WebhookProcessingEvent w
+                WHERE w.status IN :statuses
+                ORDER BY w.createdAt ASC
+            """)
     List<WebhookProcessingEvent> findOldestByStatuses(
             @Param("statuses") List<WebhookEventStatus> statuses,
             Pageable pageable
@@ -107,11 +107,11 @@ public interface WebhookProcessingEventRepository extends BaseRepository<Webhook
     // ========================
 
     @Query("""
-        SELECT w FROM WebhookProcessingEvent w
-        WHERE w.status = :status
-        AND (w.nextRetryAt IS NULL OR w.nextRetryAt <= :now)
-        ORDER BY w.nextRetryAt ASC
-    """)
+                SELECT w FROM WebhookProcessingEvent w
+                WHERE w.status = :status
+                AND (w.nextRetryAt IS NULL OR w.nextRetryAt <= :now)
+                ORDER BY w.nextRetryAt ASC
+            """)
     List<WebhookProcessingEvent> findReadyForRetry(
             @Param("status") WebhookEventStatus status,
             @Param("now") LocalDateTime now

@@ -47,7 +47,7 @@ public class InquiryController {
         return ResponseHandler.generateResponse(inquiryService.sendInquiry(user.getUserId(), requestDTO), "Inquiry Sent successfully.", true, HttpStatus.OK);
     }
 
-    @GetMapping(value = {GET_INQUIRIES_FOR_USER, GET_INQUIRIES_FOR_USER + "/"})
+    @GetMapping(value = GET_INQUIRIES_FOR_USER)
     @PreAuthorize("hasAnyRole('STUDENT', 'PRECEPTOR')")
     public ResponseEntity<GenericApiResponse<List<InquiryResponseDTO>>> getPreceptorInquiries(
             @AuthenticationPrincipal User user,
@@ -65,7 +65,7 @@ public class InquiryController {
         return ResponseHandler.generatePaginatedResponse(preceptorEnquiries, preceptorEnquiries.getContent(), "Preceptor Inquiries fetched successfully", true, HttpStatus.OK);
     }
 
-    @PatchMapping(value = {MARK_INQUIRY_AS_READ, MARK_INQUIRY_AS_READ + "/"})
+    @PatchMapping(value = MARK_INQUIRY_AS_READ)
     public ResponseEntity<GenericApiResponse<Void>> markAsRead(@PathVariable Long inquiryId) {
         this.inquiryService.markAsRead(inquiryId);
         return ResponseHandler.generateResponse(null, "Marked as read", true, HttpStatus.OK);

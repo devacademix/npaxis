@@ -387,11 +387,38 @@ public class APIConstants {
     public static final String ADMIN_WEBHOOK_DETAIL_API = "/webhooks/event-{eventId}";
     public static final String ADMIN_WEBHOOK_RETRY_API = "/webhooks/event-{eventId}/retry";
     public static final String ADMIN_WEBHOOK_HISTORY_API = "/webhooks/history";
+    public static final String ADMIN_WEBHOOK_METRICS_API = "/webhooks/metrics";
 
     // APIs for Admin Analytics
     public static final String ADMIN_ANALYTICS_OVERVIEW_API = "/analytics/overview";
     public static final String ADMIN_ANALYTICS_TOP_PRECEPTORS_API = "/analytics/top-preceptors";
     public static final String ADMIN_ANALYTICS_TRENDS_API = "/analytics/trends";
+
+    // APIs for Subscription Management
+    public static final String SUBSCRIPTIONS_API = "subscriptions";
+    public static final String CHECKOUT_API = "checkout";
+    public static final String SUBSCRIPTION_STATUS_API = "status";
+    public static final String CANCEL_SUBSCRIPTION_API = "cancel";
+    public static final String UPDATE_SUBSCRIPTION_API = "update";
+    public static final String SUBSCRIPTION_HISTORY_API = "history";
+    public static final String BILLING_PORTAL_API = "billing-portal";
+    public static final String ACCESS_CHECK_API = "access-check";
+
+    // APIs for Payment Management
+    public static final String PAYMENTS_API = "payments";
+    public static final String CREATE_CHECKOUT_SESSION_API = "create-checkout-session";
+
+    // APIs for Subscription Plans
+    public static final String PLANS_API = "subscription-plans";
+
+    // APIs for Analytics
+    public static final String ANALYTICS_API = "analytics";
+    public static final String ANALYTICS_EVENT_API = "event";
+    public static final String PRECEPTOR_STATS_API = "preceptors/{id}/stats";
+
+    // APIs for Webhooks
+    public static final String WEBHOOKS_API = "webhooks";
+    public static final String WEBHOOK_EVENTS_API = "events";
 
     /**
      * Private constructor to prevent instantiation of this utility class.

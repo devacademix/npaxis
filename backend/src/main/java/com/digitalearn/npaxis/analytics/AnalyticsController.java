@@ -13,17 +13,22 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.digitalearn.npaxis.utils.APIConstants.ANALYTICS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ANALYTICS_EVENT_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.PRECEPTOR_STATS_API;
+
 /**
  * Controller for analytics.
  */
 @RestController
-@RequestMapping("/analytics")
+@RequestMapping(BASE_API + "/" + ANALYTICS_API)
 @RequiredArgsConstructor
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
 
-    @PostMapping("/event")
+    @PostMapping(ANALYTICS_EVENT_API)
     @Operation(summary = "Log analytics event")
     public ResponseEntity<GenericApiResponse<Void>> logEvent(
             @RequestBody AnalyticsEventRequest request) {
@@ -33,7 +38,7 @@ public class AnalyticsController {
         return ResponseHandler.generateResponse(null, "Event logged successfully", true, HttpStatus.OK);
     }
 
-    @GetMapping("/preceptors/{id}/stats")
+    @GetMapping(PRECEPTOR_STATS_API)
     @Operation(summary = "Get preceptor stats")
     public ResponseEntity<GenericApiResponse<PreceptorStatsResponse>> getStats(
             @PathVariable Long id) {

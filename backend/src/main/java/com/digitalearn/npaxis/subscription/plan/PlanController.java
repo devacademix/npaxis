@@ -11,8 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.PLANS_API;
+
 @RestController
-@RequestMapping("/subscription-plans")
+@RequestMapping(BASE_API + "/" + PLANS_API)
 @RequiredArgsConstructor
 public class PlanController {
 

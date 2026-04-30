@@ -26,8 +26,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+import static com.digitalearn.npaxis.utils.APIConstants.ACCESS_CHECK_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BILLING_PORTAL_API;
+import static com.digitalearn.npaxis.utils.APIConstants.CANCEL_SUBSCRIPTION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.CHECKOUT_API;
+import static com.digitalearn.npaxis.utils.APIConstants.SUBSCRIPTIONS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.SUBSCRIPTION_HISTORY_API;
+import static com.digitalearn.npaxis.utils.APIConstants.SUBSCRIPTION_STATUS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.UPDATE_SUBSCRIPTION_API;
+
 @RestController
-@RequestMapping("/api/subscriptions")
+@RequestMapping(BASE_API + "/" + SUBSCRIPTIONS_API)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Subscription Management", description = "APIs for managing preceptor subscriptions")
@@ -37,7 +47,7 @@ public class SubscriptionController {
 
     @Operation(summary = "Create checkout session", description = "Initiates subscription via Stripe checkout")
     @ApiResponse(responseCode = "201", description = "Checkout session created successfully")
-    @PostMapping("/checkout")
+    @PostMapping(CHECKOUT_API)
     public ResponseEntity<GenericApiResponse<CreateCheckoutSessionResponse>> createCheckoutSession(
             @AuthenticationPrincipal User loggedInUser,
             @Valid @RequestBody CreateCheckoutSessionRequest request
@@ -56,7 +66,7 @@ public class SubscriptionController {
 
     @Operation(summary = "Get subscription status", description = "Fetch current subscription details")
     @ApiResponse(responseCode = "200", description = "Subscription status retrieved")
-    @GetMapping("/status")
+    @GetMapping(SUBSCRIPTION_STATUS_API)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<GenericApiResponse<SubscriptionDetailResponse>> getSubscriptionStatus(
             @AuthenticationPrincipal User loggedInUser
@@ -75,7 +85,7 @@ public class SubscriptionController {
 
     @Operation(summary = "Cancel subscription", description = "Cancel subscription at period end (allows usage until expiry)")
     @ApiResponse(responseCode = "200", description = "Subscription will be canceled at period end")
-    @PostMapping("/cancel")
+    @PostMapping(CANCEL_SUBSCRIPTION_API)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<GenericApiResponse<Void>> cancelSubscription(
             @AuthenticationPrincipal User loggedInUser
@@ -92,7 +102,7 @@ public class SubscriptionController {
 
     @Operation(summary = "Update subscription", description = "Change subscription plan or billing interval")
     @ApiResponse(responseCode = "200", description = "Subscription updated successfully")
-    @PutMapping("/update")
+    @PutMapping(UPDATE_SUBSCRIPTION_API)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<GenericApiResponse<Void>> updateSubscription(
             @AuthenticationPrincipal User loggedInUser,
@@ -110,7 +120,7 @@ public class SubscriptionController {
 
     @Operation(summary = "Get subscription history", description = "List past and current subscriptions with pagination")
     @ApiResponse(responseCode = "200", description = "Subscription history retrieved")
-    @GetMapping("/history")
+    @GetMapping(SUBSCRIPTION_HISTORY_API)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<GenericApiResponse<Page<SubscriptionHistoryResponse>>> getSubscriptionHistory(
             @AuthenticationPrincipal User loggedInUser,
@@ -131,7 +141,7 @@ public class SubscriptionController {
 
     @Operation(summary = "Create customer portal session", description = "Redirect to Stripe customer portal for billing management")
     @ApiResponse(responseCode = "200", description = "Customer portal session created")
-    @GetMapping("/portal")
+    @GetMapping(BILLING_PORTAL_API)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<GenericApiResponse<Map<String, String>>> createCustomerPortal(
             @AuthenticationPrincipal User loggedInUser
@@ -148,7 +158,7 @@ public class SubscriptionController {
 
     @Operation(summary = "Check premium access", description = "Verify if user can access premium features (includes grace period)")
     @ApiResponse(responseCode = "200", description = "Premium access verified")
-    @GetMapping("/access-check")
+    @GetMapping(ACCESS_CHECK_API)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<GenericApiResponse<Map<String, Boolean>>> checkPremiumAccess(
             @AuthenticationPrincipal User loggedInUser

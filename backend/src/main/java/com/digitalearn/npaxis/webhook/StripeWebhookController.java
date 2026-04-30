@@ -23,12 +23,16 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.WEBHOOKS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.WEBHOOK_EVENTS_API;
+
 /**
  * Webhook endpoint for receiving Stripe events
  * Handles signature verification and event processing
  */
 @RestController
-@RequestMapping("/webhooks")
+@RequestMapping(BASE_API + "/" + WEBHOOKS_API)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Webhooks", description = "Webhook endpoints for Stripe events")
@@ -40,7 +44,7 @@ public class StripeWebhookController {
     /**
      * Receive and process Stripe webhook events
      */
-    @PostMapping()
+    @PostMapping
     @Operation(summary = "Receive Stripe webhook events")
     public ResponseEntity<GenericApiResponse<Void>> handleStripeWebhook(
             @RequestBody String payload,
@@ -92,7 +96,7 @@ public class StripeWebhookController {
     /**
      * Get webhook event processing history
      */
-    @GetMapping("/events")
+    @GetMapping(WEBHOOK_EVENTS_API)
     @Operation(summary = "Get webhook event history")
     public ResponseEntity<GenericApiResponse<Page<WebhookEventResponse>>> getWebhookHistory(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
