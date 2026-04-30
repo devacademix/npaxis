@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Welcome to NPaxis Premium</title>
+
+    <style>
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table, td {
+            border-collapse: collapse !important;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        @media screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .fluid-padding {
+                padding: 20px 15px !important;
+            }
+
+            .price-section {
+                flex-direction: column !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<table cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+        <td align="center" style="padding: 40px 10px;">
+
+            <table class="email-container"
+                   style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);"
+                   width="600">
+
+                <!-- Header -->
+                <tr>
+                    <td align="center"
+                        style="background: linear-gradient(135deg, #0A2540 0%, #1a4d7a 100%); padding: 30px 20px;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">
+                            NPaxis
+                        </h1>
+                        <p style="color: #e0e0e0; margin: 8px 0 0 0; font-size: 14px;">Premium Subscription
+                            Activated</p>
+                    </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                    <td class="fluid-padding" style="padding: 40px; color: #333;">
+                        <h2 style="margin: 0 0 20px; font-size: 22px; color: #1a1a1a;">
+                            Welcome to Premium! 🎉
+                        </h2>
+
+                        <p style="font-size: 16px; line-height: 24px; color: #555;">
+                            Hello <strong th:text="${preceptorName}">Preceptor</strong>,
+                        </p>
+
+                        <p style="font-size: 16px; line-height: 24px; color: #555;">
+                            Thank you for subscribing to NPaxis Premium! Your subscription has been successfully
+                            activated, and you now have access to all premium features.
+                        </p>
+
+                        <!-- Plan Details Section -->
+                        <div style="background-color: #f9f9f9; border-left: 4px solid #0A2540; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                            <h3 style="margin: 0 0 15px; font-size: 18px; color: #0A2540;">Plan Details</h3>
+                            <table style="border-collapse: collapse;" width="100%">
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Plan:</strong>
+                                    </td>
+                                    <td align="right"
+                                        style="padding: 8px 0; color: #0A2540; font-size: 14px; font-weight: bold;">
+                                        <span th:text="${planName}">Pro Plan</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Billing Cycle:</strong>
+                                    </td>
+                                    <td align="right"
+                                        style="padding: 8px 0; color: #0A2540; font-size: 14px; font-weight: bold;">
+                                        <span th:text="${billingInterval}">Monthly</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Amount:</strong>
+                                    </td>
+                                    <td align="right"
+                                        style="padding: 8px 0; color: #0A2540; font-size: 14px; font-weight: bold;">
+                                        <span th:text="${amount}">$9.99</span> <span th:text="${currency}">USD</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Period Start:</strong>
+                                    </td>
+                                    <td align="right" style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <span th:text="${periodStart}">Jan 01, 2026</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <strong>Next Billing Date:</strong>
+                                    </td>
+                                    <td align="right" style="padding: 8px 0; color: #555; font-size: 14px;">
+                                        <span th:text="${nextBillingDate}">Feb 01, 2026</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Features Section -->
+                        <div style="margin: 25px 0;">
+                            <h3 style="margin: 0 0 15px; font-size: 18px; color: #0A2540;">What You Can Now Access</h3>
+                            <ul style="color: #555; font-size: 14px; line-height: 22px; padding-left: 20px; margin: 0;">
+                                <li>✓ Full access to all premium features</li>
+                                <li>✓ Advanced analytics and reporting</li>
+                                <li>✓ Priority customer support</li>
+                                <li>✓ Exclusive educational resources</li>
+                                <li>✓ Enhanced visibility on the platform</li>
+                            </ul>
+                        </div>
+
+                        <!-- CTA Button -->
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="#"
+                               style="background-color: #0A2540; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">
+                                Start Exploring Premium
+                            </a>
+                        </div>
+
+                        <!-- Invoice Note -->
+                        <p style="font-size: 13px; color: #777; margin: 20px 0 0 0;">
+                            📎 Your invoice is attached to this email for your records.
+                        </p>
+
+                        <p style="font-size: 14px; color: #777; margin: 15px 0 0 0;">
+                            If you have any questions or need assistance, feel free to contact our support team. We're
+                            here to help!
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="background-color: #fcfcfc; border-top: 1px solid #eee; padding: 25px; text-align: center;">
+                        <p style="font-size: 12px; color: #999; margin: 0 0 10px;">
+                            &copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> Digitalearn Solution
+                            Pvt. Ltd. All rights reserved.
+                        </p>
+                        <p style="font-size: 12px; color: #999; margin: 0;">
+                            You can manage your subscription anytime from your account settings.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
+

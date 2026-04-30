@@ -99,4 +99,12 @@ public interface PreceptorService {
      * @return PreceptorResponseDTO with contact details.
      */
     PreceptorContactResponseDTO revealContact(Long userId);
+
+    /**
+     * Downloads the license file of a preceptor.
+     *
+     * @param userId The ID of the preceptor.
+     * @return Resource representing the license file.
+     */
+    org.springframework.core.io.Resource downloadLicense(Long userId);
 }

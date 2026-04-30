@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,10 +19,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_PROFILE_PICTURE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_USER_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ALL_ACTIVE_USERS_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ALL_SOFT_DELETED_USERS_API;
@@ -32,6 +36,7 @@ import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_USER_BY_ID_A
 import static com.digitalearn.npaxis.utils.APIConstants.PUT_UPDATE_USER_API;
 import static com.digitalearn.npaxis.utils.APIConstants.RESTORE_USER_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.SOFT_DELETE_USER_BY_ID_API;
+import static com.digitalearn.npaxis.utils.APIConstants.UPLOAD_PROFILE_PICTURE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.USERS_API;
 
 
@@ -203,4 +208,36 @@ public class UserController {
         return ResponseHandler.generateResponse(null, "User hard deleted successfully", true, HttpStatus.OK);
     }
 
+    @Operation(summary = "Upload profile picture", description = "Uploads a profile picture for a user by user ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile picture uploaded successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Validation errors"),
+            @ApiResponse(responseCode = "404", description = "Not Found - User not found with the provided ID"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error - Upload failed")
+    })
+    @PreAuthorize("#userId == principal.userId")
+    @PutMapping(value = {UPLOAD_PROFILE_PICTURE_API, UPLOAD_PROFILE_PICTURE_API + "/"})
+    public ResponseEntity<GenericApiResponse<UserResponseDTO>> uploadProfilePicture(
+            @PathVariable Long userId,
+            @RequestParam("file") MultipartFile file) {
+        log.info("Uploading profile picture for user with ID: {}", userId);
+        UserResponseDTO userResponseDTO = this.userService.uploadProfilePicture(userId, file);
+        log.info("Profile picture uploaded successfully for user with ID: {}", userId);
+        return ResponseHandler.generateResponse(userResponseDTO, "Profile picture uploaded successfully", true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Download profile picture", description = "Downloads the profile picture for a user by user ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile picture downloaded successfully"),
+            @ApiResponse(responseCode = "404", description = "Not Found - Profile picture or user not found"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error - Download failed")
+    })
+    @GetMapping(value = {DOWNLOAD_PROFILE_PICTURE_API, DOWNLOAD_PROFILE_PICTURE_API + "/"})
+    public ResponseEntity<org.springframework.core.io.Resource> downloadProfilePicture(@PathVariable Long userId) {
+        log.info("Downloading profile picture for user with ID: {}", userId);
+        org.springframework.core.io.Resource resource = userService.downloadProfilePicture(userId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG) // Or detect based on extension if needed
+                .body(resource);
+    }
 }

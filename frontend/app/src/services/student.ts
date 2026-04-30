@@ -155,6 +155,37 @@ export const studentService = {
 
     return list.map(normalizePreceptor);
   },
+
+  getActiveStudents: async (): Promise<StudentProfile[]> => {
+    const response = await api.get('/students/active/all', authConfig());
+    const payload = unwrapApiData<any>(response);
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.items)
+      ? payload.items
+      : [];
+    return list.map(normalizeStudentProfile);
+  },
+
+  updateStudentDetails: async (userId: number | string, payload: Partial<StudentProfile>) => {
+    const response = await api.put(`/students/student-${userId}`, payload, authConfig());
+    return unwrapApiData<StudentProfile>(response);
+  },
+
+  softDeleteStudent: async (userId: number | string) => {
+    const response = await api.delete(`/students/soft-delete/student-${userId}`, authConfig());
+    return unwrapApiData(response);
+  },
+
+  hardDeleteStudent: async (userId: number | string) => {
+    const response = await api.delete(`/students/hard-delete/student-${userId}`, authConfig());
+    return unwrapApiData(response);
+  },
+
+  restoreStudent: async (userId: number | string) => {
+    const response = await api.put(`/students/restore/student-${userId}`, null, authConfig());
+    return unwrapApiData(response);
+  },
 };
 
 export default studentService;

@@ -1,6 +1,8 @@
 package com.digitalearn.npaxis.user;
 
 import jakarta.validation.Valid;
+import org.springframework.core.io.Resource;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -88,6 +90,10 @@ public interface UserService {
      * @param userId The ID of the user to hard-delete.
      */
     void hardDeleteUserById(Long userId);
+
+    UserResponseDTO uploadProfilePicture(Long userId, MultipartFile file);
+
+    Resource downloadProfilePicture(Long userId);
 
     LoggedInUserResponseDTO currentlyLoggedInUser();
 }

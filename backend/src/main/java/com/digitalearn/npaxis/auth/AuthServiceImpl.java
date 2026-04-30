@@ -156,7 +156,8 @@ public class AuthServiceImpl implements AuthService {
         RoleName roleName = switch (roleId.intValue()) {
             case 1 -> RoleName.ROLE_STUDENT;
             case 2 -> RoleName.ROLE_PRECEPTOR;
-            default -> throw new IllegalArgumentException("Invalid role ID provided. Expected 1 (Student) or 2 (Preceptor).");
+            default ->
+                    throw new IllegalArgumentException("Invalid role ID provided. Expected 1 (Student) or 2 (Preceptor).");
         };
 
         return roleRepository.findByRoleName(roleName)
@@ -194,6 +195,16 @@ public class AuthServiceImpl implements AuthService {
             user.setAccountEnabled(true);
             user.setEmailVerified(true);
             userRepository.save(user);
+
+            // 3. Send Successful onboarding email.
+            emailService.sendEmail(
+                    user.getEmail(),
+                    EmailTemplate.WELCOME_EMAIL,
+                    Map.of(
+                            "name", user.getDisplayName()
+                    )
+            );
+
             log.info("User account enabled successfully");
             return this.buildAuthResponse(user, servletResponse);
         } else {

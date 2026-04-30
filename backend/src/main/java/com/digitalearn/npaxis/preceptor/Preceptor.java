@@ -95,11 +95,31 @@ public class Preceptor extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", length = 20)
-    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+    private VerificationStatus verificationStatus = VerificationStatus.NOT_SUBMITTED;
 
     @Column(name = "verification_submitted_at")
     private LocalDateTime verificationSubmittedAt;
 
     @Column(name = "verification_reviewed_at")
     private LocalDateTime verificationReviewedAt;
+
+    @Column(name = "stripe_customer_id", length = 100)
+    private String stripeCustomerId;
+
+    @Column(name = "stripe_subscription_id", length = 100)
+    private String stripeSubscriptionId;
+
+    // --- License Correction Workflow ---
+
+    @Column(columnDefinition = "TEXT")
+    private String correctionRequestedReason;
+
+    @Column(name = "correction_requested_at")
+    private LocalDateTime correctionRequestedAt;
+
+    @Column(name = "resubmitted_at")
+    private LocalDateTime resubmittedAt;
+
+    @Column(name = "verification_attempts")
+    private Integer verificationAttempts = 0;
 }
