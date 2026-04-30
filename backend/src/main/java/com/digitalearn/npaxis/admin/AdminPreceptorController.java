@@ -127,6 +127,18 @@ public class AdminPreceptorController {
                 true, HttpStatus.OK);
     }
 
+    @Operation(summary = "Reject preceptor with rejection reason")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(ADMIN_PRECEPTOR_DETAIL_API + "/reject")
+    public ResponseEntity<GenericApiResponse<String>> rejectPreceptorWithReason(
+            @PathVariable Long userId,
+            @RequestParam String reason) {
+        log.info("Admin rejecting preceptor with reason - userId: {}", userId);
+        String result = adminService.rejectPreceptorWithReason(userId, reason);
+        return ResponseHandler.generateResponse(result, "Preceptor rejected successfully",
+                true, HttpStatus.OK);
+    }
+
     @Operation(summary = "Get preceptor billing report")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping(ADMIN_PRECEPTOR_BILLING_REPORT_API)
@@ -146,6 +158,17 @@ public class AdminPreceptorController {
         log.info("Admin fetching analytics - userId: {}", userId);
         PreceptorAnalyticsDTO analytics = adminService.getPreceptorAnalytics(userId);
         return ResponseHandler.generateResponse(analytics, "Analytics fetched successfully",
+                true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Get preceptor contact information (admin)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(ADMIN_PRECEPTOR_DETAIL_API + "/contact")
+    public ResponseEntity<GenericApiResponse<com.digitalearn.npaxis.preceptor.PreceptorContactResponseDTO>> getPreceptorContact(
+            @PathVariable Long userId) {
+        log.info("Admin fetching preceptor contact - userId: {}", userId);
+        com.digitalearn.npaxis.preceptor.PreceptorContactResponseDTO contact = adminService.getPreceptorContactAsAdmin(userId);
+        return ResponseHandler.generateResponse(contact, "Contact information retrieved successfully",
                 true, HttpStatus.OK);
     }
 

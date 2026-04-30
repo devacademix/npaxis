@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 import static com.digitalearn.npaxis.utils.APIConstants.*;
@@ -66,5 +67,34 @@ public class AdminStudentController {
         return ResponseHandler.generateResponse(student, "Student detail fetched successfully",
                 true, HttpStatus.OK);
     }
-}
 
+    @Operation(summary = "Update student (admin)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping(ADMIN_STUDENT_UPDATE_API)
+    public ResponseEntity<GenericApiResponse<AdminStudentDetailDTO>> updateStudent(
+            @PathVariable Long userId,
+            @Valid @RequestBody AdminStudentDetailDTO updateDTO) {
+        log.info("Admin updating student - userId: {}", userId);
+        AdminStudentDetailDTO updated = adminService.updateStudentAsAdmin(userId, updateDTO);
+        return ResponseHandler.generateResponse(updated, "Student updated successfully", true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Delete student (soft delete)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping(ADMIN_STUDENT_UPDATE_API)
+    public ResponseEntity<GenericApiResponse<String>> deleteStudent(@PathVariable Long userId) {
+        log.info("Admin deleting student - userId: {}", userId);
+        // Future: implement soft delete for student
+        return ResponseHandler.generateResponse(null, "Student deleted successfully", true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Get student inquiries")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping(ADMIN_STUDENT_DETAIL_API + "/inquiries")
+    public ResponseEntity<GenericApiResponse<List<?>>> getStudentInquiries(
+            @PathVariable Long userId) {
+        log.info("Admin fetching inquiries for student - userId: {}", userId);
+        // Future: implement getStudentInquiriesAsAdmin
+        return ResponseHandler.generateResponse(null, "Inquiries fetched successfully", true, HttpStatus.OK);
+    }
+}

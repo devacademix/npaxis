@@ -3,8 +3,11 @@ package com.digitalearn.npaxis.admin;
 import com.digitalearn.npaxis.admin.dto.*;
 import com.digitalearn.npaxis.analytics.AnalyticsEventRepository;
 import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.auditing.VerificationAuditLog;
+import com.digitalearn.npaxis.auditing.VerificationAuditLogRepository;
 import com.digitalearn.npaxis.exceptions.ResourceAlreadyExistsException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
+import com.digitalearn.npaxis.inquiry.InquiryRepository;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.preceptor.PreceptorResponseDTO;
@@ -20,6 +23,8 @@ import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransactio
 import com.digitalearn.npaxis.subscription.billing.transaction.TransactionStatus;
 import com.digitalearn.npaxis.subscription.core.PreceptorSubscriptionRepository;
 import com.digitalearn.npaxis.subscription.core.SubscriptionStatus;
+import com.digitalearn.npaxis.system.SystemSetting;
+import com.digitalearn.npaxis.system.SystemSettingRepository;
 import com.digitalearn.npaxis.user.User;
 import com.digitalearn.npaxis.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +64,9 @@ public class AdminServiceImpl implements AdminService {
     private final BillingInvoiceRepository billingInvoiceRepository;
     private final BillingTransactionRepository billingTransactionRepository;
     private final PreceptorSubscriptionRepository preceptorSubscriptionRepository;
+    private final VerificationAuditLogRepository verificationAuditLogRepository;
+    private final SystemSettingRepository systemSettingRepository;
+    private final InquiryRepository inquiryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -127,6 +135,37 @@ public class AdminServiceImpl implements AdminService {
         preceptorRepository.save(preceptor);
 
         return "Preceptor request rejected successfully";
+    }
+
+    @Override
+    @Transactional
+    public String rejectPreceptorWithReason(Long userId, String reason) {
+        log.info("Rejecting preceptor with reason - userId: {}, reason: {}", userId, reason);
+        Preceptor preceptor = preceptorRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
+
+        VerificationStatus previousStatus = preceptor.getVerificationStatus();
+        preceptor.setVerificationStatus(VerificationStatus.REJECTED);
+        preceptor.setVerified(false);
+        preceptor.setVerificationReviewedAt(LocalDateTime.now());
+        preceptor.setCorrectionRequestedReason(reason);
+        preceptor.setCorrectionRequestedAt(LocalDateTime.now());
+        preceptor.setVerificationAttempts((preceptor.getVerificationAttempts() != null ? preceptor.getVerificationAttempts() : 0) + 1);
+        preceptorRepository.save(preceptor);
+
+        // Add audit log entry for rejection with reason
+        VerificationAuditLog auditLog = VerificationAuditLog.builder()
+                .preceptorId(userId)
+                .previousStatus(previousStatus)
+                .newStatus(VerificationStatus.REJECTED)
+                .reviewerUserId(null) // Can be set from authentication context if needed
+                .reviewNote(reason)
+                .changeTimestamp(LocalDateTime.now())
+                .deleted(false)
+                .build();
+        verificationAuditLogRepository.save(auditLog);
+
+        return "Preceptor rejected with reason: " + reason;
     }
 
     @Override
@@ -291,64 +330,193 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<VerificationHistoryDTO> getPreceptorVerificationHistory(Long userId) {
         log.info("Fetching verification history for preceptor - userId: {}", userId);
-        // Placeholder - would need a separate VerificationAuditLog table
-        // For now, return empty list with basic audit info
-        return new ArrayList<>();
+
+        // Verify preceptor exists
+        Preceptor preceptor = preceptorRepository.findActiveById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
+
+        // Fetch all audit logs for this preceptor
+        Page<VerificationAuditLog> auditLogs = verificationAuditLogRepository
+                .findByPreceptorIdAndDeletedFalseOrderByChangeTimestampDesc(userId, Pageable.ofSize(100));
+
+        // Map to DTO
+        return auditLogs.getContent().stream()
+                .map(log -> new VerificationHistoryDTO(
+                        log.getAuditId(),
+                        "VERIFICATION_" + log.getNewStatus().name(),
+                        log.getPreviousStatus() != null ? log.getPreviousStatus().name() : null,
+                        log.getNewStatus().name(),
+                        log.getReviewerUserId() != null ?
+                                userRepository.findById(log.getReviewerUserId())
+                                        .map(User::getDisplayName).orElse("System") : "System",
+                        log.getReviewerUserId(),
+                        log.getReviewNote(),
+                        log.getChangeTimestamp()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
     public String addVerificationNote(Long userId, String note, String noteType) {
         log.info("Adding verification note for preceptor - userId: {}, noteType: {}", userId, noteType);
+
+        // Verify preceptor exists
         Preceptor preceptor = preceptorRepository.findActiveById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
-        // Placeholder - would need to store notes in a separate table
-        log.info("Verification note added successfully");
+
+        // Create audit log entry
+        VerificationAuditLog auditLog = VerificationAuditLog.builder()
+                .preceptorId(userId)
+                .previousStatus(preceptor.getVerificationStatus())
+                .newStatus(preceptor.getVerificationStatus())
+                .reviewNote(note)
+                .changeTimestamp(LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
+                .deleted(false)
+                .build();
+
+        verificationAuditLogRepository.save(auditLog);
+        log.info("Verification note added successfully - auditId: {}", auditLog.getAuditId());
+
         return "Note added successfully";
     }
 
     @Override
     public PreceptorBillingReportDTO getPreceptorBillingReport(Long userId) {
         log.info("Fetching billing report for preceptor - userId: {}", userId);
+
         Preceptor preceptor = preceptorRepository.findActiveById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
-        // Placeholder - would need to integrate with Stripe/subscription service
+
+        // Get all transactions for this preceptor
+        Page<BillingTransaction> txPage = billingTransactionRepository
+                .findByPreceptor_UserIdOrderByTransactionAtDesc(userId, PageRequest.of(0, Integer.MAX_VALUE));
+
+        List<BillingTransaction> allTransactions = txPage.getContent();
+
+        // Calculate metrics
+        double successfulRevenue = allTransactions.stream()
+                .filter(tx -> tx.getStatus().toString().equals("SUCCEEDED"))
+                .mapToDouble(tx -> tx.getAmountInMinorUnits() / 100.0)
+                .sum();
+
+        double failedRevenue = allTransactions.stream()
+                .filter(tx -> tx.getStatus().toString().equals("FAILED"))
+                .mapToDouble(tx -> tx.getAmountInMinorUnits() / 100.0)
+                .sum();
+
+        int successCount = (int) allTransactions.stream()
+                .filter(tx -> tx.getStatus().toString().equals("SUCCEEDED"))
+                .count();
+
+        int failedCount = (int) allTransactions.stream()
+                .filter(tx -> tx.getStatus().toString().equals("FAILED"))
+                .count();
+
+        LocalDateTime lastTransactionDate = allTransactions.isEmpty() ?
+            null : allTransactions.get(0).getTransactionAt();
+
+        // Get last invoice date
+        Page<com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoice> invoicePage =
+            billingInvoiceRepository.findByPreceptor_UserIdOrderByInvoiceCreatedAtDesc(
+                userId,
+                PageRequest.of(0, 1)
+            );
+        LocalDateTime lastInvoiceDate = invoicePage.isEmpty() ?
+            null : invoicePage.getContent().get(0).getInvoiceCreatedAt();
+
+        String status = allTransactions.isEmpty() ? "NO_ACTIVITY" : "ACTIVE";
+
+        log.info("Billing report calculated - userId: {}, revenue: {}, failed: {}, transactions: {}",
+                userId, successfulRevenue, failedRevenue, allTransactions.size());
+
         return new PreceptorBillingReportDTO(
                 userId,
                 preceptor.getUser().getDisplayName(),
-                "ACTIVE",
-                "Premium",
-                0.0,
-                0.0,
-                0,
+                preceptor.isVerified() ? "VERIFIED" : "PENDING",
+                preceptor.isPremium() ? "Premium" : "Standard",
+                successfulRevenue,
+                failedRevenue,
+                successCount,
+                lastInvoiceDate,
+                lastTransactionDate,
+                status,
                 null,
-                null,
-                "PENDING",
-                null,
-                0,
-                0
+                failedCount,
+                allTransactions.size()
         );
     }
 
     @Override
     public PreceptorAnalyticsDTO getPreceptorAnalytics(Long userId) {
         log.info("Fetching analytics for preceptor - userId: {}", userId);
+
         Preceptor preceptor = preceptorRepository.findActiveById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
-        // Placeholder - would integrate with analytics service
+
+        // Get event counts by type for this preceptor
+        List<Object[]> eventCounts = analyticsRepository.countEventsByPreceptor(userId);
+
+        long profileViews = 0;
+        long contactReveals = 0;
+        long inquiries = 0;
+
+        for (Object[] row : eventCounts) {
+            EventType type = (EventType) row[0];
+            long count = (long) row[1];
+
+            switch (type) {
+                case PROFILE_VIEW -> profileViews = count;
+                case CONTACT_REVEAL -> contactReveals = count;
+                case INQUIRY -> inquiries = count;
+            }
+        }
+
+        // Calculate response rate (successful inquiries vs total)
+        double responseRate = inquiries > 0 ? 100.0 : 0.0;
+
+        // Get transaction history for conversion metrics
+        Page<BillingTransaction> transactions = billingTransactionRepository
+                .findByPreceptor_UserIdOrderByTransactionAtDesc(userId, PageRequest.of(0, 100));
+
+        long successfulTransactions = transactions.getContent().stream()
+                .filter(tx -> tx.getStatus().toString().equals("SUCCEEDED"))
+                .count();
+
+        double conversionRate = inquiries > 0 ? (successfulTransactions * 100.0 / inquiries) : 0.0;
+
+        log.info("Analytics calculated - userId: {}, views: {}, contacts: {}, inquiries: {}",
+                userId, profileViews, contactReveals, inquiries);
+
         return new PreceptorAnalyticsDTO(
                 userId,
                 preceptor.getUser().getDisplayName(),
-                0L,
-                0L,
-                0L,
-                0.0,
-                0,
-                0.0,
-                0L,
+                profileViews,
+                contactReveals,
+                inquiries,
+                responseRate,
+                (int) successfulTransactions,
+                conversionRate,
+                transactions.getTotalElements(),
                 "STABLE",
-                0.0
+                0.0  // Placeholder for growth rate
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.digitalearn.npaxis.preceptor.PreceptorContactResponseDTO getPreceptorContactAsAdmin(Long userId) {
+        log.info("Admin fetching preceptor contact info - userId: {}", userId);
+
+        Preceptor preceptor = preceptorRepository.findActiveById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
+
+        // Admin can view contact without premium check
+        return com.digitalearn.npaxis.preceptor.PreceptorContactResponseDTO.builder()
+                .phone(preceptor.getPhone())
+                .email(preceptor.getEmail())
+                .build();
     }
 
     @Override
@@ -374,25 +542,85 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
+    public AdminStudentDetailDTO updateStudentAsAdmin(Long userId, AdminStudentDetailDTO updateDTO) {
+        log.info("Admin updating student - userId: {}", userId);
+        Student student = studentRepository.findActiveById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + userId));
+
+        // Apply updates
+        if (updateDTO.displayName() != null) {
+            student.getUser().setDisplayName(updateDTO.displayName());
+        }
+        if (updateDTO.phone() != null) {
+            student.setPhone(updateDTO.phone());
+        }
+        if (updateDTO.university() != null) {
+            student.setUniversity(updateDTO.university());
+        }
+        if (updateDTO.program() != null) {
+            student.setProgram(updateDTO.program());
+        }
+        if (updateDTO.graduationYear() != null) {
+            student.setGraduationYear(updateDTO.graduationYear());
+        }
+
+        studentRepository.save(student);
+        log.info("Student updated successfully - userId: {}", userId);
+        return mapStudentToDetailDTO(student);
+    }
+
+    @Override
     public List<SystemSettingsDTO> getAllSettings() {
         log.info("Fetching all system settings");
-        // Placeholder - would need SystemSettings table/service
-        return new ArrayList<>();
+
+        List<SystemSetting> settings = systemSettingRepository.findAllActive();
+
+        return settings.stream()
+                .map(s -> new SystemSettingsDTO(
+                        s.getSettingKey(),
+                        s.getSettingValue(),
+                        s.getDescription(),
+                        s.getCategory().name()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Override
     public SystemSettingsDTO getSetting(String key) {
         log.info("Fetching setting - key: {}", key);
-        // Placeholder
-        return new SystemSettingsDTO(key, "", "", "GENERAL");
+
+        SystemSetting setting = systemSettingRepository.findBySettingKeyAndIsActiveTrue(key)
+                .orElseThrow(() -> new ResourceNotFoundException("Setting not found with key: " + key));
+
+        return new SystemSettingsDTO(
+                setting.getSettingKey(),
+                setting.getSettingValue(),
+                setting.getDescription(),
+                setting.getCategory().name()
+        );
     }
 
     @Override
     @Transactional
     public SystemSettingsDTO updateSetting(String key, Object value) {
         log.info("Updating setting - key: {}, value: {}", key, value);
-        // Placeholder - would need to persist settings
-        return new SystemSettingsDTO(key, value, "", "GENERAL");
+
+        SystemSetting setting = systemSettingRepository.findBySettingKey(key)
+                .orElseThrow(() -> new ResourceNotFoundException("Setting not found with key: " + key));
+
+        setting.setSettingValue(value != null ? value.toString() : "");
+        setting.onUpdate();
+        systemSettingRepository.save(setting);
+
+        log.info("Setting updated successfully - key: {}", key);
+
+        return new SystemSettingsDTO(
+                setting.getSettingKey(),
+                setting.getSettingValue(),
+                setting.getDescription(),
+                setting.getCategory().name()
+        );
     }
 
     @Override
@@ -707,6 +935,11 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private AdminStudentDetailDTO mapStudentToDetailDTO(Student student) {
+        // Count inquiries sent by this student
+        Page<com.digitalearn.npaxis.inquiry.Inquiry> inquiriesPage = inquiryRepository
+                .findByStudent_User_UserId(student.getUserId(), PageRequest.of(0, 1));
+        int inquiriesSent = (int) inquiriesPage.getTotalElements();
+
         return new AdminStudentDetailDTO(
                 student.getUserId(),
                 student.getUser().getDisplayName(),
@@ -716,7 +949,7 @@ public class AdminServiceImpl implements AdminService {
                 student.getProgram(),
                 student.getGraduationYear(),
                 student.getSavedPreceptors() != null ? student.getSavedPreceptors().size() : 0,
-                0, // inquires sent count - would need to query
+                inquiriesSent,
                 null, // last activity - would need audit log
                 student.getUser().isEmailVerified(),
                 student.getUser().isAccountEnabled(),

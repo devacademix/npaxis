@@ -132,6 +132,11 @@ public interface AdminService {
      */
     AdminStudentDetailDTO getStudentDetailAsAdmin(Long userId);
 
+    /**
+     * Update student profile as admin
+     */
+    AdminStudentDetailDTO updateStudentAsAdmin(Long userId, AdminStudentDetailDTO updateDTO);
+
     // Admin Settings Operations
     /**
      * Get all system settings
@@ -174,4 +179,14 @@ public interface AdminService {
      * Can display PDF, PNG, JPG, etc. in browser
      */
     org.springframework.core.io.Resource viewLicenseImageAsAdmin(Long userId);
+
+    /**
+     * Get preceptor contact information (admin override, no premium check)
+     */
+    com.digitalearn.npaxis.preceptor.PreceptorContactResponseDTO getPreceptorContactAsAdmin(Long userId);
+
+    /**
+     * Reject preceptor with rejection reason
+     */
+    String rejectPreceptorWithReason(Long userId, String reason);
 }

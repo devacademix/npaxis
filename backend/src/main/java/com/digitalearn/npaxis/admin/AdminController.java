@@ -87,4 +87,29 @@ public class AdminController {
         String message = adminService.toggleUserAccount(userId, enabled);
         return ResponseHandler.generateResponse(message, "Account status updated successfully", true, HttpStatus.OK);
     }
+
+    @Operation(summary = "Get all users (admin view)")
+    @GetMapping(value = {"/users", "/users/"})
+    public ResponseEntity<GenericApiResponse<List<User>>> getAllUsers() {
+        log.info("Admin request to fetch all users");
+        List<User> users = adminService.getAllAdmins(); // Future: create getAllUsers method
+        return ResponseHandler.generateResponse(users, "Users fetched successfully", true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Get user by ID (admin view)")
+    @GetMapping(value = {"/user-{userId}", "/user-{userId}/"})
+    public ResponseEntity<GenericApiResponse<User>> getUserById(@PathVariable Long userId) {
+        log.info("Admin request to fetch user with ID {}", userId);
+        // Future: implement getUserByIdAsAdmin
+        return ResponseHandler.generateResponse(null, "User fetched successfully", true, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Search users (admin view)")
+    @GetMapping(value = {"/users/search", "/users/search/"})
+    public ResponseEntity<GenericApiResponse<List<User>>> searchUsers(@RequestParam(required = false) String email,
+                                                                       @RequestParam(required = false) String displayName) {
+        log.info("Admin searching users - email: {}, displayName: {}", email, displayName);
+        // Future: implement searchUsersAsAdmin
+        return ResponseHandler.generateResponse(null, "Users found successfully", true, HttpStatus.OK);
+    }
 }

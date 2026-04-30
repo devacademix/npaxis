@@ -104,6 +104,7 @@ public class PreceptorController {
                     )
             }
     )
+    @PreAuthorize("permitAll()")
     @GetMapping(value = {GET_ACTIVE_PRECEPTOR_BY_ID_API, GET_ACTIVE_PRECEPTOR_BY_ID_API + "/"})
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> getActivePreceptorById(@PathVariable Long userId) {
         log.info("Fetching active preceptor with ID: {}", userId);
@@ -112,7 +113,7 @@ public class PreceptorController {
     }
 
     @Operation(summary = "Update preceptor details", description = "Updates the details of an existing preceptor.")
-    @PreAuthorize("#userId == principal.userId")
+    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
     @PutMapping(value = {PUT_UPDATE_PRECEPTOR_API, PUT_UPDATE_PRECEPTOR_API + "/"})
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> updatePreceptor(
             @PathVariable Long userId,
@@ -183,6 +184,7 @@ public class PreceptorController {
     }
 
     @Operation(summary = "Reveal contact information", description = "Reveals the contact details of a preceptor (premium gate).")
+    @PreAuthorize("permitAll()")
     @GetMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
     public ResponseEntity<GenericApiResponse<PreceptorContactResponseDTO>> revealContact(@PathVariable Long userId) {
         log.info("Revealing contact for preceptor ID: {}", userId);

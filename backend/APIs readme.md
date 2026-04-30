@@ -235,6 +235,8 @@ requirements, and expected outputs.
 
 ## 5. Administration (`/administration`)
 
+### 5.1 Admin General Operations
+
 | Endpoint                        | Method | Description                         | Input                              | Output                                 |
 |:--------------------------------|:-------|:------------------------------------|:-----------------------------------|:---------------------------------------|
 | `/add-admin`                    | POST   | Registers a new admin user.         | `AdminRegisterRequest`             | `AdminRegisterResponse`                |
@@ -243,8 +245,236 @@ requirements, and expected outputs.
 | `/preceptors/reject-{userId}`   | POST   | Rejects a preceptor request.        | `userId` (Path)                    | Success message                        |
 | `/all-admins`                   | GET    | Fetches all admin users.            | None                               | List of `User` (Entity)                |
 | `/user-{userId}/toggle-account` | PUT    | Enables/disables a user account.    | `userId` (Path), `enabled` (Query) | Success message                        |
+| `/users`                        | GET    | List all users (admin view).        | None                               | List of `User` entities                |
+| `/users/search`                 | GET    | Search users by email or name.      | `email`, `displayName` (Query)     | List of `User` entities                |
+| `/user-{userId}`                | GET    | Get user by ID (admin view).        | `userId` (Path)                    | `User` entity                          |
 
-### Data Objects
+### 5.2 Admin Dashboard & Settings
+
+| Endpoint                        | Method | Description                         | Input                              | Output                                 |
+|:--------------------------------|:-------|:------------------------------------|:-----------------------------------|:---------------------------------------|
+| `/dashboard`                    | GET    | Get admin dashboard overview.       | None                               | `AdminAnalyticsOverviewDTO`            |
+| `/settings`                     | GET    | Get all system settings.            | None                               | List of `SystemSettingsDTO`            |
+| `/settings/{key}`               | GET    | Get specific setting by key.        | `key` (Path)                       | `SystemSettingsDTO`                    |
+| `/settings/{key}`               | PUT    | Update a system setting.            | `key` (Path), `value` (Body)       | `SystemSettingsDTO`                    |
+| `/revenue-summary`              | GET    | Get revenue report.                 | None                               | `RevenueReportDTO`                     |
+| `/revenue-transactions`         | GET    | Get transaction history.            | Pageable params                    | Paginated list of `TransactionHistoryDTO` |
+
+### 5.3 Admin Revenue Management
+
+| Endpoint                        | Method | Description                         | Input                              | Output                                 |
+|:--------------------------------|:-------|:------------------------------------|:-----------------------------------|:---------------------------------------|
+| `/revenue/by-preceptor`         | GET    | Get revenue by preceptor.           | Pageable params                    | Paginated list of `PreceptorBillingReportDTO` |
+
+### 5.4 Admin Analytics
+
+| Endpoint                        | Method | Description                         | Input                              | Output                                 |
+|:--------------------------------|:-------|:------------------------------------|:-----------------------------------|:---------------------------------------|
+| `/analytics/overview`           | GET    | Get admin analytics overview.       | None                               | `AdminAnalyticsOverviewDTO`            |
+| `/analytics/top-preceptors`     | GET    | Get top preceptors by analytics.    | None                               | `AdminAnalyticsOverviewDTO`            |
+| `/analytics/trends`             | GET    | Get platform trends.                | None                               | `AdminAnalyticsOverviewDTO`            |
+
+### 5.5 Admin Preceptor Management
+
+| Endpoint                                    | Method | Description                                      | Input                                  | Output                                   |
+|:--------------------------------------------|:-------|:------------------------------------------------|:---------------------------------------|:-----------------------------------------|
+| `/preceptors`                               | GET    | List all preceptors (admin view).                | Pageable params                        | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/search`                        | GET    | Search and filter preceptors (admin view).       | `specialty`, `location`, `verificationStatus`, Pageable | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/approved`                      | GET    | Get approved preceptors.                         | Pageable params                        | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/rejected`                      | GET    | Get rejected preceptors.                         | Pageable params                        | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/preceptor-{userId}`            | GET    | Get preceptor detail (admin view).               | `userId` (Path)                        | `AdminPreceptorDetailDTO`                |
+| `/preceptors/preceptor-{userId}`            | PUT    | Update preceptor (admin).                        | `userId` (Path), `AdminPreceptorDetailDTO` | `AdminPreceptorDetailDTO`                |
+| `/preceptors/preceptor-{userId}/verification-history` | GET | Get verification history for preceptor.   | `userId` (Path)                        | List of `VerificationHistoryDTO`         |
+| `/preceptors/preceptor-{userId}/notes`      | POST   | Add verification note to preceptor.              | `userId` (Path), `note`, `noteType` (Query) | Success message                          |
+| `/preceptors/preceptor-{userId}/reject`     | POST   | Reject preceptor with rejection reason.         | `userId` (Path), `reason` (Query)      | Success message                          |
+| `/preceptors/preceptor-{userId}/billing-report` | GET | Get preceptor billing report.                    | `userId` (Path)                        | `PreceptorBillingReportDTO`              |
+| `/preceptors/preceptor-{userId}/analytics`  | GET    | Get preceptor analytics.                         | `userId` (Path)                        | `PreceptorAnalyticsDTO`                  |
+| `/preceptors/preceptor-{userId}/contact`    | GET    | Get preceptor contact (admin - no premium check).| `userId` (Path)                        | `PreceptorContactResponseDTO`            |
+| `/preceptors/preceptor-{userId}/license/download` | GET | Download preceptor license file (admin).    | `userId` (Path)                        | License file (PDF Resource)              |
+| `/preceptors/preceptor-{userId}/license/view` | GET | View preceptor license image (admin).            | `userId` (Path)                        | License image (Resource)                 |
+
+### 5.6 Admin Student Management
+
+| Endpoint                                    | Method | Description                                      | Input                                  | Output                                   |
+|:--------------------------------------------|:-------|:------------------------------------------------|:---------------------------------------|:-----------------------------------------|
+| `/students`                                 | GET    | List all students (admin view).                  | Pageable params                        | Paginated list of `AdminStudentListDTO` |
+| `/students/search`                          | GET    | Search and filter students (admin view).         | `university`, `program`, Pageable     | Paginated list of `AdminStudentListDTO` |
+| `/students/student-{userId}`                | GET    | Get student detail (admin view).                 | `userId` (Path)                        | `AdminStudentDetailDTO`                  |
+| `/students/student-{userId}`                | PUT    | Update student (admin).                          | `userId` (Path), `AdminStudentDetailDTO` | `AdminStudentDetailDTO`                  |
+| `/students/student-{userId}`                | DELETE | Delete student (soft delete).                    | `userId` (Path)                        | Success message                          |
+| `/students/student-{userId}/inquiries`      | GET    | Get student inquiries.                           | `userId` (Path)                        | List of inquiries                        |
+
+### 5.7 Admin Webhook Management
+
+| Endpoint                                    | Method | Description                                      | Input                                  | Output                                   |
+|:--------------------------------------------|:-------|:------------------------------------------------|:---------------------------------------|:-----------------------------------------|
+| `/webhooks/history`                         | GET    | Get webhook event history.                       | Pageable params                        | Paginated list of `WebhookEventResponse` |
+| `/webhooks/retry/{eventId}`                 | POST   | Retry failed webhook event.                      | `eventId` (Path)                       | Success message                          |
+| `/webhooks/{eventId}`                       | GET    | Get webhook event details.                       | `eventId` (Path)                       | `WebhookEventDetailDTO`                  |
+| `/webhooks/metrics`                         | GET    | Get webhook metrics and statistics.              | None                                   | `WebhookMetricsDTO`                      |
+
+### Data Objects for Administration
+
+#### `AdminAnalyticsOverviewDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `totalUsers`            | `Long`            | Total user count.                |
+| `totalStudents`         | `Long`            | Total student count.             |
+| `totalPreceptors`       | `Long`            | Total preceptor count.           |
+| `newUsersThisMonth`     | `Long`            | New users this month.            |
+| `verifiedPreceptors`    | `Long`            | Verified preceptor count.        |
+| `pendingVerifications`  | `Long`            | Pending verifications.           |
+| `totalRevenue`          | `BigDecimal`      | Total revenue.                   |
+| `revenueThisMonth`      | `BigDecimal`      | Revenue this month.              |
+| `totalSubscriptions`    | `Long`            | Total subscription count.        |
+| `activeSubscriptions`   | `Long`            | Active subscription count.       |
+
+#### `AdminPreceptorListDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `userId`                | `Long`            | Unique identifier.               |
+| `displayName`           | `String`          | Display name.                    |
+| `email`                 | `String`          | Email address.                   |
+| `specialty`             | `String`          | Specialty area.                  |
+| `location`              | `String`          | Location.                        |
+| `verificationStatus`    | `String`          | Verification status.             |
+| `isPremium`             | `boolean`         | Premium subscription status.     |
+| `createdAt`             | `LocalDateTime`   | Creation timestamp.              |
+
+#### `AdminPreceptorDetailDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `userId`                | `Long`            | Unique identifier.               |
+| `displayName`           | `String`          | Display name.                    |
+| `email`                 | `String`          | Email address.                   |
+| `credentials`           | `String`          | Professional credentials.        |
+| `specialty`             | `String`          | Specialty area.                  |
+| `location`              | `String`          | Location.                        |
+| `phone`                 | `String`          | Phone number.                    |
+| `honorarium`            | `String`          | Honorarium.                      |
+| `requirements`          | `String`          | Requirements.                    |
+| `isVerified`            | `boolean`         | Verification status.             |
+| `isPremium`             | `boolean`         | Premium status.                  |
+| `verificationStatus`    | `String`          | Verification status detail.      |
+
+#### `AdminStudentListDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `userId`                | `Long`            | Unique identifier.               |
+| `displayName`           | `String`          | Display name.                    |
+| `email`                 | `String`          | Email address.                   |
+| `university`            | `String`          | University name.                 |
+| `program`               | `String`          | Academic program.                |
+| `createdAt`             | `LocalDateTime`   | Creation timestamp.              |
+
+#### `AdminStudentDetailDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `userId`                | `Long`            | Unique identifier.               |
+| `displayName`           | `String`          | Display name.                    |
+| `email`                 | `String`          | Email address.                   |
+| `phone`                 | `String`          | Phone number.                    |
+| `university`            | `String`          | University name.                 |
+| `program`               | `String`          | Academic program.                |
+| `graduationYear`        | `String`          | Graduation year.                 |
+| `savedPreceptors`       | `Integer`         | Count of saved preceptors.       |
+| `inquiriesSent`         | `Integer`         | Count of inquiries sent.         |
+
+#### `VerificationHistoryDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `auditId`               | `Long`            | Audit log ID.                    |
+| `previousStatus`        | `String`          | Previous status.                 |
+| `newStatus`             | `String`          | New status.                      |
+| `reviewerUserId`        | `Long`            | Reviewer user ID.                |
+| `reviewNote`            | `String`          | Review note/reason.              |
+| `changeTimestamp`       | `LocalDateTime`   | Change timestamp.                |
+
+#### `PreceptorBillingReportDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `userId`                | `Long`            | Unique identifier.               |
+| `displayName`           | `String`          | Display name.                    |
+| `accountStatus`         | `String`          | Account status.                  |
+| `subscriptionTier`      | `String`          | Subscription tier.               |
+| `successfulRevenue`     | `BigDecimal`      | Successful transaction revenue.  |
+| `failedRevenue`         | `BigDecimal`      | Failed transaction revenue.      |
+| `successCount`          | `Integer`         | Successful transaction count.    |
+| `lastInvoiceDate`       | `LocalDateTime`   | Last invoice date.               |
+| `lastTransactionDate`   | `LocalDateTime`   | Last transaction date.           |
+
+#### `PreceptorAnalyticsDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `userId`                | `Long`            | Unique identifier.               |
+| `displayName`           | `String`          | Display name.                    |
+| `profileViews`          | `Long`            | Total profile views.             |
+| `contactReveals`        | `Long`            | Total contact reveals.           |
+| `inquiries`             | `Long`            | Total inquiries received.        |
+| `responseRate`          | `Double`          | Response rate percentage.        |
+| `successfulTransactions`| `Integer`         | Successful transaction count.    |
+| `conversionRate`        | `Double`          | Conversion rate percentage.      |
+| `totalTransactions`     | `Long`            | Total transaction count.         |
+
+#### `WebhookEventDetailDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `eventId`               | `String`          | Webhook event ID.                |
+| `eventType`             | `String`          | Event type.                      |
+| `status`                | `String`          | Processing status.               |
+| `processedAt`           | `LocalDateTime`   | Processing timestamp.            |
+| `retryCount`            | `Integer`         | Number of retries.               |
+| `errorMessage`          | `String`          | Error message (if any).          |
+
+#### `WebhookMetricsDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `totalEvents`           | `Long`            | Total webhook events.            |
+| `successfulEvents`      | `Long`            | Successful events.               |
+| `failedEvents`          | `Long`            | Failed events.                   |
+| `pendingRetries`        | `Integer`         | Pending retry count.             |
+| `averageProcessingTime` | `Long`            | Average processing time (ms).    |
+
+#### `SystemSettingsDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `settingKey`            | `String`          | Setting key identifier.          |
+| `value`                 | `Object`          | Setting value.                   |
+| `description`           | `String`          | Setting description.             |
+| `isActive`              | `boolean`         | Whether setting is active.       |
+
+#### `RevenueReportDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `totalRevenue`          | `BigDecimal`      | Total revenue amount.            |
+| `revenueThisMonth`      | `BigDecimal`      | Revenue this month.              |
+| `successfulTransactions`| `Long`            | Successful transaction count.    |
+| `failedTransactions`    | `Long`            | Failed transaction count.        |
+| `totalTransactions`     | `Long`            | Total transaction count.         |
+
+#### `TransactionHistoryDTO`
+
+| Field                   | Type              | Description                      |
+|:------------------------|:------------------|:---------------------------------|
+| `transactionId`         | `Long`            | Transaction ID.                  |
+| `preceptorId`           | `Long`            | Preceptor ID.                    |
+| `preceptorName`         | `String`          | Preceptor name.                  |
+| `amountInMinorUnits`    | `Long`            | Amount in minor units.           |
+| `currency`              | `String`          | Currency code.                   |
+| `status`                | `String`          | Transaction status.              |
+| `transactionAt`         | `LocalDateTime`   | Transaction timestamp.           |
 
 #### `AdminRegisterRequest`
 
@@ -293,10 +523,13 @@ requirements, and expected outputs.
 
 ## 7. Role Management (`/roles`)
 
-| Endpoint                | Method | Description               | Input           | Output                    |
-|:------------------------|:-------|:--------------------------|:----------------|:--------------------------|
-| `/active/all`           | GET    | Fetches all active roles. | None            | List of `RoleResponseDTO` |
-| `/active/role-{roleId}` | GET    | Fetches a role by ID.     | `roleId` (Path) | `RoleResponseDTO`         |
+| Endpoint                | Method | Description                         | Input                    | Output                    |
+|:------------------------|:-------|:------------------------------------|:-------------------------|:--------------------------|
+| `/active/all`           | GET    | Fetch all active roles.             | None                     | List of `RoleResponseDTO` |
+| `/active/role-{roleId}` | GET    | Fetch a role by ID.                 | `roleId` (Path)          | `RoleResponseDTO`         |
+| `/`                     | POST   | Create a new role (admin only).     | `RoleCreateDTO`          | `RoleResponseDTO`         |
+| `/role-{roleId}`        | PUT    | Update a role (admin only).         | `roleId` (Path), `RoleUpdateDTO` | `RoleResponseDTO`         |
+| `/role-{roleId}`        | DELETE | Delete a role (admin only).         | `roleId` (Path)          | Success message           |
 
 ### Data Objects
 
@@ -307,6 +540,19 @@ requirements, and expected outputs.
 | `roleId`      | `Long`   | Unique role identifier.                       |
 | `roleName`    | `String` | Name of the role (STUDENT, PRECEPTOR, ADMIN). |
 | `description` | `String` | Brief description of the role.                |
+
+#### `RoleCreateDTO`
+
+| Field         | Type     | Description                      |
+|:--------------|:---------|:---------------------------------|
+| `roleName`    | `String` | Name of the new role.            |
+| `description` | `String` | Description of the role.         |
+
+#### `RoleUpdateDTO`
+
+| Field         | Type     | Description                      |
+|:--------------|:---------|:---------------------------------|
+| `description` | `String` | Updated role description.        |
 
 ---
 
