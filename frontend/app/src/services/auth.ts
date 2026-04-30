@@ -20,9 +20,24 @@ const unwrapApiData = <T>(response: any): T => {
   return response.data as T;
 };
 
+const isPublicAuthRequest = (url?: string) => {
+  if (!url) return false;
+
+  return [
+    '/auth/login',
+    '/auth/register',
+    '/auth/verify-otp',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/initialize',
+    '/auth/refresh-token',
+    '/auth/logout',
+  ].some((path) => url.includes(path));
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
-  if (token && config.headers && !config.headers.Authorization) {
+  if (token && config.headers && !config.headers.Authorization && !isPublicAuthRequest(config.url)) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -35,10 +50,7 @@ api.interceptors.response.use(
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
     const statusCode = error.response?.status;
     const requestUrl = originalRequest?.url || '';
-    const isAuthCall =
-      requestUrl.includes('/auth/login') ||
-      requestUrl.includes('/auth/refresh-token') ||
-      requestUrl.includes('/auth/logout');
+    const isAuthCall = isPublicAuthRequest(requestUrl);
 
     if (statusCode === 401 && originalRequest && !originalRequest._retry && !isAuthCall) {
       originalRequest._retry = true;
@@ -160,6 +172,25 @@ export const authService = {
   logout: async () => {
     await api.post('/auth/logout');
     clearAuthStorage();
+  },
+
+  refreshSession: async () => {
+    const response = await api.post('/auth/refresh-token');
+    const refreshed = unwrapApiData<AuthResponse>(response);
+
+    if (refreshed?.accessToken) {
+      localStorage.setItem('accessToken', refreshed.accessToken);
+      if (refreshed.displayName) localStorage.setItem('displayName', refreshed.displayName);
+      if (refreshed.role) localStorage.setItem('role', refreshed.role);
+      if (refreshed.userId != null) localStorage.setItem('userId', String(refreshed.userId));
+    }
+
+    return refreshed;
+  },
+
+  initializeSystem: async () => {
+    const response = await api.post('/auth/initialize');
+    return unwrapApiData(response);
   },
 
   getCurrentUser: async (): Promise<UserResponse> => {

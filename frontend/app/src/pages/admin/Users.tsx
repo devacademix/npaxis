@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import UserFilters from '../../components/admin/UserFilters';
@@ -28,6 +28,7 @@ const Users: React.FC = () => {
   const [viewUser, setViewUser] = useState<UserTableRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserTableRow | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
   const [addAdminForm, setAddAdminForm] = useState({ email: '', displayName: '', password: '' });
 
@@ -35,32 +36,46 @@ const Users: React.FC = () => {
     setToast({ type, message });
   };
 
-  useEffect(() => {
+  const loadUsers = useCallback(async () => {
     if (!isAdmin) return;
+    try {
+      setIsLoading(true);
+      setError(null);
+      const [activeUsers, deletedUsers] = await Promise.all([
+        userService.getActiveUsers(),
+        userService.getDeletedUsers().catch(() => []),
+      ]);
 
-    const loadUsers = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await userService.getAllUsers();
-        const normalized = (Array.isArray(response) ? response : []).map((user: UserRecord) => ({
+      const merged = new Map<number, UserRecord>();
+      [...(Array.isArray(activeUsers) ? activeUsers : []), ...(Array.isArray(deletedUsers) ? deletedUsers : [])].forEach((user) => {
+        if (user?.userId != null) {
+          merged.set(Number(user.userId), user);
+        }
+      });
+
+      const normalized = Array.from(merged.values()).map((user: UserRecord) => {
+        const normalizedEnabled = Boolean(user.isEnabled ?? user.enabled ?? user.accountEnabled ?? true);
+        return {
           userId: user.userId,
           displayName: user.displayName,
           email: user.email,
           role: user.role,
-          isEnabled: Boolean(user.isEnabled ?? user.enabled ?? user.accountEnabled ?? true),
+          isEnabled: normalizedEnabled,
+          enabled: normalizedEnabled,
           isDeleted: Boolean(user.isDeleted ?? user.deleted ?? false),
-        }));
-        setUsers(normalized);
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load users.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadUsers();
+        };
+      });
+      setUsers(normalized);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load users.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [isAdmin]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -84,7 +99,7 @@ const Users: React.FC = () => {
       const matchesRole =
         roleFilter === 'ALL' || normalizeRoleValue(user.role) === normalizeRoleValue(roleFilter);
 
-      const derivedStatus = user.isDeleted || !user.isEnabled ? 'DISABLED' : 'ACTIVE';
+    const derivedStatus = user.isDeleted || !user.enabled ? 'DISABLED' : 'ACTIVE';
       const matchesStatus = statusFilter === 'ALL' || derivedStatus === statusFilter;
 
       return matchesSearch && matchesRole && matchesStatus;
@@ -119,25 +134,55 @@ const Users: React.FC = () => {
     setUsers((prev) => prev.filter((item) => item.userId !== userId));
   };
 
-  const handleToggleStatus = async (user: UserTableRow) => {
-    const currentUserId = Number(localStorage.getItem('userId'));
-    if (currentUserId === user.userId) {
-      showToast('error', 'You cannot disable your own account.');
+  const handleViewUser = async (user: UserTableRow) => {
+    if (!user.isDeleted) {
+      setViewUser(user);
       return;
     }
 
-    if (user.isDeleted) return;
+    try {
+      setActionLoadingId(user.userId);
+      const deletedDetail = await userService.getDeletedUserById(user.userId);
+      setViewUser({
+        userId: deletedDetail.userId,
+        displayName: deletedDetail.displayName,
+        email: deletedDetail.email,
+        role: deletedDetail.role,
+        enabled: Boolean(deletedDetail.isEnabled ?? deletedDetail.enabled ?? deletedDetail.accountEnabled ?? false),
+        isEnabled: Boolean(deletedDetail.isEnabled ?? deletedDetail.enabled ?? deletedDetail.accountEnabled ?? false),
+        isDeleted: true,
+      });
+    } catch (err: any) {
+      showToast('error', err?.message || 'Failed to load deleted user details.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
-    const nextEnabled = !user.isEnabled;
+  const handleToggleStatus = async (user: UserTableRow, targetState: boolean) => {
+    const currentUserId = Number(localStorage.getItem('userId'));
+    if (currentUserId === user.userId && targetState === false) {
+      showToast('error', 'You cannot disable your own account.');
+      return;
+    }
+    if (user.isDeleted) return;
     try {
       setIsActionLoading(true);
-      await userService.toggleAccountStatus(user.userId, nextEnabled);
-      updateUserState(user.userId, { isEnabled: nextEnabled });
-      showToast('success', `User ${nextEnabled ? 'enabled' : 'disabled'} successfully.`);
+      setActionLoadingId(user.userId);
+      const response = await adminService.toggleAdminAccount(user.userId, targetState);
+      console.log('TOGGLE RESPONSE:', response);
+      const payload = (response ?? {}) as Record<string, unknown>;
+      const serverEnabled = Boolean(
+        payload.enabled ?? payload.active ?? payload.isActive ?? targetState
+      );
+      updateUserState(user.userId, { isEnabled: serverEnabled, enabled: serverEnabled });
+      showToast('success', `User ${serverEnabled ? 'enabled' : 'disabled'} successfully.`);
+      await loadUsers();
     } catch (err: any) {
       showToast('error', err?.message || 'Failed to update user status.');
     } finally {
       setIsActionLoading(false);
+      setActionLoadingId(null);
     }
   };
 
@@ -145,7 +190,7 @@ const Users: React.FC = () => {
     try {
       setIsActionLoading(true);
       await userService.restoreUser(user.userId);
-      updateUserState(user.userId, { isDeleted: false, isEnabled: true });
+      updateUserState(user.userId, { isDeleted: false, isEnabled: true, enabled: true });
       showToast('success', 'User restored successfully.');
     } catch (err: any) {
       showToast('error', err?.message || 'Failed to restore user.');
@@ -165,7 +210,7 @@ const Users: React.FC = () => {
     try {
       setIsActionLoading(true);
       await userService.softDeleteUser(deleteTarget.userId);
-      updateUserState(deleteTarget.userId, { isDeleted: true, isEnabled: false });
+      updateUserState(deleteTarget.userId, { isDeleted: true, isEnabled: false, enabled: false });
       setDeleteTarget(null);
       showToast('success', 'User soft deleted successfully.');
     } catch (err: any) {
@@ -227,17 +272,26 @@ const Users: React.FC = () => {
           <p className="mt-2 text-slate-500">Manage students, preceptors, and admins across the platform.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setShowAddAdminModal(true)}
-            className="w-fit rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
-          >
-            + Add Admin
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAddAdminModal(true)}
+              className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+            >
+              + Add Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/students')}
+              className="rounded-full border border-blue-600 px-5 py-2.5 text-sm font-bold text-blue-600 hover:bg-blue-50"
+            >
+              + Add Student
+            </button>
+          </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="w-fit rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
+            className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
           >
             Logout
           </button>
@@ -262,10 +316,11 @@ const Users: React.FC = () => {
       <UserTable
         users={paginatedUsers}
         isLoading={isLoading}
-        onViewUser={setViewUser}
+        onViewUser={handleViewUser}
         onToggleStatus={handleToggleStatus}
         onOpenDeleteModal={setDeleteTarget}
         onRestoreUser={handleRestore}
+        actionLoadingId={actionLoadingId}
       />
 
       {!isLoading && filteredUsers.length > 0 ? (
@@ -321,7 +376,7 @@ const Users: React.FC = () => {
               <p><span className="font-semibold text-slate-600">Role:</span> {viewUser.role}</p>
               <p>
                 <span className="font-semibold text-slate-600">Status:</span>{' '}
-                {viewUser.isDeleted || !viewUser.isEnabled ? 'Disabled' : 'Active'}
+                {viewUser.isDeleted || !viewUser.enabled ? 'Disabled' : 'Active'}
               </p>
             </div>
             <div className="mt-6 flex justify-end">

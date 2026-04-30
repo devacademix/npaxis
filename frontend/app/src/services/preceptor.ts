@@ -61,6 +61,7 @@ export interface PreceptorSearchItem {
   requirements?: string;
   isVerified: boolean;
   isPremium: boolean;
+  verificationStatus?: VerificationStatus;
 }
 
 export interface PreceptorSearchResult {
@@ -135,6 +136,7 @@ const normalizeSearchItem = (payload: any): PreceptorSearchItem => ({
   requirements: payload?.requirements ? String(payload.requirements) : undefined,
   isVerified: Boolean(payload?.isVerified),
   isPremium: Boolean(payload?.isPremium),
+  verificationStatus: payload?.verificationStatus ? String(payload.verificationStatus) as VerificationStatus : undefined,
 });
 
 export const preceptorService = {
@@ -252,4 +254,24 @@ export const preceptorService = {
     downloadUrl: `/api/v1/preceptors/preceptor-${id}/license`,
     viewUrl: `/api/v1/preceptors/preceptor-${id}/license/view`,
   }),
+
+  verifyPreceptor: async (id: number | string) => {
+    const response = await api.put(`/preceptors/verify/preceptor-${id}`, null, authConfig());
+    return extractData<PreceptorProfile>(response);
+  },
+
+  restorePreceptor: async (id: number | string) => {
+    const response = await api.put(`/preceptors/restore/preceptor-${id}`, null, authConfig());
+    return extractData<PreceptorProfile>(response);
+  },
+
+  softDeletePreceptor: async (id: number | string) => {
+    const response = await api.delete(`/preceptors/soft-delete/preceptor-${id}`, authConfig());
+    return extractData<PreceptorProfile>(response);
+  },
+
+  hardDeletePreceptor: async (id: number | string) => {
+    const response = await api.delete(`/preceptors/hard-delete/preceptor-${id}`, authConfig());
+    return extractData<PreceptorProfile>(response);
+  },
 };

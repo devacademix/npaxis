@@ -15,6 +15,13 @@ export interface AdminUpdateRequest {
   roles: number[];
 }
 
+export interface PlatformSetting {
+  key: string;
+  value: unknown;
+  description?: string;
+  settingType?: string;
+}
+
 const unwrapApiData = <T>(response: any): T => {
   if (response?.data?.data !== undefined) {
     return response.data.data as T;
@@ -67,6 +74,41 @@ export const settingsService = {
 
   updateAdminDetails: async (userId: number, payload: AdminUpdateRequest) => {
     const response = await api.put(`/users/user-${userId}`, payload, authConfig());
+    return unwrapApiData(response);
+  },
+
+  getPlatformSettings: async (): Promise<PlatformSetting[]> => {
+    const response = await api.get('/administration/settings', authConfig());
+    const payload = unwrapApiData<any>(response);
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.content)
+      ? payload.content
+      : Array.isArray(payload?.items)
+      ? payload.items
+      : [];
+
+    return list.map((item: any) => ({
+      key: String(item?.key ?? ''),
+      value: item?.value,
+      description: item?.description ? String(item.description) : undefined,
+      settingType: item?.settingType ? String(item.settingType) : undefined,
+    }));
+  },
+
+  getPlatformSetting: async (key: string): Promise<PlatformSetting> => {
+    const response = await api.get(`/administration/settings/${key}`, authConfig());
+    const item = unwrapApiData<any>(response) || {};
+    return {
+      key: String(item?.key ?? key),
+      value: item?.value,
+      description: item?.description ? String(item.description) : undefined,
+      settingType: item?.settingType ? String(item.settingType) : undefined,
+    };
+  },
+
+  updatePlatformSetting: async (key: string, value: unknown) => {
+    const response = await api.put(`/administration/settings/${key}`, { value }, authConfig());
     return unwrapApiData(response);
   },
 

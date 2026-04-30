@@ -139,6 +139,7 @@ const Landing: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeSpecialty, setActiveSpecialty] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [specialtyOptions, setSpecialtyOptions] = useState<string[]>([]);
 
   const fetchPreceptors = async (query?: string) => {
     try {
@@ -148,6 +149,10 @@ const Landing: React.FC = () => {
         size: 6
       });
       setPreceptors(result.items);
+      const uniqueSpecialties = Array.from(
+        new Set(result.items.flatMap((item) => (item.specialty ? [item.specialty] : [])))
+      );
+      setSpecialtyOptions(['All', ...uniqueSpecialties.filter((s) => s)]);
     } catch (error) {
       console.error('Failed to fetch preceptors:', error);
     } finally {
@@ -393,17 +398,18 @@ const Landing: React.FC = () => {
             <h2 className="mb-8 text-4xl font-black leading-tight text-slate-800">
               Ask<br/>Doctors
             </h2>
-            <div className="flex flex-col gap-2">
-              {['All', 'Primary Care', 'Family Medicine', 'Pediatric', 'Emergency', 'Orthopaedic'].map((cat) => (
-                <button 
-                  key={cat} 
-                  onClick={() => setActiveSpecialty(cat)}
-                  className={`px-6 py-3 text-sm font-bold text-left rounded-r-full transition-all ${activeSpecialty === cat ? 'bg-cyan-200/50 text-cyan-800 border-l-4 border-cyan-500' : 'text-slate-600 hover:bg-slate-50 border-l-4 border-transparent'}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col gap-2">
+            {(specialtyOptions.length > 0 ? specialtyOptions : ['All', 'Primary Care', 'Family Medicine', 'Pediatric', 'Emergency', 'Orthopaedic']).map((cat) => (
+              <button 
+                key={cat} 
+                type="button"
+                onClick={() => setActiveSpecialty(cat)}
+                className={`px-6 py-3 text-sm font-bold text-left rounded-r-full transition-all ${activeSpecialty === cat ? 'bg-cyan-200/50 text-cyan-800 border-l-4 border-cyan-500' : 'text-slate-600 hover:bg-slate-50 border-l-4 border-transparent'}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
           </div>
           
           <div className="relative lg:col-span-3">

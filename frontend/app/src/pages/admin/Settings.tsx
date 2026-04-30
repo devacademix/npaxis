@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SettingsForm, { type SettingsState, type SettingsTab } from '../../components/admin/SettingsForm';
 import { authService } from '../../services/auth';
-import settingsService, { type AdminCurrentUser } from '../../services/settings';
+import settingsService, { type AdminCurrentUser, type PlatformSetting } from '../../services/settings';
 
 const defaultSettings: SettingsState = {
   general: {
@@ -50,6 +50,55 @@ const mergeSettings = (base: SettingsState, overrides: Partial<SettingsState>): 
   systemControls: { ...base.systemControls, ...(overrides.systemControls ?? {}) },
 });
 
+const normalizeSettingKey = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const applyBackendSettings = (base: SettingsState, platformSettings: PlatformSetting[]): SettingsState => {
+  const next = mergeSettings(base, {});
+
+  platformSettings.forEach((setting) => {
+    const normalized = normalizeSettingKey(setting.key);
+    const value = setting.value;
+
+    if (normalized.includes('platform') && normalized.includes('name')) {
+      next.general.platformName = String(value ?? next.general.platformName);
+    } else if (normalized.includes('support') && normalized.includes('email')) {
+      next.general.supportEmail = String(value ?? next.general.supportEmail);
+    } else if (normalized.includes('language')) {
+      next.general.defaultLanguage = String(value ?? next.general.defaultLanguage);
+    } else if (normalized.includes('timezone')) {
+      next.general.timezone = String(value ?? next.general.timezone);
+    } else if (normalized.includes('public') && normalized.includes('api')) {
+      next.integrations.publicApiKey = String(value ?? next.integrations.publicApiKey);
+    } else if (normalized.includes('secret') && normalized.includes('api')) {
+      next.integrations.secretApiKey = String(value ?? next.integrations.secretApiKey);
+    } else if (normalized.includes('webhook')) {
+      next.integrations.webhookUrl = String(value ?? next.integrations.webhookUrl);
+    } else if (normalized.includes('payment') && normalized.includes('enabled')) {
+      next.integrations.paymentsEnabled = Boolean(value);
+    } else if (normalized.includes('mail') && normalized.includes('enabled')) {
+      next.integrations.mailServiceEnabled = Boolean(value);
+    } else if (normalized.includes('analytics') && normalized.includes('enabled')) {
+      next.integrations.analyticsEnabled = Boolean(value);
+    } else if (normalized.includes('email') && normalized.includes('notification')) {
+      next.notifications.emailNotifications = Boolean(value);
+    } else if (normalized.includes('system') && normalized.includes('alert')) {
+      next.notifications.systemAlerts = Boolean(value);
+    } else if (normalized.includes('inquiry') && normalized.includes('alert')) {
+      next.notifications.inquiryAlerts = Boolean(value);
+    } else if (normalized.includes('registration') && normalized.includes('enabled')) {
+      next.systemControls.registrationEnabled = Boolean(value);
+    } else if (normalized.includes('maintenance') && normalized.includes('mode')) {
+      next.systemControls.maintenanceMode = Boolean(value);
+    } else if (normalized.includes('twofactor')) {
+      next.security.twoFactorEnabled = Boolean(value);
+    } else if (normalized.includes('session') && normalized.includes('timeout')) {
+      next.security.sessionTimeout = String(value ?? next.security.sessionTimeout);
+    }
+  });
+
+  return next;
+};
+
 const Settings: React.FC = () => {
   const role = localStorage.getItem('role');
   const isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
@@ -65,6 +114,7 @@ const Settings: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSetting[]>([]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -72,20 +122,27 @@ const Settings: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const currentAdmin = await settingsService.getCurrentAdmin();
+        const [currentAdmin, backendSettings] = await Promise.all([
+          settingsService.getCurrentAdmin(),
+          settingsService.getPlatformSettings().catch(() => []),
+        ]);
         setAdminUser(currentAdmin);
-        setSettings((prev) => ({
-          ...prev,
-          general: {
-            ...prev.general,
-            adminName: prev.general.adminName || currentAdmin.name || '',
-            adminEmail: prev.general.adminEmail || currentAdmin.email || '',
-            supportEmail:
-              prev.general.supportEmail === defaultSettings.general.supportEmail && currentAdmin.email
-                ? currentAdmin.email
-                : prev.general.supportEmail,
-          },
-        }));
+        setPlatformSettings(backendSettings);
+        setSettings((prev) => {
+          const withBackend = applyBackendSettings(prev, backendSettings);
+          return {
+            ...withBackend,
+            general: {
+              ...withBackend.general,
+              adminName: withBackend.general.adminName || currentAdmin.name || '',
+              adminEmail: withBackend.general.adminEmail || currentAdmin.email || '',
+              supportEmail:
+                withBackend.general.supportEmail === defaultSettings.general.supportEmail && currentAdmin.email
+                  ? currentAdmin.email
+                  : withBackend.general.supportEmail,
+            },
+          };
+        });
       } catch (err: any) {
         setError(err?.message || 'Failed to load admin settings.');
       } finally {
@@ -185,6 +242,56 @@ const Settings: React.FC = () => {
           'Profile not updated (enter current password to apply profile changes). Other settings saved locally.';
       }
 
+      const platformValueMap = new Map<string, unknown>();
+      platformSettings.forEach((setting) => {
+        const normalized = normalizeSettingKey(setting.key);
+        if (normalized.includes('platform') && normalized.includes('name')) {
+          platformValueMap.set(setting.key, settings.general.platformName.trim());
+        } else if (normalized.includes('support') && normalized.includes('email')) {
+          platformValueMap.set(setting.key, settings.general.supportEmail.trim());
+        } else if (normalized.includes('language')) {
+          platformValueMap.set(setting.key, settings.general.defaultLanguage);
+        } else if (normalized.includes('timezone')) {
+          platformValueMap.set(setting.key, settings.general.timezone);
+        } else if (normalized.includes('public') && normalized.includes('api')) {
+          platformValueMap.set(setting.key, settings.integrations.publicApiKey);
+        } else if (normalized.includes('secret') && normalized.includes('api')) {
+          platformValueMap.set(setting.key, settings.integrations.secretApiKey);
+        } else if (normalized.includes('webhook')) {
+          platformValueMap.set(setting.key, settings.integrations.webhookUrl.trim());
+        } else if (normalized.includes('payment') && normalized.includes('enabled')) {
+          platformValueMap.set(setting.key, settings.integrations.paymentsEnabled);
+        } else if (normalized.includes('mail') && normalized.includes('enabled')) {
+          platformValueMap.set(setting.key, settings.integrations.mailServiceEnabled);
+        } else if (normalized.includes('analytics') && normalized.includes('enabled')) {
+          platformValueMap.set(setting.key, settings.integrations.analyticsEnabled);
+        } else if (normalized.includes('email') && normalized.includes('notification')) {
+          platformValueMap.set(setting.key, settings.notifications.emailNotifications);
+        } else if (normalized.includes('system') && normalized.includes('alert')) {
+          platformValueMap.set(setting.key, settings.notifications.systemAlerts);
+        } else if (normalized.includes('inquiry') && normalized.includes('alert')) {
+          platformValueMap.set(setting.key, settings.notifications.inquiryAlerts);
+        } else if (normalized.includes('registration') && normalized.includes('enabled')) {
+          platformValueMap.set(setting.key, settings.systemControls.registrationEnabled);
+        } else if (normalized.includes('maintenance') && normalized.includes('mode')) {
+          platformValueMap.set(setting.key, settings.systemControls.maintenanceMode);
+        } else if (normalized.includes('twofactor')) {
+          platformValueMap.set(setting.key, settings.security.twoFactorEnabled);
+        } else if (normalized.includes('session') && normalized.includes('timeout')) {
+          platformValueMap.set(setting.key, settings.security.sessionTimeout);
+        }
+      });
+
+      const changedEntries = Array.from(platformValueMap.entries());
+      if (changedEntries.length > 0) {
+        await Promise.all(changedEntries.map(([key, value]) => settingsService.updatePlatformSetting(key, value)));
+        const refreshedSetting = await settingsService.getPlatformSetting(changedEntries[0][0]);
+        setPlatformSettings((prev) => {
+          const remainder = prev.filter((item) => item.key !== refreshedSetting.key);
+          return [...remainder, refreshedSetting];
+        });
+      }
+
       await settingsService.saveTemporarySettings({
         ...settings,
         security: {
@@ -204,7 +311,7 @@ const Settings: React.FC = () => {
           confirmPassword: '',
         },
       }));
-      setSuccess(profileMessage);
+      setSuccess(changedEntries.length > 0 ? `${profileMessage} Platform settings synced.` : profileMessage);
     } catch (err: any) {
       setError(err?.message || 'Failed to save settings.');
     } finally {

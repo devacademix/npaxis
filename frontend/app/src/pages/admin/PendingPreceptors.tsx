@@ -159,11 +159,9 @@ const PendingPreceptors: React.FC = () => {
   };
 
   const handleViewDocument = (preceptor: Preceptor) => {
-    if (!preceptor.licenseFileUrl) {
-      setToast({ message: 'License document URL is not available.', type: 'error' });
-      return;
-    }
-    window.open(preceptor.licenseFileUrl, '_blank', 'noopener,noreferrer');
+    const urls = adminService.getPreceptorLicenseUrls(preceptor.id);
+    const targetUrl = preceptor.licenseFileUrl || urls.reviewUrl;
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
   };
 
   const renderSkeletonTable = () => (
