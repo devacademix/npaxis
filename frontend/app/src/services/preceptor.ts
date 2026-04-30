@@ -255,6 +255,22 @@ export const preceptorService = {
     viewUrl: `/api/v1/preceptors/preceptor-${id}/license/view`,
   }),
 
+  getLicenseBlob: async (id: number | string) => {
+    const response = await api.get(`/preceptors/preceptor-${id}/license`, {
+      ...authConfig(),
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+
+  getLicenseViewBlob: async (id: number | string) => {
+    const response = await api.get(`/preceptors/preceptor-${id}/license/view`, {
+      ...authConfig(),
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+
   verifyPreceptor: async (id: number | string) => {
     const response = await api.put(`/preceptors/verify/preceptor-${id}`, null, authConfig());
     return extractData<PreceptorProfile>(response);

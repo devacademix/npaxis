@@ -43,6 +43,7 @@ const Revenue: React.FC = () => {
 
   const [summary, setSummary] = useState<RevenueSummary>(defaultSummary);
   const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
+  const [revenueByPreceptor, setRevenueByPreceptor] = useState<any[]>([]);
   const [revenueTrend, setRevenueTrend] = useState<RevenueChartPoint[]>([]);
   const [transactionTrend, setTransactionTrend] = useState<RevenueChartPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -161,6 +162,9 @@ const Revenue: React.FC = () => {
       adminService.getPaymentHistory(preceptorId),
       adminService.getPreceptorAnalytics(preceptorId),
     ]);
+    const revenueByPreceptorResult = await Promise.allSettled([
+      adminService.getRevenueByPreceptor({ page: 0, size: 20 }),
+    ]);
 
     const failedCalls: string[] = [];
     let stats: RevenueStatsApi = {};
@@ -194,6 +198,9 @@ const Revenue: React.FC = () => {
     setPayments(paymentList);
     setRevenueTrend(revenueFromAnalytics.length ? revenueFromAnalytics : derivedTrends.revenueData);
     setTransactionTrend(transactionsFromAnalytics.length ? transactionsFromAnalytics : derivedTrends.transactionData);
+    if (revenueByPreceptorResult[0].status === 'fulfilled') {
+      setRevenueByPreceptor(Array.isArray(revenueByPreceptorResult[0].value) ? revenueByPreceptorResult[0].value : []);
+    }
 
     if (failedCalls.length > 0) {
       const normalized = failedCalls.map((message) => {
@@ -456,6 +463,49 @@ const Revenue: React.FC = () => {
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">Revenue by Preceptor</h3>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {revenueByPreceptor.length} record(s)
+          </span>
+        </div>
+        {revenueByPreceptor.length === 0 ? (
+          <p className="text-sm text-slate-500">No preceptor revenue breakdown available.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left">
+              <thead className="border-b border-slate-200">
+                <tr>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Preceptor</th>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</th>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Status</th>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Meta</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {revenueByPreceptor.map((item, index) => (
+                  <tr key={item?.userId ?? item?.id ?? index}>
+                    <td className="px-3 py-3 text-sm font-semibold text-slate-800">
+                      {item?.displayName ?? item?.preceptorName ?? item?.name ?? `Preceptor ${index + 1}`}
+                    </td>
+                    <td className="px-3 py-3 text-sm font-bold text-slate-900">
+                      {formatCurrency(Number(item?.amount ?? item?.revenue ?? item?.totalRevenue ?? 0))}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-slate-600">
+                      {String(item?.status ?? item?.verificationStatus ?? 'N/A')}
+                    </td>
+                    <td className="px-3 py-3 text-xs text-slate-500">
+                      {item?.email ?? item?.location ?? item?.specialty ?? 'No extra metadata'}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

@@ -19,6 +19,7 @@ const StudentManagement: React.FC = () => {
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [search, setSearch] = useState('');
   const [newStudentForm, setNewStudentForm] = useState({
     displayName: '',
     email: '',
@@ -71,6 +72,23 @@ const StudentManagement: React.FC = () => {
       setToast({ type: 'error', message: err?.message || 'Failed to load student detail.' });
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  const handleSearch = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (!search.trim()) {
+        await loadStudents();
+        return;
+      }
+      const directory = await adminService.searchAdminStudents({ keyword: search.trim(), page: 0, size: 100 });
+      setStudents(directory as StudentProfile[]);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to search students.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -192,6 +210,21 @@ const StudentManagement: React.FC = () => {
             >
               + Add Student
             </button>
+            <div className="flex flex-1 flex-wrap gap-2">
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search students"
+                className="min-w-[220px] rounded-full border border-slate-200 px-4 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="rounded-full border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+              >
+                Search
+              </button>
+            </div>
           </div>
 
         <div>

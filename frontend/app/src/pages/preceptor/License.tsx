@@ -36,6 +36,7 @@ const License: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isOpeningDocument, setIsOpeningDocument] = useState(false);
 
   useEffect(() => {
     if (!isPreceptor) return;
@@ -150,6 +151,33 @@ const License: React.FC = () => {
     }
   };
 
+  const openLicenseDocument = async (mode: 'view' | 'download') => {
+    if (!userId) return;
+    try {
+      setIsOpeningDocument(true);
+      const blob =
+        mode === 'view'
+          ? await preceptorService.getLicenseViewBlob(userId)
+          : await preceptorService.getLicenseBlob(userId);
+      const objectUrl = URL.createObjectURL(blob);
+
+      if (mode === 'view') {
+        window.open(objectUrl, '_blank', 'noopener,noreferrer');
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+      } else {
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = `preceptor-license-${userId}`;
+        anchor.click();
+        URL.revokeObjectURL(objectUrl);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Unable to open submitted license document.');
+    } finally {
+      setIsOpeningDocument(false);
+    }
+  };
+
   const content = useMemo(() => {
     if (isLoading) {
       return (
@@ -213,6 +241,27 @@ const License: React.FC = () => {
               </>
             )}
           </button>
+
+          {submittedAt ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => openLicenseDocument('view')}
+                disabled={isOpeningDocument}
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                View Submitted License
+              </button>
+              <button
+                type="button"
+                onClick={() => openLicenseDocument('download')}
+                disabled={isOpeningDocument}
+                className="rounded-full border border-blue-200 px-5 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+              >
+                Download Copy
+              </button>
+            </div>
+          ) : null}
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">

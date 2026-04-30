@@ -92,6 +92,7 @@ const Dashboard: React.FC = () => {
   const [revenueSources, setRevenueSources] = useState<RevenueSourceEntry[]>([]);
   const [insightsError, setInsightsError] = useState<string | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(true);
+  const [topPreceptors, setTopPreceptors] = useState<any[]>([]);
 
   const handleGenerateReport = () => {
     const reportPayload = {
@@ -167,6 +168,7 @@ const Dashboard: React.FC = () => {
           preceptorService.searchPreceptors({ size: 1 }),
           adminService.getAnalyticsTrends().catch(() => null),
         ]);
+        const topPreceptorsResponse = await adminService.getAnalyticsTopPreceptors().catch(() => null);
 
         const trendSource = Array.isArray((trends as any)?.growthTrend)
           ? (trends as any).growthTrend
@@ -187,10 +189,17 @@ const Dashboard: React.FC = () => {
           setGrowthTrend(buildGrowthTrend(pending));
         }
         setRevenueSources(buildRevenueSources(students, preceptorOverview.totalElements));
+        const topList = Array.isArray((topPreceptorsResponse as any)?.topPreceptors)
+          ? (topPreceptorsResponse as any).topPreceptors
+          : Array.isArray(topPreceptorsResponse)
+          ? topPreceptorsResponse
+          : [];
+        setTopPreceptors(topList.slice(0, 5));
       } catch (err: any) {
         setInsightsError(err?.message || 'Unable to load live insights.');
         setGrowthTrend(buildGrowthTrend([]));
         setRevenueSources(buildRevenueSources([], 0));
+        setTopPreceptors([]);
       } finally {
         setInsightsLoading(false);
       }
@@ -360,6 +369,31 @@ const Dashboard: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="mb-4 flex items-center justify-between">
+          <h4 className="text-lg font-bold text-slate-900">Top Preceptors</h4>
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{topPreceptors.length} ranked</span>
+        </div>
+        {topPreceptors.length === 0 ? (
+          <p className="text-sm text-slate-500">No top-preceptor analytics available right now.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {topPreceptors.map((item, index) => (
+              <div key={item?.userId ?? item?.id ?? index} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Rank #{index + 1}</p>
+                <p className="mt-2 text-base font-semibold text-slate-900">
+                  {item?.displayName ?? item?.name ?? item?.preceptorName ?? 'Preceptor'}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">{item?.specialty ?? item?.location ?? 'No profile tag'}</p>
+                <p className="mt-3 text-sm font-bold text-blue-700">
+                  {item?.score ?? item?.profileViews ?? item?.engagement ?? item?.inquiries ?? 0}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

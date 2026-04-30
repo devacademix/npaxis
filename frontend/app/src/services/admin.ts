@@ -352,6 +352,22 @@ export const adminService = {
     reviewUrl: `/api/v1/administration/preceptors/${userId}/license/review`,
   }),
 
+  downloadPreceptorLicenseBlob: async (userId: number | string) => {
+    const response = await api.get(`/administration/preceptors/${userId}/license/download`, {
+      ...authConfig(),
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+
+  reviewPreceptorLicenseBlob: async (userId: number | string) => {
+    const response = await api.get(`/administration/preceptors/${userId}/license/review`, {
+      ...authConfig(),
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
+
   getAllUsers: async (): Promise<AdminUser[]> => {
     const response = await api.get('/users/all', authConfig());
     return unwrapApiData<AdminUser[]>(response) || [];

@@ -4,6 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import SettingsForm, { type SettingsState, type SettingsTab } from '../../components/admin/SettingsForm';
 import { authService } from '../../services/auth';
 import settingsService, { type AdminCurrentUser, type PlatformSetting } from '../../services/settings';
+import userService from '../../services/user';
 
 const defaultSettings: SettingsState = {
   general: {
@@ -115,6 +116,9 @@ const Settings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [platformSettings, setPlatformSettings] = useState<PlatformSetting[]>([]);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -127,6 +131,12 @@ const Settings: React.FC = () => {
           settingsService.getPlatformSettings().catch(() => []),
         ]);
         setAdminUser(currentAdmin);
+        try {
+          const blob = await userService.getProfilePictureBlob(currentAdmin.userId);
+          setProfileImageUrl(URL.createObjectURL(blob));
+        } catch {
+          setProfileImageUrl(null);
+        }
         setPlatformSettings(backendSettings);
         setSettings((prev) => {
           const withBackend = applyBackendSettings(prev, backendSettings);
@@ -151,6 +161,14 @@ const Settings: React.FC = () => {
     };
     loadAdmin();
   }, [isAdmin]);
+
+  useEffect(() => {
+    return () => {
+      if (profileImageUrl) {
+        URL.revokeObjectURL(profileImageUrl);
+      }
+    };
+  }, [profileImageUrl]);
 
   useEffect(() => {
     if (!success) return;
@@ -337,6 +355,26 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleProfileImageUpload = async () => {
+    if (!adminUser || !profileImageFile) return;
+    try {
+      setIsUploadingImage(true);
+      setError(null);
+      await userService.uploadProfilePicture(adminUser.userId, profileImageFile);
+      const blob = await userService.getProfilePictureBlob(adminUser.userId);
+      setProfileImageUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return URL.createObjectURL(blob);
+      });
+      setProfileImageFile(null);
+      setSuccess('Profile picture updated successfully.');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to update profile picture.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -389,6 +427,40 @@ const Settings: React.FC = () => {
         </div>
       ) : (
         <>
+          <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  {profileImageUrl ? (
+                    <img src={profileImageUrl} alt={adminDisplayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="material-symbols-outlined text-4xl text-slate-400">admin_panel_settings</span>
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Profile Picture</h2>
+                  <p className="text-sm text-slate-500">Upload your current admin profile image.</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isUploadingImage}
+                  onChange={(event) => setProfileImageFile(event.target.files?.[0] ?? null)}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleProfileImageUpload}
+                  disabled={!profileImageFile || isUploadingImage}
+                  className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+                </button>
+              </div>
+            </div>
+          </div>
           <SettingsForm
             activeTab={activeTab}
             onTabChange={setActiveTab}
