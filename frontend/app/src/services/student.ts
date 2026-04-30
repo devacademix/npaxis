@@ -156,6 +156,25 @@ export const studentService = {
     return list.map(normalizePreceptor);
   },
 
+  getStudents: async (params?: { page?: number; size?: number }) => {
+    const response = await api.get('/students', {
+      ...authConfig(),
+      params: {
+        page: params?.page ?? 0,
+        size: params?.size ?? 50,
+      },
+    });
+    const payload = unwrapApiData<any>(response);
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.content)
+      ? payload.content
+      : Array.isArray(payload?.items)
+      ? payload.items
+      : [];
+    return list.map(normalizeStudentProfile);
+  },
+
   getActiveStudents: async (): Promise<StudentProfile[]> => {
     const response = await api.get('/students/active/all', authConfig());
     const payload = unwrapApiData<any>(response);

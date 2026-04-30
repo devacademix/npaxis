@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { preceptorService, type PreceptorSearchItem } from '../../services/preceptor';
+import { adminService } from '../../services/admin';
 
 type ManagementPreceptor = PreceptorSearchItem & {
   status: 'ACTIVE' | 'DELETED';
@@ -29,8 +30,8 @@ const PreceptorManagement: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await preceptorService.searchPreceptors({ page: 0, size: 50 });
-      const mapped = response.items.map((item) => ({
+      const response = await adminService.getAdminPreceptors({ page: 0, size: 100 });
+      const mapped = response.map((item) => ({
         ...item,
         status: 'ACTIVE' as const,
         verificationLabel: item.verificationStatus ?? (item.isVerified ? 'APPROVED' : 'PENDING'),

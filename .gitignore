@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+# Frontend (React / Node)
+node_modules/
+dist/
+build/
+
+# Env & Secrets (CRITICAL)
+.env
+.env.*
+application-dev.yml
+=======
 /.idea/.gitignore
 /uploads/licenses/4-0146dbc2-7d51-4ede-99aa-a088dedf4f88-sign_jpeg
 /.idea/checkstyle-idea.xml
@@ -7,3 +18,4 @@
 /.idea/misc.xml
 /.idea/vcs.xml
 "backend/src/main/resources/application-dev.yml" 
+>>>>>>> b85d3e817a12c3b91b5019d0f81a6deccd9027b0

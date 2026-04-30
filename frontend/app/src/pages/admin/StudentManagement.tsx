@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { studentService, type StudentProfile } from '../../services/student';
 import { authService } from '../../services/auth';
+import { adminService } from '../../services/admin';
 
 interface EditableStudent {
   userId: number;
@@ -42,8 +43,8 @@ const StudentManagement: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const directory = await studentService.getActiveStudents();
-      setStudents(directory);
+      const directory = await adminService.getAdminStudents({ page: 0, size: 100 });
+      setStudents(directory as StudentProfile[]);
     } catch (err: any) {
       setError(err?.message || 'Failed to load students.');
     } finally {
@@ -57,12 +58,20 @@ const StudentManagement: React.FC = () => {
     return 'Active';
   };
 
-  const handleEditClick = (student: StudentProfile) => {
-    setEditingStudent({
-      userId: student.userId,
-      displayName: student.displayName,
-      email: student.email,
-    });
+  const handleEditClick = async (student: StudentProfile) => {
+    try {
+      setActionLoadingId(student.userId);
+      const detail = await adminService.getAdminStudentDetail(student.userId);
+      setEditingStudent({
+        userId: Number(detail?.userId ?? student.userId),
+        displayName: String(detail?.displayName ?? detail?.name ?? student.displayName),
+        email: String(detail?.email ?? student.email),
+      });
+    } catch (err: any) {
+      setToast({ type: 'error', message: err?.message || 'Failed to load student detail.' });
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const handleEditSubmit = async (event: React.FormEvent) => {

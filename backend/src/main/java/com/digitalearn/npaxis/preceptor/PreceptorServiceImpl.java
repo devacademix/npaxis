@@ -1,12 +1,8 @@
 package com.digitalearn.npaxis.preceptor;
 
-import com.digitalearn.npaxis.exceptionhandler.BusinessErrorCodes;
-import com.digitalearn.npaxis.exceptions.BusinessException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
-import com.digitalearn.npaxis.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -14,7 +10,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Implementation of PreceptorService.
@@ -26,7 +28,6 @@ public class PreceptorServiceImpl implements PreceptorService {
 
     private final PreceptorRepository preceptorRepository;
     private final PreceptorMapper preceptorMapper;
-    private final StorageService storageService;
 
     @Transactional(readOnly = true)
     @Override
@@ -58,13 +59,8 @@ public class PreceptorServiceImpl implements PreceptorService {
     @Transactional(readOnly = true)
     public PreceptorResponseDTO getActivePreceptorById(Long userId) {
         log.debug("Preceptor Service Impl --> Get active preceptor by ID: {}", userId);
-
-
         Preceptor preceptor = preceptorRepository.findActiveById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
-
-        log.info("Preceptor: isPremium{}, isVerified: {}", preceptor.isPremium(), preceptor.isVerified());
-
         return preceptorMapper.toPreceptorDTO(preceptor);
     }
 
@@ -155,12 +151,7 @@ public class PreceptorServiceImpl implements PreceptorService {
         Preceptor preceptor = preceptorRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
 
-        // If replacing an existing license, delete the old file
-        if (preceptor.getLicenseFileUrl() != null && !preceptor.getLicenseFileUrl().isEmpty()) {
-            storageService.deleteFile(preceptor.getLicenseFileUrl());
-        }
-
-        String storedPath = storageService.storeFile(file, "licenses", userId.toString());
+        String storedPath = storeLicenseFile(file, userId);
 
         preceptor.setLicenseNumber(licenseNumber);
         preceptor.setLicenseState(licenseState);
@@ -178,29 +169,12 @@ public class PreceptorServiceImpl implements PreceptorService {
         log.debug("Preceptor Service Impl --> Reveal contact for preceptor ID: {}", userId);
         Preceptor preceptor = preceptorRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
-
-        // check if the preceptor has premium or not
-        if (!preceptor.isPremium()) {
-            throw new BusinessException(BusinessErrorCodes.PRECEPTOR_NOT_PREMIUM);
-        }
+        // In a real application, logic for premium access check would go here.
+        // For now, we return the preceptor DTO which includes the contact details.
         return PreceptorContactResponseDTO.builder()
                 .phone(preceptor.getPhone())
                 .email(preceptor.getEmail())
                 .build();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Resource downloadLicense(Long userId) {
-        log.debug("Preceptor Service Impl --> Download license for preceptor ID: {}", userId);
-        Preceptor preceptor = preceptorRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found with ID: " + userId));
-
-        if (preceptor.getLicenseFileUrl() == null || preceptor.getLicenseFileUrl().isEmpty()) {
-            throw new ResourceNotFoundException("License file not found for preceptor ID: " + userId);
-        }
-
-        return storageService.loadFileAsResource(preceptor.getLicenseFileUrl());
     }
 
     private Specification<Preceptor> buildPreceptorSpec(PreceptorFilter filter) {
@@ -213,5 +187,32 @@ public class PreceptorServiceImpl implements PreceptorService {
                         filter.getMinHonorarium(),
                         filter.getMaxHonorarium()
                 ));
+    }
+
+    private String storeLicenseFile(MultipartFile file, Long userId) {
+        String originalName = file.getOriginalFilename() == null ? "license" : file.getOriginalFilename();
+        String extension = "";
+        int dot = originalName.lastIndexOf('.');
+        if (dot >= 0 && dot < originalName.length() - 1) {
+            extension = originalName.substring(dot + 1).toLowerCase(Locale.ROOT);
+        }
+
+        if (!extension.isEmpty() && !extension.equals("pdf") && !extension.equals("png") && !extension.equals("jpg") && !extension.equals("jpeg")) {
+            throw new IllegalArgumentException("Only PDF, PNG, JPG, and JPEG files are allowed.");
+        }
+
+        try {
+            Path uploadDir = Path.of("uploads", "licenses");
+            Files.createDirectories(uploadDir);
+
+            String safeName = originalName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            String filename = "preceptor-" + userId + "-" + UUID.randomUUID() + "-" + safeName;
+            Path target = uploadDir.resolve(filename);
+
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            return target.toString().replace('\\', '/');
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to store uploaded license file.", ex);
+        }
     }
 }

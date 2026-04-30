@@ -27,12 +27,11 @@ import java.util.List;
 import static com.digitalearn.npaxis.utils.APIConstants.ADD_ADMIN_API;
 import static com.digitalearn.npaxis.utils.APIConstants.ADMINISTRATION_API;
 import static com.digitalearn.npaxis.utils.APIConstants.APPROVE_PRECEPTOR_API;
-import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_PENDING_PRECEPTORS_API;
 import static com.digitalearn.npaxis.utils.APIConstants.REJECT_PRECEPTOR_API;
 
 @RestController
-@RequestMapping(BASE_API + "/" + ADMINISTRATION_API)
+@RequestMapping(ADMINISTRATION_API)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Administration", description = "APIs for admin-only operations")

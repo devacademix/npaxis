@@ -134,8 +134,18 @@ const Dashboard: React.FC = () => {
     const fetchStats = async () => {
       try {
         setIsLoading(true);
-        const response = await adminService.getStats();
-        setStats(response);
+        try {
+          const overview = await adminService.getAnalyticsOverview();
+          setStats({
+            totalUsers: Number(overview?.totalUsers ?? overview?.users ?? 0),
+            premiumUsers: Number(overview?.premiumCount ?? overview?.premiumUsers ?? 0),
+            revenue: Number(overview?.monthlyRevenue ?? overview?.revenue ?? overview?.totalRevenue ?? 0),
+            activePreceptors: Number(overview?.activePreceptors ?? overview?.preceptorCount ?? 0),
+          });
+        } catch {
+          const response = await adminService.getStats();
+          setStats(response);
+        }
       } catch (err: any) {
         setError(err?.message || 'Failed to load dashboard statistics.');
       } finally {
@@ -151,13 +161,31 @@ const Dashboard: React.FC = () => {
       setInsightsLoading(true);
       setInsightsError(null);
       try {
-        const [students, pending, preceptorOverview] = await Promise.all([
+        const [students, pending, preceptorOverview, trends] = await Promise.all([
           studentService.getActiveStudents(),
           adminService.getPendingPreceptors({ size: 120 }),
           preceptorService.searchPreceptors({ size: 1 }),
+          adminService.getAnalyticsTrends().catch(() => null),
         ]);
 
-        setGrowthTrend(buildGrowthTrend(pending));
+        const trendSource = Array.isArray((trends as any)?.growthTrend)
+          ? (trends as any).growthTrend
+          : Array.isArray((trends as any)?.items)
+          ? (trends as any).items
+          : null;
+
+        if (trendSource) {
+          setGrowthTrend(
+            trendSource
+              .map((item: any) => ({
+                label: String(item?.label ?? item?.month ?? ''),
+                value: Number(item?.value ?? item?.count ?? 0),
+              }))
+              .filter((item: { label: string; value: number }) => item.label)
+          );
+        } else {
+          setGrowthTrend(buildGrowthTrend(pending));
+        }
         setRevenueSources(buildRevenueSources(students, preceptorOverview.totalElements));
       } catch (err: any) {
         setInsightsError(err?.message || 'Unable to load live insights.');

@@ -41,8 +41,19 @@ const Users: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await userService.getAllUsers();
-      const normalized = (Array.isArray(response) ? response : []).map((user: UserRecord) => {
+      const [activeUsers, deletedUsers] = await Promise.all([
+        userService.getActiveUsers(),
+        userService.getDeletedUsers().catch(() => []),
+      ]);
+
+      const merged = new Map<number, UserRecord>();
+      [...(Array.isArray(activeUsers) ? activeUsers : []), ...(Array.isArray(deletedUsers) ? deletedUsers : [])].forEach((user) => {
+        if (user?.userId != null) {
+          merged.set(Number(user.userId), user);
+        }
+      });
+
+      const normalized = Array.from(merged.values()).map((user: UserRecord) => {
         const normalizedEnabled = Boolean(user.isEnabled ?? user.enabled ?? user.accountEnabled ?? true);
         return {
           userId: user.userId,
@@ -121,6 +132,31 @@ const Users: React.FC = () => {
 
   const removeUserFromState = (userId: number) => {
     setUsers((prev) => prev.filter((item) => item.userId !== userId));
+  };
+
+  const handleViewUser = async (user: UserTableRow) => {
+    if (!user.isDeleted) {
+      setViewUser(user);
+      return;
+    }
+
+    try {
+      setActionLoadingId(user.userId);
+      const deletedDetail = await userService.getDeletedUserById(user.userId);
+      setViewUser({
+        userId: deletedDetail.userId,
+        displayName: deletedDetail.displayName,
+        email: deletedDetail.email,
+        role: deletedDetail.role,
+        enabled: Boolean(deletedDetail.isEnabled ?? deletedDetail.enabled ?? deletedDetail.accountEnabled ?? false),
+        isEnabled: Boolean(deletedDetail.isEnabled ?? deletedDetail.enabled ?? deletedDetail.accountEnabled ?? false),
+        isDeleted: true,
+      });
+    } catch (err: any) {
+      showToast('error', err?.message || 'Failed to load deleted user details.');
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const handleToggleStatus = async (user: UserTableRow, targetState: boolean) => {
@@ -280,7 +316,7 @@ const Users: React.FC = () => {
       <UserTable
         users={paginatedUsers}
         isLoading={isLoading}
-        onViewUser={setViewUser}
+        onViewUser={handleViewUser}
         onToggleStatus={handleToggleStatus}
         onOpenDeleteModal={setDeleteTarget}
         onRestoreUser={handleRestore}

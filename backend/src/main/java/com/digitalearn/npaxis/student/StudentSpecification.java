@@ -1,8 +1,9 @@
 package com.digitalearn.npaxis.student;
 
-import jakarta.persistence.criteria.Join;
+import com.digitalearn.npaxis.student.Student;
 import org.springframework.data.jpa.domain.Specification;
 
+import jakarta.persistence.criteria.Join;
 import java.util.List;
 
 /**

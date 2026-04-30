@@ -1,7 +1,0 @@
-spring:
-  main:
-    lazy-initialization: true
-  application:
-    name: NPaxis
-  profiles:
-    active: dev

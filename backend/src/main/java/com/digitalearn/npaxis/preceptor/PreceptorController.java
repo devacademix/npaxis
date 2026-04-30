@@ -15,7 +15,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,15 +23,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_LICENSE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_STUDENT_BY_ID_API;
@@ -183,52 +181,10 @@ public class PreceptorController {
     }
 
     @Operation(summary = "Reveal contact information", description = "Reveals the contact details of a preceptor (premium gate).")
-    @GetMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
+    @PostMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
     public ResponseEntity<GenericApiResponse<PreceptorContactResponseDTO>> revealContact(@PathVariable Long userId) {
         log.info("Revealing contact for preceptor ID: {}", userId);
         PreceptorContactResponseDTO preceptorContact = preceptorService.revealContact(userId);
         return ResponseHandler.generateResponse(preceptorContact, "Contact revealed successfully", true, HttpStatus.OK);
-    }
-
-    @Operation(summary = "Download license file", description = "Downloads the license file of a preceptor.")
-    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
-    @GetMapping(value = {DOWNLOAD_LICENSE_API, DOWNLOAD_LICENSE_API + "/"})
-    public ResponseEntity<org.springframework.core.io.Resource> downloadLicense(@PathVariable Long userId) {
-        log.info("Downloading license for preceptor ID: {}", userId);
-        org.springframework.core.io.Resource resource = preceptorService.downloadLicense(userId);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF) // Defaulting to PDF, or detect based on extension
-                .body(resource);
-    }
-
-    @Operation(summary = "View license image", description = "View/preview license image for a preceptor (display in browser, not download).")
-    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
-    @GetMapping(value = {"/preceptor-{userId}/license/view", "/preceptor-{userId}/license/view/"})
-    public ResponseEntity<org.springframework.core.io.Resource> viewLicenseImage(@PathVariable Long userId) {
-        log.info("Viewing license image for preceptor ID: {}", userId);
-        org.springframework.core.io.Resource resource = preceptorService.downloadLicense(userId);
-
-        // Determine content type based on file extension
-        String contentType = "application/pdf"; // default
-        try {
-            String path = resource.getFile().getAbsolutePath();
-            if (path.toLowerCase().endsWith(".png")) {
-                contentType = "image/png";
-            } else if (path.toLowerCase().endsWith(".jpg") || path.toLowerCase().endsWith(".jpeg")) {
-                contentType = "image/jpeg";
-            } else if (path.toLowerCase().endsWith(".gif")) {
-                contentType = "image/gif";
-            } else if (path.toLowerCase().endsWith(".webp")) {
-                contentType = "image/webp";
-            }
-        } catch (Exception e) {
-            log.debug("Could not determine file type, using default PDF type");
-        }
-
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "inline") // inline for browser display, not download
-                .header("Cache-Control", "public, max-age=3600")
-                .contentType(MediaType.parseMediaType(contentType))
-                .body(resource);
     }
 }

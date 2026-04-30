@@ -1,17 +1,14 @@
 package com.digitalearn.npaxis.analytics;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
-/**
- * Request DTO for logging an analytics event.
- */
-public record AnalyticsEventRequest(
+@Data
+public class AnalyticsEventRequest {
 
-        @NotNull
-        EventType eventType,
+    @NotNull(message = "Event type requires")
+    private String eventType;
 
-        @NotNull
-        Long preceptorId
-
-) {
+    @NotNull(message = "Preceptor ID is required")
+    private Long preceptorId;
 }

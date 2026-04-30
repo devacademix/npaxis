@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
-import java.io.File;
 import java.util.Map;
 
 @Slf4j
@@ -46,36 +45,6 @@ public class ThymeleafEmailService implements EmailService {
         } catch (MessagingException | java.io.UnsupportedEncodingException e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage());
             // Depending on requirements, you might want to save failed emails to a DLQ table here
-        }
-    }
-
-    @Async
-    @Override
-    public void sendEmailWithAttachment(String to, EmailTemplate emailTemplate, Map<String, Object> templateModel, File attachment, String attachmentFileName) {
-        try {
-            Context thymeleafContext = new Context();
-            thymeleafContext.setVariables(templateModel);
-
-            String template = templateEngine.process(emailTemplate.getTemplateName(), thymeleafContext);
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(emailConfig.getFromAddress(), emailConfig.getFromName());
-            helper.setTo(to);
-            helper.setSubject(emailTemplate.getSubject());
-            helper.setText(template, true); // true indicates HTML
-
-            // Add attachment
-            if (attachment != null && attachment.exists()) {
-                helper.addAttachment(attachmentFileName, attachment);
-            }
-
-            this.mailSender.send(message);
-            log.info("Email with attachment sent successfully to: {}", to);
-
-        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
-            log.error("Failed to send email with attachment to {}: {}", to, e.getMessage());
         }
     }
 }

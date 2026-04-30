@@ -96,10 +96,6 @@ public class APIConstants {
      * API endpoint for hard deleting a user by their ID.
      */
     public static final String HARD_DELETE_USER_BY_ID_API = "hard-delete/user-{userId}";
-
-    public static final String UPLOAD_PROFILE_PICTURE_API = "user-{userId}/upload-profile-picture";
-    public static final String DOWNLOAD_PROFILE_PICTURE_API = "user-{userId}/profile-picture";
-
     /**
      * API endpoint for fetching all users including soft-deleted ones.
      */
@@ -318,14 +314,7 @@ public class APIConstants {
     public static final String RESTORE_PRECEPTOR_BY_ID_API = "restore/preceptor-{userId}";
     public static final String VERIFY_PRECEPTOR_API = "verify/preceptor-{userId}";
     public static final String SUBMIT_LICENSE_API = "preceptor-{userId}/submit-license";
-    public static final String DOWNLOAD_LICENSE_API = "preceptor-{userId}/license";
-    public static final String REVEAL_CONTACT_API = "active/preceptor-{userId}/reveal-contact";
-
-    // APIs for Inquiry Management
-    public static final String INQUIRIES_BASE_API = "inquiries";
-    public static final String SEND_INQUIRY_API = "send";
-    public static final String GET_INQUIRIES_FOR_USER = "my-inquiries";
-    public static final String MARK_INQUIRY_AS_READ = "/{inquiryId}/read";
+    public static final String REVEAL_CONTACT_API = "preceptor-{userId}/reveal-contact";
 
     // APIs for Admin Management
     public static final String ADMINISTRATION_API = "administration";
@@ -333,65 +322,6 @@ public class APIConstants {
     public static final String GET_PENDING_PRECEPTORS_API = "/preceptors/pending";
     public static final String APPROVE_PRECEPTOR_API = "/preceptors/approve-{userId}";
     public static final String REJECT_PRECEPTOR_API = "/preceptors/reject-{userId}";
-
-    // APIs for Admin Preceptor Management
-    public static final String ADMIN_PRECEPTORS_LIST_API = "/preceptors/list";
-    public static final String ADMIN_PRECEPTOR_DETAIL_API = "/preceptors/detail-{userId}";
-    public static final String ADMIN_PRECEPTOR_UPDATE_API = "/preceptors/update-{userId}";
-    public static final String ADMIN_PRECEPTOR_LICENSE_REVIEW_API = "/preceptors/{userId}/license/review";
-    public static final String ADMIN_PRECEPTOR_LICENSE_APPROVE_API = "/preceptors/{userId}/license/approve";
-    public static final String ADMIN_PRECEPTOR_LICENSE_REJECT_API = "/preceptors/{userId}/license/reject";
-    public static final String ADMIN_PRECEPTOR_LICENSE_DOWNLOAD_API = "/preceptors/{userId}/license/download";
-    public static final String ADMIN_PRECEPTOR_CONTACT_REVEAL_API = "/preceptors/{userId}/contact";
-    public static final String ADMIN_PRECEPTOR_VERIFICATION_HISTORY_API = "/preceptors/{userId}/verification-history";
-    public static final String ADMIN_PRECEPTOR_VERIFICATION_NOTES_API = "/preceptors/{userId}/verification-notes";
-    public static final String ADMIN_PRECEPTOR_BILLING_REPORT_API = "/preceptors/{userId}/billing";
-    public static final String ADMIN_PRECEPTOR_ANALYTICS_API = "/preceptors/{userId}/analytics";
-
-    // APIs for Admin Preceptor Verification Lists
-    public static final String ADMIN_PRECEPTORS_APPROVED_API = "/preceptors/verified/approved";
-    public static final String ADMIN_PRECEPTORS_REJECTED_API = "/preceptors/verified/rejected";
-    public static final String ADMIN_PRECEPTORS_PENDING_API = "/preceptors/verified/pending";
-
-    // APIs for Admin Dashboard & Settings
-    public static final String ADMIN_DASHBOARD_API = "/dashboard";
-    public static final String ADMIN_SETTINGS_API = "/settings";
-    public static final String ADMIN_SETTINGS_GENERAL_API = "/settings/general";
-    public static final String ADMIN_SETTINGS_INTEGRATIONS_API = "/settings/integrations";
-    public static final String ADMIN_SETTINGS_NOTIFICATIONS_API = "/settings/notifications";
-    public static final String ADMIN_SETTINGS_SYSTEM_CONTROLS_API = "/settings/system-controls";
-
-    // APIs for Admin Revenue & Reporting
-    public static final String ADMIN_REVENUE_API = "/revenue";
-    public static final String ADMIN_REVENUE_SUMMARY_API = "/revenue/summary";
-    public static final String ADMIN_REVENUE_TRANSACTION_HISTORY_API = "/revenue/transactions";
-    public static final String ADMIN_REVENUE_BY_PRECEPTOR_API = "/revenue/by-preceptor";
-    public static final String ADMIN_INVOICES_API = "/revenue/invoices";
-    public static final String ADMIN_SUBSCRIPTIONS_API = "/revenue/subscriptions";
-
-    // APIs for Admin Student Management
-    public static final String ADMIN_STUDENTS_LIST_API = "/students/list";
-    public static final String ADMIN_STUDENT_DETAIL_API = "/students/detail-{userId}";
-    public static final String ADMIN_STUDENT_UPDATE_API = "/students/update-{userId}";
-    public static final String ADMIN_STUDENTS_SEARCH_API = "/students/search";
-
-    // APIs for Admin Role Management
-    public static final String ADMIN_ROLES_CREATE_API = "/roles";
-    public static final String ADMIN_ROLES_UPDATE_API = "/roles/role-{roleId}";
-    public static final String ADMIN_ROLES_DELETE_API = "/roles/role-{roleId}";
-    public static final String ADMIN_USER_ROLES_ASSIGN_API = "/users/user-{userId}/roles";
-    public static final String ADMIN_USER_ROLES_REMOVE_API = "/users/user-{userId}/roles/remove";
-
-    // APIs for Admin Webhook Management
-    public static final String ADMIN_WEBHOOKS_LIST_API = "/webhooks";
-    public static final String ADMIN_WEBHOOK_DETAIL_API = "/webhooks/event-{eventId}";
-    public static final String ADMIN_WEBHOOK_RETRY_API = "/webhooks/event-{eventId}/retry";
-    public static final String ADMIN_WEBHOOK_HISTORY_API = "/webhooks/history";
-
-    // APIs for Admin Analytics
-    public static final String ADMIN_ANALYTICS_OVERVIEW_API = "/analytics/overview";
-    public static final String ADMIN_ANALYTICS_TOP_PRECEPTORS_API = "/analytics/top-preceptors";
-    public static final String ADMIN_ANALYTICS_TRENDS_API = "/analytics/trends";
 
     /**
      * Private constructor to prevent instantiation of this utility class.
