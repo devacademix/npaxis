@@ -14,15 +14,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.CREATE_CHECKOUT_SESSION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.PAYMENTS_API;
+
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping(BASE_API + "/" + PAYMENTS_API)
 @RequiredArgsConstructor
 public class PaymentController {
 
     // Injecting the Interface, not the concrete Stripe implementation
     private final PaymentGatewayService paymentGatewayService;
 
-    @PostMapping("/create-checkout-session")
+    @PostMapping(CREATE_CHECKOUT_SESSION_API)
     @PreAuthorize("hasRole('PRECEPTOR') and #request.preceptorId == principal.userId")
     public ResponseEntity<GenericApiResponse<CheckoutSessionResponse>> createCheckoutSession(
             @Valid @RequestBody CheckoutSessionRequest request) {

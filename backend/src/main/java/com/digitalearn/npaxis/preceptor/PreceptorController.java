@@ -58,7 +58,7 @@ public class PreceptorController {
             summary = "Search and filter preceptors",
             description = "Supports filtering, pagination, and sorting"
     )
-    @GetMapping(value = {PRECEPTORS_SEARCH_API, PRECEPTORS_SEARCH_API + "/"})
+    @GetMapping(value = PRECEPTORS_SEARCH_API)
     public ResponseEntity<GenericApiResponse<List<PreceptorResponseDTO>>> searchPreceptors(
 
             @RequestParam(required = false) String specialty,
@@ -105,7 +105,7 @@ public class PreceptorController {
             }
     )
     @PreAuthorize("permitAll()")
-    @GetMapping(value = {GET_ACTIVE_PRECEPTOR_BY_ID_API, GET_ACTIVE_PRECEPTOR_BY_ID_API + "/"})
+    @GetMapping(value = GET_ACTIVE_PRECEPTOR_BY_ID_API)
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> getActivePreceptorById(@PathVariable Long userId) {
         log.info("Fetching active preceptor with ID: {}", userId);
         PreceptorResponseDTO preceptor = preceptorService.getActivePreceptorById(userId);
@@ -114,7 +114,7 @@ public class PreceptorController {
 
     @Operation(summary = "Update preceptor details", description = "Updates the details of an existing preceptor.")
     @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
-    @PutMapping(value = {PUT_UPDATE_PRECEPTOR_API, PUT_UPDATE_PRECEPTOR_API + "/"})
+    @PutMapping(value = {PUT_UPDATE_PRECEPTOR_API})
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> updatePreceptor(
             @PathVariable Long userId,
             @Valid @RequestBody PreceptorRequestDTO preceptorRequestDto) {
@@ -125,7 +125,7 @@ public class PreceptorController {
 
     @Operation(summary = "Soft delete preceptor", description = "Deactivates a preceptor by their unique user ID.")
     @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
-    @DeleteMapping(value = {SOFT_DELETE_PRECEPTOR_BY_ID_API, SOFT_DELETE_PRECEPTOR_BY_ID_API + "/"})
+    @DeleteMapping(value = {SOFT_DELETE_PRECEPTOR_BY_ID_API})
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> softDeletePreceptor(@PathVariable Long userId) {
         log.info("Soft deleting preceptor with ID: {}", userId);
         preceptorService.softDeletePreceptor(userId);
@@ -134,7 +134,7 @@ public class PreceptorController {
 
     @Operation(summary = "Hard delete preceptor", description = "Permanently deletes a preceptor by their unique user ID.")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping(value = {HARD_DELETE_PRECEPTOR_BY_ID_API, HARD_DELETE_STUDENT_BY_ID_API + "/"})
+    @DeleteMapping(value = {HARD_DELETE_PRECEPTOR_BY_ID_API})
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> hardDeletePreceptor(@PathVariable Long userId) {
         log.info("Hard deleting preceptor with ID: {}", userId);
         preceptorService.hardDeletePreceptor(userId);
@@ -143,7 +143,7 @@ public class PreceptorController {
 
     @Operation(summary = "Restore preceptor", description = "Restores a soft-deleted preceptor.")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping(value = {RESTORE_PRECEPTOR_BY_ID_API, RESTORE_PRECEPTOR_BY_ID_API + "/"})
+    @PutMapping(value = {RESTORE_PRECEPTOR_BY_ID_API})
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> restorePreceptor(@PathVariable Long userId) {
         log.info("Restoring preceptor with ID: {}", userId);
         preceptorService.restorePreceptor(userId);
@@ -152,7 +152,7 @@ public class PreceptorController {
 
     @Operation(summary = "Verify preceptor", description = "Verifies a preceptor (Admin action).")
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping(value = {VERIFY_PRECEPTOR_API, VERIFY_PRECEPTOR_API + "/"})
+    @PutMapping(value = {VERIFY_PRECEPTOR_API})
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> verifyPreceptor(@PathVariable Long userId) {
         log.info("Verifying preceptor with ID: {}", userId);
         PreceptorResponseDTO verifiedPreceptor = preceptorService.verifyPreceptor(userId);
@@ -161,7 +161,7 @@ public class PreceptorController {
 
     @Operation(summary = "Submit license for verification", description = "Allows a preceptor to upload license details for verification.")
     @PreAuthorize("#userId == principal.userId")
-    @PostMapping(value = {SUBMIT_LICENSE_API, SUBMIT_LICENSE_API + "/"}, consumes = "application/json")
+    @PostMapping(value = {SUBMIT_LICENSE_API}, consumes = "application/json")
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> submitLicenseJson(
             @PathVariable("userId") Long userId,
             @Valid @RequestBody PreceptorRequestDTO preceptorRequestDto) {
@@ -172,7 +172,7 @@ public class PreceptorController {
 
     @Operation(summary = "Submit license file for verification", description = "Allows a preceptor to upload a license file using multipart/form-data.")
     @PreAuthorize("#userId == principal.userId")
-    @PostMapping(value = {SUBMIT_LICENSE_API, SUBMIT_LICENSE_API + "/"}, consumes = "multipart/form-data")
+    @PostMapping(value = {SUBMIT_LICENSE_API}, consumes = "multipart/form-data")
     public ResponseEntity<GenericApiResponse<PreceptorResponseDTO>> submitLicenseMultipart(
             @PathVariable("userId") Long userId,
             @RequestPart("file") MultipartFile file,
@@ -185,7 +185,7 @@ public class PreceptorController {
 
     @Operation(summary = "Reveal contact information", description = "Reveals the contact details of a preceptor (premium gate).")
     @PreAuthorize("permitAll()")
-    @GetMapping(value = {REVEAL_CONTACT_API, REVEAL_CONTACT_API + "/"})
+    @GetMapping(value = {REVEAL_CONTACT_API})
     public ResponseEntity<GenericApiResponse<PreceptorContactResponseDTO>> revealContact(@PathVariable Long userId) {
         log.info("Revealing contact for preceptor ID: {}", userId);
         PreceptorContactResponseDTO preceptorContact = preceptorService.revealContact(userId);
@@ -194,7 +194,7 @@ public class PreceptorController {
 
     @Operation(summary = "Download license file", description = "Downloads the license file of a preceptor.")
     @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
-    @GetMapping(value = {DOWNLOAD_LICENSE_API, DOWNLOAD_LICENSE_API + "/"})
+    @GetMapping(value = {DOWNLOAD_LICENSE_API})
     public ResponseEntity<org.springframework.core.io.Resource> downloadLicense(@PathVariable Long userId) {
         log.info("Downloading license for preceptor ID: {}", userId);
         org.springframework.core.io.Resource resource = preceptorService.downloadLicense(userId);

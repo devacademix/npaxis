@@ -70,7 +70,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "User fetched successfully"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Fetching user failed")
     })
-    @GetMapping(value = {GET_CURRENTLY_LOGGED_IN_USER_API, GET_CURRENTLY_LOGGED_IN_USER_API + "/"})
+    @GetMapping(value = GET_CURRENTLY_LOGGED_IN_USER_API)
     private ResponseEntity<GenericApiResponse<LoggedInUserResponseDTO>> getCurrentUser() {
         log.info("Fetching currently logged in user.");
         return ResponseHandler.generateResponse(this.userService.currentlyLoggedInUser(), "Fetching currently logged in user successful", true, HttpStatus.OK);
@@ -84,7 +84,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Update failed")
     })
     @PreAuthorize("#userId == principal.userId")
-    @PutMapping(value = {PUT_UPDATE_USER_API, PUT_UPDATE_USER_API + "/"})
+    @PutMapping(value = PUT_UPDATE_USER_API)
     public ResponseEntity<GenericApiResponse<UserResponseDTO>> putUpdateExistingUser(
             @PathVariable Long userId,
             @Valid @RequestBody UserRequestDTO userRequestDto) {
@@ -99,7 +99,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Users fetched successfully"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Fetching users failed")
     })
-    @GetMapping(value = {"", "/", GET_ALL_ACTIVE_USERS_API, GET_ALL_ACTIVE_USERS_API + "/"})
+    @GetMapping(value = {"", GET_ALL_ACTIVE_USERS_API})
     public ResponseEntity<GenericApiResponse<List<UserResponseDTO>>> getAllActiveUsers() {
         log.info("Fetching all users");
         List<UserResponseDTO> users = this.userService.getAllActiveUsers();
@@ -113,7 +113,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Not Found - User not found with the provided ID"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Fetching user failed")
     })
-    @GetMapping(value = {GET_ACTIVE_USER_BY_ID_API, GET_ACTIVE_USER_BY_ID_API + "/"})
+    @GetMapping(value = GET_ACTIVE_USER_BY_ID_API)
     public ResponseEntity<GenericApiResponse<UserResponseDTO>> getActiveUserById(@PathVariable Long userId) {
         log.info("Fetching user with ID: {}", userId);
         UserResponseDTO user = this.userService.getActiveUserById(userId);
@@ -128,7 +128,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Deleting user failed")
     })
     @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
-    @DeleteMapping(value = {SOFT_DELETE_USER_BY_ID_API, SOFT_DELETE_USER_BY_ID_API + "/"})
+    @DeleteMapping(value = SOFT_DELETE_USER_BY_ID_API)
     public ResponseEntity<GenericApiResponse<Object>> softRemoveUserById(@PathVariable Long userId) {
         log.info("Removing user with ID: {}", userId);
         this.userService.softRemoveUserById(userId);
@@ -141,7 +141,7 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Users fetched successfully"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Fetching users failed")
     })
-    @GetMapping(value = {GET_ALL_USERS_API, GET_ALL_USERS_API + "/"})
+    @GetMapping(value = GET_ALL_USERS_API)
     public ResponseEntity<GenericApiResponse<List<UserResponseDTO>>> getAllUsers() {
         log.info("Fetching all users including soft-deleted ones");
         List<UserResponseDTO> users = this.userService.getAllUsers();
@@ -155,7 +155,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Fetching soft-deleted users failed")
     })
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping(value = {GET_ALL_SOFT_DELETED_USERS_API, GET_ALL_SOFT_DELETED_USERS_API + "/"})
+    @GetMapping(value = GET_ALL_SOFT_DELETED_USERS_API)
     public ResponseEntity<GenericApiResponse<List<UserResponseDTO>>> getAllSoftDeletedUsers() {
         log.info("Fetching all soft-deleted users");
         List<UserResponseDTO> users = this.userService.getAllSoftDeletedUsers();
@@ -170,7 +170,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Fetching soft-deleted user failed")
     })
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping(value = {GET_SOFT_DELETED_USER_BY_ID_API, GET_SOFT_DELETED_USER_BY_ID_API + "/"})
+    @GetMapping(value = GET_SOFT_DELETED_USER_BY_ID_API)
     public ResponseEntity<GenericApiResponse<UserResponseDTO>> getSoftDeletedUserById(@PathVariable Long userId) {
         log.info("Fetching soft-deleted user with ID: {}", userId);
         UserResponseDTO user = this.userService.getSoftDeletedUserById(userId);
@@ -185,7 +185,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Restoring user failed")
     })
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping(value = {RESTORE_USER_BY_ID_API, RESTORE_USER_BY_ID_API + "/"})
+    @PutMapping(value = RESTORE_USER_BY_ID_API)
     public ResponseEntity<GenericApiResponse<Object>> restoreUserById(@PathVariable Long userId) {
         log.info("Restoring user with ID: {}", userId);
         this.userService.restoreUserById(userId);
@@ -199,7 +199,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Not Found - User not found with the provided ID"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Hard Deleting user failed")
     })
-    @DeleteMapping(value = {HARD_DELETE_USER_BY_ID_API, HARD_DELETE_USER_BY_ID_API + "/"})
+    @DeleteMapping(value = HARD_DELETE_USER_BY_ID_API)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GenericApiResponse<Object>> hardDeleteUserById(@PathVariable Long userId) {
         log.info("Hard Deleting user with ID: {}", userId);
@@ -216,7 +216,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Upload failed")
     })
     @PreAuthorize("#userId == principal.userId")
-    @PutMapping(value = {UPLOAD_PROFILE_PICTURE_API, UPLOAD_PROFILE_PICTURE_API + "/"})
+    @PutMapping(value = UPLOAD_PROFILE_PICTURE_API)
     public ResponseEntity<GenericApiResponse<UserResponseDTO>> uploadProfilePicture(
             @PathVariable Long userId,
             @RequestParam("file") MultipartFile file) {
@@ -232,7 +232,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Not Found - Profile picture or user not found"),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Download failed")
     })
-    @GetMapping(value = {DOWNLOAD_PROFILE_PICTURE_API, DOWNLOAD_PROFILE_PICTURE_API + "/"})
+    @GetMapping(value = DOWNLOAD_PROFILE_PICTURE_API)
     public ResponseEntity<org.springframework.core.io.Resource> downloadProfilePicture(@PathVariable Long userId) {
         log.info("Downloading profile picture for user with ID: {}", userId);
         org.springframework.core.io.Resource resource = userService.downloadProfilePicture(userId);
