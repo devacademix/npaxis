@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- ============================================
+         Spring Boot Logback Configuration
+         Production Grade with Best Practices
+         ============================================ -->
+
+    <!-- Import Spring Boot default configuration -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Define properties for logging configuration -->
+    <property name="LOG_FILE_PATH" value="${LOG_FILE_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/logs}"/>
+    <property name="APP_NAME" value="npaxis"/>
+    <property name="ARCHIVE_DIR" value="${LOG_FILE_PATH}/archive"/>
+    <property name="MAX_FILE_SIZE" value="100MB"/>
+    <property name="MAX_HISTORY" value="30"/>
+    <property name="TOTAL_SIZE_CAP" value="5GB"/>
+
+    <!-- Console Appender - for console output -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ============================================
+         File Appenders - Size and Time Based Rolling
+         ============================================ -->
+
+    <!-- Application Log File - Size and Time Based Rolling -->
+    <appender name="APPLICATION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- Current log file path -->
+        <file>${LOG_FILE_PATH}/${APP_NAME}-application.log</file>
+
+        <!-- Rolling Policy: Combines size-based and time-based rotation -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Pattern for archived files: date and file number -->
+            <fileNamePattern>${ARCHIVE_DIR}/${APP_NAME}-application/%d{yyyy-MM-dd}/${APP_NAME}-application-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+
+            <!-- Maximum size of each log file before rotation -->
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+
+            <!-- Keep logs for 30 days -->
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+
+            <!-- Total size cap for all log files (5GB) -->
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+
+            <!-- Minimum index -->
+            <minIndex>1</minIndex>
+            <maxIndex>10</maxIndex>
+        </rollingPolicy>
+
+        <!-- Log encoder with detailed pattern -->
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+
+        <!-- Immediate flush for critical information -->
+        <immediateFlush>true</immediateFlush>
+    </appender>
+
+    <!-- Error Log File - Only ERROR and FATAL -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE_PATH}/${APP_NAME}-error.log</file>
+
+        <!-- Rolling Policy for error logs -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ARCHIVE_DIR}/${APP_NAME}-error/%d{yyyy-MM-dd}/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+
+        <!-- Filter: Only ERROR and above -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n%xEx</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+
+        <immediateFlush>true</immediateFlush>
+    </appender>
+
+    <!-- Debug Log File - DEBUG level (for dev environment) -->
+    <appender name="DEBUG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE_PATH}/${APP_NAME}-debug.log</file>
+
+        <!-- Rolling Policy for debug logs -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ARCHIVE_DIR}/${APP_NAME}-debug/%d{yyyy-MM-dd}/${APP_NAME}-debug-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>2GB</totalSizeCap>
+        </rollingPolicy>
+
+        <!-- Filter: Only DEBUG level -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>DEBUG</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}:%line - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Async Appender for Application File - Improves performance -->
+    <appender name="ASYNC_APPLICATION" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- Queue depth to prevent blocking -->
+        <queueSize>512</queueSize>
+
+        <!-- Discard TRACE, DEBUG, and INFO events in case of queue being full -->
+        <discardingThreshold>0</discardingThreshold>
+
+        <!-- Whether to block when queue is full (false = drop messages) -->
+        <includeCallerData>false</includeCallerData>
+
+        <appender-ref ref="APPLICATION_FILE"/>
+    </appender>
+
+    <!-- Async Appender for Error File -->
+    <appender name="ASYNC_ERROR" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>256</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+        <appender-ref ref="ERROR_FILE"/>
+    </appender>
+
+    <!-- ============================================
+         Logger Configuration by Module
+         ============================================ -->
+
+    <!-- Spring Framework - INFO level -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.springframework.web" level="INFO"/>
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="org.springframework.data" level="INFO"/>
+
+    <!-- Hibernate - WARN level -->
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+
+    <!-- Database - INFO level -->
+    <logger name="org.postgresql" level="INFO"/>
+
+    <!-- Jackson (JSON) - WARN level -->
+    <logger name="com.fasterxml.jackson" level="WARN"/>
+
+    <!-- Application specific loggers -->
+    <logger name="com.digitalearn.npaxis" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.user" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.preceptor" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.student" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.inquiry" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.subscription" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.payment" level="INFO"/>
+    <logger name="com.digitalearn.npaxis.email" level="INFO"/>
+    <logger name="com.digitalearn.npaxis.storage" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.analytics" level="DEBUG"/>
+    <logger name="com.digitalearn.npaxis.webhook" level="INFO"/>
+
+    <!-- ============================================
+         Spring Profiles - Conditional Configuration
+         ============================================ -->
+
+    <!-- Development Profile Configuration -->
+    <springProfile name="dev">
+        <!-- Root Logger Level: DEBUG for development -->
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_APPLICATION"/>
+            <appender-ref ref="ASYNC_ERROR"/>
+            <appender-ref ref="DEBUG_FILE"/>
+        </root>
+    </springProfile>
+
+    <!-- Production Profile Configuration -->
+    <springProfile name="prod">
+        <!-- Root Logger Level: INFO for production -->
+        <root level="INFO">
+            <appender-ref ref="ASYNC_APPLICATION"/>
+            <appender-ref ref="ASYNC_ERROR"/>
+        </root>
+
+        <!-- More restrictive logging for external libraries in production -->
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="org.springframework.data" level="WARN"/>
+        <logger name="org.hibernate" level="ERROR"/>
+    </springProfile>
+
+    <!-- Staging Profile Configuration -->
+    <springProfile name="staging">
+        <!-- Root Logger Level: INFO for staging -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_APPLICATION"/>
+            <appender-ref ref="ASYNC_ERROR"/>
+        </root>
+    </springProfile>
+
+    <!-- Default Profile (if no profile specified) -->
+    <springProfile name="!prod,!staging">
+        <!-- Default to dev settings -->
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ASYNC_APPLICATION"/>
+            <appender-ref ref="ASYNC_ERROR"/>
+            <appender-ref ref="DEBUG_FILE"/>
+        </root>
+    </springProfile>
+
+</configuration>
+

@@ -47,6 +47,15 @@ build/
 Thumbs.db
 
 # =========================
+# Environment & Secrets
+# =========================
+.env
+.env.secrets
+.env.local
+.env.*.local
+*.secrets
+
+# =========================
 # Misc
 # =========================
 HELP.md

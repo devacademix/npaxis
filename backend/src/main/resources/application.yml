@@ -5,3 +5,27 @@ spring:
     name: NPaxis
   profiles:
     active: dev
+
+# ============================================
+# Logging Configuration
+# ============================================
+logging:
+  # Path where log files will be stored
+  file:
+    name: logs/${spring.application.name}.log
+    max-size: 100MB
+    max-history: 30
+
+  # Log level configuration
+  level:
+    root: INFO
+    com.digitalearn.npaxis: DEBUG
+
+  # Pattern for console logs
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+  # Logback configuration file location
+  config: classpath:logback-spring.xml
+

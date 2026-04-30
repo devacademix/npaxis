@@ -1,0 +1,137 @@
+spring:
+  application:
+    name: npaxis
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    # Connection pool configuration for production
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        generate_statistics: false
+        jdbc:
+          batch_size: 25
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          trust: "*"
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
+          debug: false
+
+  task:
+    execution:
+      pool:
+        core-size: 5
+        max-size: 20
+        queue-capacity: 500
+      thread-name-prefix: npaxis-async-
+    scheduling:
+      pool:
+        size: 5
+      thread-name-prefix: npaxis-scheduled-
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration:
+      access: ${JWT_EXPIRATION_ACCESS}
+      refresh: ${JWT_EXPIRATION_REFRESH}
+
+npaxis:
+  email:
+    from-address: ${EMAIL_FROM_ADDRESS}
+    from-name: ${EMAIL_FROM_NAME}
+  storage:
+    local-directory: ${STORAGE_LOCAL_DIRECTORY}
+    allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS}
+    cloud:
+      bucket-name: ${CLOUD_BUCKET_NAME}
+      region: ${CLOUD_REGION}
+      access-key: ${CLOUD_ACCESS_KEY}
+      secret-key: ${CLOUD_SECRET_KEY}
+
+stripe:
+  api-key: ${STRIPE_API_KEY}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+  checkout:
+    success-url: ${STRIPE_SUCCESS_URL}
+    cancel-url: ${STRIPE_CANCEL_URL}
+  portal:
+    return-url: ${STRIPE_PORTAL_RETURN_URL}
+  api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
+  max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
+  connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
+  read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:10000}
+  currency: ${STRIPE_CURRENCY:usd}
+  trial:
+    period-days: ${STRIPE_TRIAL_DAYS:14}
+
+# ============================================
+# Logging Configuration for Production
+# ============================================
+logging:
+  level:
+    root: INFO
+    org.springframework: WARN
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.springframework.data: WARN
+    org.hibernate: ERROR
+    org.postgresql: WARN
+    com.digitalearn.npaxis: INFO
+
+  # Log file configuration
+  file:
+    name: /var/log/${spring.application.name}/${spring.application.name}.log
+    max-size: 100MB
+    max-history: 90
+    total-size-cap: 10GB
+
+  # Log patterns
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+  # Logback configuration
+  config: classpath:logback-spring.xml
+
+# ============================================
+# Server Configuration
+# ============================================
+server:
+  port: 8080
+  compression:
+    enabled: true
+    min-response-size: 1024
+  shutdown: graceful
+  servlet:
+    context-path: /api/v1
+
