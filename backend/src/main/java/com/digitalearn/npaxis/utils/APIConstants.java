@@ -387,6 +387,7 @@ public class APIConstants {
     public static final String ADMIN_WEBHOOK_DETAIL_API = "/webhooks/event-{eventId}";
     public static final String ADMIN_WEBHOOK_RETRY_API = "/webhooks/event-{eventId}/retry";
     public static final String ADMIN_WEBHOOK_HISTORY_API = "/webhooks/history";
+    public static final String ADMIN_WEBHOOK_METRICS_API = "/webhooks/metrics";
 
     // APIs for Admin Analytics
     public static final String ADMIN_ANALYTICS_OVERVIEW_API = "/analytics/overview";

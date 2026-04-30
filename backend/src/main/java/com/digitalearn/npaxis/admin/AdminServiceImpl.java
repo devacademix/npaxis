@@ -14,6 +14,12 @@ import com.digitalearn.npaxis.role.RoleName;
 import com.digitalearn.npaxis.role.RoleRepository;
 import com.digitalearn.npaxis.student.Student;
 import com.digitalearn.npaxis.student.StudentRepository;
+import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoiceRepository;
+import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransaction;
+import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransactionRepository;
+import com.digitalearn.npaxis.subscription.billing.transaction.TransactionStatus;
+import com.digitalearn.npaxis.subscription.core.PreceptorSubscriptionRepository;
+import com.digitalearn.npaxis.subscription.core.SubscriptionStatus;
 import com.digitalearn.npaxis.user.User;
 import com.digitalearn.npaxis.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,6 +56,9 @@ public class AdminServiceImpl implements AdminService {
     private final PreceptorRepository preceptorRepository;
     private final StudentRepository studentRepository;
     private final AnalyticsEventRepository analyticsRepository;
+    private final BillingInvoiceRepository billingInvoiceRepository;
+    private final BillingTransactionRepository billingTransactionRepository;
+    private final PreceptorSubscriptionRepository preceptorSubscriptionRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -387,36 +398,209 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public RevenueReportDTO getRevenueReport() {
         log.info("Fetching revenue report");
-        // Placeholder - would integrate with Stripe API
-        return new RevenueReportDTO(0.0, 0.0, 0.0, 0L, 0L, 0, 0.0, LocalDateTime.now());
+
+        try {
+            LocalDateTime now = LocalDateTime.now();
+
+            // --- Time boundaries (consistent & reusable) ---
+            LocalDateTime startOfMonth = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
+            LocalDateTime startOfNextMonth = startOfMonth.plusMonths(1);
+
+            LocalDateTime startOfYear = now.withDayOfYear(1).toLocalDate().atStartOfDay();
+            LocalDateTime startOfNextYear = startOfYear.plusYears(1);
+
+            // --- Revenue queries (fixed repo usage) ---
+            long totalMinor = billingInvoiceRepository.getTotalRevenueInMinorUnits();
+
+            long monthMinor = billingInvoiceRepository.getRevenueBetween(
+                    startOfMonth, startOfNextMonth
+            );
+
+            long ytdMinor = billingInvoiceRepository.getRevenueBetween(
+                    startOfYear, startOfNextYear
+            );
+
+            // --- Convert safely (use BigDecimal for money) ---
+            BigDecimal totalRevenue = BigDecimal.valueOf(totalMinor).movePointLeft(2);
+            BigDecimal monthlyRevenue = BigDecimal.valueOf(monthMinor).movePointLeft(2);
+            BigDecimal yearToDateRevenue = BigDecimal.valueOf(ytdMinor).movePointLeft(2);
+
+            // --- Counts ---
+            long paidInvoicesCount = billingInvoiceRepository.countPaidInvoices();
+
+            // ⚠️ Still approximate — replace later with real subscription table
+            long activeSubscriptionsCount =
+                    preceptorSubscriptionRepository.countByStatusAndDeletedFalse(SubscriptionStatus.ACTIVE);
+
+            long canceledSubscriptionsCount =
+                    preceptorSubscriptionRepository.countByStatusAndDeletedFalse(SubscriptionStatus.CANCELED);
+
+            // --- Average monthly revenue ---
+            LocalDateTime firstInvoiceDate = billingInvoiceRepository.getFirstInvoiceDate();
+
+            int avgMonthlyRevenue = 0;
+            if (firstInvoiceDate != null) {
+                long monthsBetween = java.time.temporal.ChronoUnit.MONTHS.between(
+                        firstInvoiceDate.toLocalDate().withDayOfMonth(1),
+                        now.toLocalDate().withDayOfMonth(1)
+                );
+
+                if (monthsBetween > 0) {
+                    avgMonthlyRevenue = totalRevenue
+                            .divide(BigDecimal.valueOf(monthsBetween), RoundingMode.HALF_UP)
+                            .intValue();
+                }
+            }
+
+            // --- Churn ---
+            long totalSubscriptions = activeSubscriptionsCount + canceledSubscriptionsCount;
+
+            double churnRate = totalSubscriptions > 0
+                    ? (double) canceledSubscriptionsCount / totalSubscriptions * 100
+                    : 0.0;
+
+            log.info("✓ Revenue report calculated: total={}, monthly={}, ytd={}",
+                    totalRevenue, monthlyRevenue, yearToDateRevenue);
+
+            return new RevenueReportDTO(
+                    totalRevenue.doubleValue(),
+                    monthlyRevenue.doubleValue(),
+                    yearToDateRevenue.doubleValue(),
+                    activeSubscriptionsCount,
+                    canceledSubscriptionsCount,
+                    avgMonthlyRevenue,
+                    churnRate,
+                    now
+            );
+
+        } catch (Exception e) {
+            log.error("Error fetching revenue report", e);
+
+            return new RevenueReportDTO(
+                    0.0, 0.0, 0.0,
+                    0L, 0L, 0,
+                    0.0,
+                    LocalDateTime.now()
+            );
+        }
     }
 
     @Override
     public Page<TransactionHistoryDTO> getTransactionHistory(Pageable pageable) {
         log.info("Fetching transaction history");
-        // Placeholder - would integrate with Stripe API
-        return Page.empty(pageable);
+
+        try {
+            // Fetch all transactions ordered by date (newest first)
+            Page<BillingTransaction> transactions = billingTransactionRepository
+                    .findAllWithPreceptorOrderByTransactionAtDesc(pageable);
+
+            // Map to DTO
+            return transactions.map(tx -> {
+                Double amount = tx.getAmountInMinorUnits() / 100.0;
+                String displayName = tx.getPreceptor() != null ?
+                    tx.getPreceptor().getUser().getDisplayName() : "Unknown";
+                Long userId = tx.getPreceptor() != null ?
+                    tx.getPreceptor().getUserId() : null;
+                String transactionType = "PAYMENT"; // Default type
+                String paymentMethod = "Stripe";
+
+                log.debug("Transaction: invoiceId={}, preceptor={}, amount={}, status={}",
+                        tx.getStripeInvoiceId(), userId, amount, tx.getStatus());
+
+                return new TransactionHistoryDTO(
+                        tx.getStripePaymentIntentId() != null ?
+                            tx.getStripePaymentIntentId() : tx.getId().toString(),
+                        userId,
+                        displayName,
+                        transactionType,
+                        amount,
+                        tx.getStatus().toString(),
+                        paymentMethod,
+                        tx.getTransactionAt()
+                );
+            });
+
+        } catch (Exception e) {
+            log.error("Error fetching transaction history: {}", e.getMessage(), e);
+            return Page.empty(pageable);
+        }
     }
 
     @Override
     public Page<PreceptorBillingReportDTO> getRevenueByPreceptor(Pageable pageable) {
         log.info("Fetching revenue by preceptor");
-        Page<Preceptor> preceptors = preceptorRepository.findAllActive(pageable);
-        return preceptors.map(p -> new PreceptorBillingReportDTO(
-                p.getUserId(),
-                p.getUser().getDisplayName(),
-                "ACTIVE",
-                "Premium",
-                0.0,
-                0.0,
-                0,
-                null,
-                null,
-                "PENDING",
-                null,
-                0,
-                0
-        ));
+
+        try {
+            // Fetch all preceptors
+            Page<Preceptor> preceptors = preceptorRepository.findAllActive(pageable);
+
+            // Map each preceptor to billing report with aggregated data
+            return preceptors.map(preceptor -> {
+                // Get all transactions for this preceptor
+                Page<BillingTransaction> txPage = billingTransactionRepository
+                        .findByPreceptor_UserIdOrderByTransactionAtDesc(preceptor.getUserId(),
+                            PageRequest.of(0, Integer.MAX_VALUE));
+
+                List<BillingTransaction> allTransactions = txPage.getContent();
+
+                // Calculate metrics
+                double successfulRevenue = allTransactions.stream()
+                        .filter(tx -> tx.getStatus().toString().equals("SUCCEEDED"))
+                        .mapToDouble(tx -> tx.getAmountInMinorUnits() / 100.0)
+                        .sum();
+
+                double failedRevenue = allTransactions.stream()
+                        .filter(tx -> tx.getStatus().toString().equals("FAILED"))
+                        .mapToDouble(tx -> tx.getAmountInMinorUnits() / 100.0)
+                        .sum();
+
+                int successCount = (int) allTransactions.stream()
+                        .filter(tx -> tx.getStatus().toString().equals("SUCCEEDED"))
+                        .count();
+
+                int failedCount = (int) allTransactions.stream()
+                        .filter(tx -> tx.getStatus().toString().equals("FAILED"))
+                        .count();
+
+                LocalDateTime lastTransactionDate = allTransactions.isEmpty() ?
+                    null : allTransactions.get(0).getTransactionAt();
+
+                // Get last invoice date
+                Page<com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoice> invoicePage =
+                    billingInvoiceRepository.findByPreceptor_UserIdOrderByInvoiceCreatedAtDesc(
+                        preceptor.getUserId(),
+                        PageRequest.of(0, 1)
+                    );
+                LocalDateTime lastInvoiceDate = invoicePage.isEmpty() ?
+                    null : invoicePage.getContent().get(0).getInvoiceCreatedAt();
+
+                String status = allTransactions.isEmpty() ? "NO_ACTIVITY" : "ACTIVE";
+
+                log.debug("Preceptor {} billing: revenue={}, failed={}, transactions={}, status={}",
+                        preceptor.getUserId(), successfulRevenue, failedRevenue,
+                        allTransactions.size(), status);
+
+                return new PreceptorBillingReportDTO(
+                        preceptor.getUserId(),
+                        preceptor.getUser().getDisplayName(),
+                        preceptor.isVerified() ? "VERIFIED" : "PENDING",
+                        preceptor.isPremium() ? "Premium" : "Standard",
+                        successfulRevenue,
+                        failedRevenue,
+                        successCount,
+                        lastInvoiceDate,
+                        lastTransactionDate,
+                        status,
+                        null, // notes
+                        failedCount,
+                        allTransactions.size()
+                );
+            });
+
+        } catch (Exception e) {
+            log.error("Error fetching revenue by preceptor: {}", e.getMessage(), e);
+            return Page.empty(pageable);
+        }
     }
 
     @Override

@@ -97,5 +97,38 @@ public interface BillingInvoiceRepository extends BaseRepository<BillingInvoice,
             @Param("invoiceCreatedAt") LocalDateTime invoiceCreatedAt,
             @Param("invoicePaidAt") LocalDateTime invoicePaidAt
     );
-}
 
+    @Query("""
+    SELECT COUNT(bi)
+    FROM BillingInvoice bi
+    WHERE bi.status = com.digitalearn.npaxis.subscription.billing.invoice.InvoiceStatus.PAID
+      AND (bi.deleted = false OR bi.deleted IS NULL)
+    """)
+    long countPaidInvoices();
+
+    @Query("""
+    SELECT COALESCE(SUM(bi.amountPaidInMinorUnits), 0)
+    FROM BillingInvoice bi
+    WHERE bi.status = com.digitalearn.npaxis.subscription.billing.invoice.InvoiceStatus.PAID
+      AND bi.invoicePaidAt >= :start
+      AND bi.invoicePaidAt < :end
+      AND (bi.deleted = false OR bi.deleted IS NULL)
+    """)
+    long getRevenueBetween(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(bi.amountPaidInMinorUnits), 0)
+    FROM BillingInvoice bi
+    WHERE bi.status = com.digitalearn.npaxis.subscription.billing.invoice.InvoiceStatus.PAID
+      AND (bi.deleted = false OR bi.deleted IS NULL)
+    """)
+    long getTotalRevenueInMinorUnits();
+
+    Page<BillingInvoice> findAllByOrderByInvoicePaidAtDesc(Pageable pageable);
+
+    @Query("SELECT MIN(bi.invoiceCreatedAt) FROM BillingInvoice bi WHERE bi.status = 'PAID'")
+    java.time.LocalDateTime getFirstInvoiceDate();
+}
