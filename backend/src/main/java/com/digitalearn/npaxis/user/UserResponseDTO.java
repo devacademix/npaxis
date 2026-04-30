@@ -6,6 +6,7 @@ public record UserResponseDTO(
         String displayName,
         String email,
         String role,
-        boolean accountEnabled
+        boolean accountEnabled,
+        String photoUrl
 ) {
 }
