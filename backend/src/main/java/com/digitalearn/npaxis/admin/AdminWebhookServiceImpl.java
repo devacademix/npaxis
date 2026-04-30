@@ -3,12 +3,12 @@ package com.digitalearn.npaxis.admin;
 import com.digitalearn.npaxis.admin.dto.WebhookEventDetailDTO;
 import com.digitalearn.npaxis.admin.dto.WebhookMetricsDTO;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
+import com.digitalearn.npaxis.webhook.WebhookEventMapper;
 import com.digitalearn.npaxis.webhook.WebhookEventResponse;
 import com.digitalearn.npaxis.webhook.WebhookEventStatus;
 import com.digitalearn.npaxis.webhook.WebhookProcessingEvent;
 import com.digitalearn.npaxis.webhook.WebhookProcessingEventRepository;
 import com.digitalearn.npaxis.webhook.WebhookService;
-import com.digitalearn.npaxis.webhook.WebhookEventMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,12 +36,12 @@ public class AdminWebhookServiceImpl implements AdminWebhookService {
     @Override
     public Page<WebhookEventResponse> getWebhookEventHistory(Pageable pageable) {
         log.info("Admin fetching webhook event history - page: {}, size: {}",
-            pageable.getPageNumber(), pageable.getPageSize());
+                pageable.getPageNumber(), pageable.getPageSize());
 
         try {
             Page<WebhookEventResponse> history = webhookService.getEventHistory(pageable);
             log.info("✓ Retrieved {} webhook events (total: {})",
-                history.getContent().size(), history.getTotalElements());
+                    history.getContent().size(), history.getTotalElements());
             return history;
 
         } catch (Exception e) {
@@ -57,7 +57,7 @@ public class AdminWebhookServiceImpl implements AdminWebhookService {
         try {
             WebhookProcessingEvent event = webhookEventRepository.findByEventId(eventId)
                     .orElseThrow(() -> new ResourceNotFoundException(
-                        "Webhook event not found with ID: " + eventId));
+                            "Webhook event not found with ID: " + eventId));
 
             String preceptorName = event.getPreceptor() != null ?
                     event.getPreceptor().getUser().getDisplayName() : "N/A";
@@ -92,11 +92,11 @@ public class AdminWebhookServiceImpl implements AdminWebhookService {
         try {
             WebhookProcessingEvent event = webhookEventRepository.findByEventId(eventId)
                     .orElseThrow(() -> new ResourceNotFoundException(
-                        "Webhook event not found with ID: " + eventId));
+                            "Webhook event not found with ID: " + eventId));
 
             // Verify event is in failed state
             if (!event.getStatus().equals(WebhookEventStatus.FAILED_RETRYING) &&
-                !event.getStatus().equals(WebhookEventStatus.DEAD_LETTER)) {
+                    !event.getStatus().equals(WebhookEventStatus.DEAD_LETTER)) {
                 log.warn("Cannot retry event {} - current status: {}", eventId, event.getStatus());
                 return "Event is not in a failed state. Current status: " + event.getStatus();
             }
@@ -112,10 +112,10 @@ public class AdminWebhookServiceImpl implements AdminWebhookService {
             webhookService.retryFailedEvents();
 
             log.info("✓ Webhook event scheduled for retry: eventId={}, nextRetryAt={}",
-                eventId, event.getNextRetryAt());
+                    eventId, event.getNextRetryAt());
 
             return "Webhook event (ID: " + eventId + ") has been scheduled for retry. " +
-                   "Check status in a few moments.";
+                    "Check status in a few moments.";
 
         } catch (ResourceNotFoundException e) {
             log.warn("Webhook event not found for retry: {}", eventId);
@@ -145,16 +145,16 @@ public class AdminWebhookServiceImpl implements AdminWebhookService {
                     .findByStatus(WebhookEventStatus.FAILED_RETRYING);
             Integer averageRetryCount = allEvents.isEmpty() ? 0 :
                     (int) allEvents.stream()
-                            .mapToInt(WebhookProcessingEvent::getRetryCount)
-                            .average()
-                            .orElse(0);
+                          .mapToInt(WebhookProcessingEvent::getRetryCount)
+                          .average()
+                          .orElse(0);
 
             // Find oldest pending event
             LocalDateTime oldestPendingDate = allEvents.isEmpty() ? null :
                     allEvents.stream()
-                            .map(WebhookProcessingEvent::getCreatedAt)
-                            .min(LocalDateTime::compareTo)
-                            .orElse(null);
+                    .map(WebhookProcessingEvent::getCreatedAt)
+                    .min(LocalDateTime::compareTo)
+                    .orElse(null);
 
             // Find most common event type (would need to query all and count)
             String mostCommonEventType = "customer.subscription.created"; // Placeholder

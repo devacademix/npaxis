@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import static com.digitalearn.npaxis.utils.APIConstants.*;
+import static com.digitalearn.npaxis.utils.APIConstants.ANALYTICS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ANALYTICS_EVENT_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.PRECEPTOR_STATS_API;
 
 /**
  * Controller for analytics.

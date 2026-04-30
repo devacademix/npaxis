@@ -2,7 +2,7 @@ package com.digitalearn.npaxis.webhook;
 
 /**
  * Status enum for webhook event processing.
- *
+ * <p>
  * State transitions:
  * PENDING → PROCESSING → SUCCESS (happy path)
  * PENDING → PROCESSING → FAILED_RETRYING (retry path)

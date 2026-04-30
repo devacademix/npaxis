@@ -15,11 +15,20 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.digitalearn.npaxis.utils.APIConstants.*;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMINISTRATION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_DETAIL_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_HISTORY_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_METRICS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_WEBHOOK_RETRY_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
 
 /**
  * Admin controller for webhook management operations
@@ -41,11 +50,11 @@ public class AdminWebhookController {
         log.info("Admin fetching webhook event history");
         Page<WebhookEventResponse> events = adminWebhookService.getWebhookEventHistory(pageable);
         return ResponseHandler.generatePaginatedResponse(
-            events,
-            events.getContent(),
-            "Webhook history fetched successfully",
-            true,
-            HttpStatus.OK
+                events,
+                events.getContent(),
+                "Webhook history fetched successfully",
+                true,
+                HttpStatus.OK
         );
     }
 
@@ -57,10 +66,10 @@ public class AdminWebhookController {
         log.info("Admin retrying webhook event - eventId: {}", eventId);
         String result = adminWebhookService.retryWebhookEvent(eventId);
         return ResponseHandler.generateResponse(
-            result,
-            "Webhook event retry initiated successfully",
-            true,
-            HttpStatus.OK
+                result,
+                "Webhook event retry initiated successfully",
+                true,
+                HttpStatus.OK
         );
     }
 
@@ -72,10 +81,10 @@ public class AdminWebhookController {
         log.info("Admin fetching webhook event detail - eventId: {}", eventId);
         WebhookEventDetailDTO detail = adminWebhookService.getWebhookEventDetail(eventId);
         return ResponseHandler.generateResponse(
-            detail,
-            "Webhook event detail fetched successfully",
-            true,
-            HttpStatus.OK
+                detail,
+                "Webhook event detail fetched successfully",
+                true,
+                HttpStatus.OK
         );
     }
 
@@ -86,10 +95,10 @@ public class AdminWebhookController {
         log.info("Admin fetching webhook metrics");
         WebhookMetricsDTO metrics = adminWebhookService.getWebhookMetrics();
         return ResponseHandler.generateResponse(
-            metrics,
-            "Webhook metrics fetched successfully",
-            true,
-            HttpStatus.OK
+                metrics,
+                "Webhook metrics fetched successfully",
+                true,
+                HttpStatus.OK
         );
     }
 }

@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.digitalearn.npaxis.utils.APIConstants.ADMINISTRATION_API;
 import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_ANALYTICS_OVERVIEW_API;
 import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_ANALYTICS_TOP_PRECEPTORS_API;
 import static com.digitalearn.npaxis.utils.APIConstants.ADMIN_ANALYTICS_TRENDS_API;
 import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
-import static com.digitalearn.npaxis.utils.APIConstants.ADMINISTRATION_API;
 
 /**
  * Admin controller for analytics and insights

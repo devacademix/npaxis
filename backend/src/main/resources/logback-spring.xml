@@ -39,7 +39,9 @@
         <!-- Rolling Policy: Combines size-based and time-based rotation -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- Pattern for archived files: date and file number -->
-            <fileNamePattern>${ARCHIVE_DIR}/${APP_NAME}-application/%d{yyyy-MM-dd}/${APP_NAME}-application-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>
+                ${ARCHIVE_DIR}/${APP_NAME}-application/%d{yyyy-MM-dd}/${APP_NAME}-application-%d{yyyy-MM-dd}.%i.log.gz
+            </fileNamePattern>
 
             <!-- Maximum size of each log file before rotation -->
             <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
@@ -71,7 +73,9 @@
 
         <!-- Rolling Policy for error logs -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${ARCHIVE_DIR}/${APP_NAME}-error/%d{yyyy-MM-dd}/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>
+                ${ARCHIVE_DIR}/${APP_NAME}-error/%d{yyyy-MM-dd}/${APP_NAME}-error-%d{yyyy-MM-dd}.%i.log.gz
+            </fileNamePattern>
             <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
             <maxHistory>${MAX_HISTORY}</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
@@ -96,7 +100,9 @@
 
         <!-- Rolling Policy for debug logs -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${ARCHIVE_DIR}/${APP_NAME}-debug/%d{yyyy-MM-dd}/${APP_NAME}-debug-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>
+                ${ARCHIVE_DIR}/${APP_NAME}-debug/%d{yyyy-MM-dd}/${APP_NAME}-debug-%d{yyyy-MM-dd}.%i.log.gz
+            </fileNamePattern>
             <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>2GB</totalSizeCap>

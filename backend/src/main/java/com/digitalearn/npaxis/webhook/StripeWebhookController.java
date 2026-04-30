@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import static com.digitalearn.npaxis.utils.APIConstants.*;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.WEBHOOKS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.WEBHOOK_EVENTS_API;
 
 /**
  * Webhook endpoint for receiving Stripe events

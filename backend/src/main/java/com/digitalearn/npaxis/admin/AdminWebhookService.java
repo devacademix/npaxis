@@ -13,6 +13,7 @@ public interface AdminWebhookService {
 
     /**
      * Get paginated webhook event history
+     *
      * @param pageable pagination parameters
      * @return paginated webhook event responses
      */
@@ -20,6 +21,7 @@ public interface AdminWebhookService {
 
     /**
      * Get detailed view of specific webhook event
+     *
      * @param eventId the Stripe event ID
      * @return webhook event details
      */
@@ -27,6 +29,7 @@ public interface AdminWebhookService {
 
     /**
      * Retry a single failed webhook event
+     *
      * @param eventId the event ID to retry
      * @return success message with retry schedule
      */
@@ -34,6 +37,7 @@ public interface AdminWebhookService {
 
     /**
      * Get webhook metrics and statistics
+     *
      * @return webhook metrics including success rate and stats
      */
     WebhookMetricsDTO getWebhookMetrics();

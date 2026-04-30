@@ -107,7 +107,7 @@ public class AdminController {
     @Operation(summary = "Search users (admin view)")
     @GetMapping(value = {"/users/search", "/users/search/"})
     public ResponseEntity<GenericApiResponse<List<User>>> searchUsers(@RequestParam(required = false) String email,
-                                                                       @RequestParam(required = false) String displayName) {
+                                                                      @RequestParam(required = false) String displayName) {
         log.info("Admin searching users - email: {}, displayName: {}", email, displayName);
         // Future: implement searchUsersAsAdmin
         return ResponseHandler.generateResponse(null, "Users found successfully", true, HttpStatus.OK);

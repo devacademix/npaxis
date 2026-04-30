@@ -50,7 +50,7 @@ Thumbs.db
 # Environment & Secrets
 # =========================
 .env
-.env.secrets
+secrets.properties
 .env.local
 .env.*.local
 *.secrets

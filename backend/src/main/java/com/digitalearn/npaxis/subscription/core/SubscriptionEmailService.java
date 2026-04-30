@@ -303,15 +303,15 @@ public class SubscriptionEmailService {
      * CRITICAL: This method is called directly from transactional webhook context
      * It generates and stores the PDF while entities are still attached, then passes to async method
      * DO NOT mark this as @Async - it must run in the webhook transaction
-     * 
-     * @param preceptorId the preceptor ID
-     * @param preceptorName the preceptor name
-     * @param preceptorEmail the preceptor email
-     * @param invoiceNumber the invoice number
+     *
+     * @param preceptorId            the preceptor ID
+     * @param preceptorName          the preceptor name
+     * @param preceptorEmail         the preceptor email
+     * @param invoiceNumber          the invoice number
      * @param amountPaidInMinorUnits the amount paid in minor units
-     * @param currency the currency code
-     * @param invoiceDate the invoice creation date
-     * @param hostedInvoiceUrl optional Stripe hosted URL
+     * @param currency               the currency code
+     * @param invoiceDate            the invoice creation date
+     * @param hostedInvoiceUrl       optional Stripe hosted URL
      * @return the stored PDF URL/path if stored successfully, null otherwise
      */
     @Transactional(readOnly = true)
@@ -375,19 +375,19 @@ public class SubscriptionEmailService {
     /**
      * Send invoice payment email with PDF attachment (async)
      * Converts PDF bytes to temporary file and sends via email service
-     * 
+     * <p>
      * IMPORTANT: The temporary file is NOT deleted in this method.
      * It is only marked for deletion on JVM exit via deleteOnExit().
      * This prevents race conditions with the async email service.
      *
-     * @param preceptorId the preceptor ID
-     * @param preceptorName the preceptor name
-     * @param preceptorEmail the preceptor email
+     * @param preceptorId            the preceptor ID
+     * @param preceptorName          the preceptor name
+     * @param preceptorEmail         the preceptor email
      * @param amountPaidInMinorUnits the amount paid
-     * @param currency the currency code
-     * @param invoiceNumber the invoice number
-     * @param hostedInvoiceUrl optional Stripe URL
-     * @param pdfBytes the PDF content as bytes
+     * @param currency               the currency code
+     * @param invoiceNumber          the invoice number
+     * @param hostedInvoiceUrl       optional Stripe URL
+     * @param pdfBytes               the PDF content as bytes
      */
     @Async
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -407,7 +407,7 @@ public class SubscriptionEmailService {
 
             // Create temporary file from PDF bytes
             tempPdfFile = createTemporaryPdfFile(pdfBytes, invoiceNumber);
-            
+
             if (tempPdfFile == null || !tempPdfFile.exists()) {
                 log.warn("Failed to create temporary PDF file, sending email without attachment");
                 sendInvoicePaymentEmailAsync(preceptorId, preceptorName, preceptorEmail,
@@ -452,8 +452,8 @@ public class SubscriptionEmailService {
 
     /**
      * Create a temporary file from PDF bytes
-     * 
-     * @param pdfBytes the PDF content as bytes
+     *
+     * @param pdfBytes      the PDF content as bytes
      * @param invoiceNumber the invoice number (used for naming)
      * @return temporary File object, or null if creation fails
      */
@@ -482,12 +482,12 @@ public class SubscriptionEmailService {
      * Generate invoice PDF and store it persistently to storage backend.
      * This stores the PDF so it's not lost if email fails to attach it.
      *
-     * @param invoiceNumber the invoice number
-     * @param preceptorName the preceptor name
-     * @param invoiceDate the invoice creation date
+     * @param invoiceNumber          the invoice number
+     * @param preceptorName          the preceptor name
+     * @param invoiceDate            the invoice creation date
      * @param amountPaidInMinorUnits the amount paid
-     * @param currency the currency code
-     * @param hostedInvoiceUrl optional Stripe URL
+     * @param currency               the currency code
+     * @param hostedInvoiceUrl       optional Stripe URL
      * @return the storage URL/path where PDF is stored, or null if storage fails
      */
     public String generateAndStoreInvoicePdf(

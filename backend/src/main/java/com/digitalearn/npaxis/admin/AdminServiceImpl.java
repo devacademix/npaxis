@@ -1,6 +1,16 @@
 package com.digitalearn.npaxis.admin;
 
-import com.digitalearn.npaxis.admin.dto.*;
+import com.digitalearn.npaxis.admin.dto.AdminAnalyticsOverviewDTO;
+import com.digitalearn.npaxis.admin.dto.AdminPreceptorDetailDTO;
+import com.digitalearn.npaxis.admin.dto.AdminPreceptorListDTO;
+import com.digitalearn.npaxis.admin.dto.AdminStudentDetailDTO;
+import com.digitalearn.npaxis.admin.dto.AdminStudentListDTO;
+import com.digitalearn.npaxis.admin.dto.PreceptorAnalyticsDTO;
+import com.digitalearn.npaxis.admin.dto.PreceptorBillingReportDTO;
+import com.digitalearn.npaxis.admin.dto.RevenueReportDTO;
+import com.digitalearn.npaxis.admin.dto.SystemSettingsDTO;
+import com.digitalearn.npaxis.admin.dto.TransactionHistoryDTO;
+import com.digitalearn.npaxis.admin.dto.VerificationHistoryDTO;
 import com.digitalearn.npaxis.analytics.AnalyticsEventRepository;
 import com.digitalearn.npaxis.analytics.EventType;
 import com.digitalearn.npaxis.auditing.VerificationAuditLog;
@@ -10,7 +20,6 @@ import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.inquiry.InquiryRepository;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
-import com.digitalearn.npaxis.preceptor.PreceptorResponseDTO;
 import com.digitalearn.npaxis.preceptor.VerificationStatus;
 import com.digitalearn.npaxis.role.Role;
 import com.digitalearn.npaxis.role.RoleName;
@@ -20,7 +29,6 @@ import com.digitalearn.npaxis.student.StudentRepository;
 import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoiceRepository;
 import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransaction;
 import com.digitalearn.npaxis.subscription.billing.transaction.BillingTransactionRepository;
-import com.digitalearn.npaxis.subscription.billing.transaction.TransactionStatus;
 import com.digitalearn.npaxis.subscription.core.PreceptorSubscriptionRepository;
 import com.digitalearn.npaxis.subscription.core.SubscriptionStatus;
 import com.digitalearn.npaxis.system.SystemSetting;
@@ -36,19 +44,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -348,7 +351,7 @@ public class AdminServiceImpl implements AdminService {
                         log.getNewStatus().name(),
                         log.getReviewerUserId() != null ?
                                 userRepository.findById(log.getReviewerUserId())
-                                        .map(User::getDisplayName).orElse("System") : "System",
+                                .map(User::getDisplayName).orElse("System") : "System",
                         log.getReviewerUserId(),
                         log.getReviewNote(),
                         log.getChangeTimestamp()
@@ -415,16 +418,16 @@ public class AdminServiceImpl implements AdminService {
                 .count();
 
         LocalDateTime lastTransactionDate = allTransactions.isEmpty() ?
-            null : allTransactions.get(0).getTransactionAt();
+                null : allTransactions.get(0).getTransactionAt();
 
         // Get last invoice date
         Page<com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoice> invoicePage =
-            billingInvoiceRepository.findByPreceptor_UserIdOrderByInvoiceCreatedAtDesc(
-                userId,
-                PageRequest.of(0, 1)
-            );
+                billingInvoiceRepository.findByPreceptor_UserIdOrderByInvoiceCreatedAtDesc(
+                        userId,
+                        PageRequest.of(0, 1)
+                );
         LocalDateTime lastInvoiceDate = invoicePage.isEmpty() ?
-            null : invoicePage.getContent().get(0).getInvoiceCreatedAt();
+                null : invoicePage.getContent().get(0).getInvoiceCreatedAt();
 
         String status = allTransactions.isEmpty() ? "NO_ACTIVITY" : "ACTIVE";
 
@@ -726,9 +729,9 @@ public class AdminServiceImpl implements AdminService {
             return transactions.map(tx -> {
                 Double amount = tx.getAmountInMinorUnits() / 100.0;
                 String displayName = tx.getPreceptor() != null ?
-                    tx.getPreceptor().getUser().getDisplayName() : "Unknown";
+                        tx.getPreceptor().getUser().getDisplayName() : "Unknown";
                 Long userId = tx.getPreceptor() != null ?
-                    tx.getPreceptor().getUserId() : null;
+                        tx.getPreceptor().getUserId() : null;
                 String transactionType = "PAYMENT"; // Default type
                 String paymentMethod = "Stripe";
 
@@ -737,7 +740,7 @@ public class AdminServiceImpl implements AdminService {
 
                 return new TransactionHistoryDTO(
                         tx.getStripePaymentIntentId() != null ?
-                            tx.getStripePaymentIntentId() : tx.getId().toString(),
+                                tx.getStripePaymentIntentId() : tx.getId().toString(),
                         userId,
                         displayName,
                         transactionType,
@@ -767,7 +770,7 @@ public class AdminServiceImpl implements AdminService {
                 // Get all transactions for this preceptor
                 Page<BillingTransaction> txPage = billingTransactionRepository
                         .findByPreceptor_UserIdOrderByTransactionAtDesc(preceptor.getUserId(),
-                            PageRequest.of(0, Integer.MAX_VALUE));
+                                PageRequest.of(0, Integer.MAX_VALUE));
 
                 List<BillingTransaction> allTransactions = txPage.getContent();
 
@@ -791,16 +794,16 @@ public class AdminServiceImpl implements AdminService {
                         .count();
 
                 LocalDateTime lastTransactionDate = allTransactions.isEmpty() ?
-                    null : allTransactions.get(0).getTransactionAt();
+                        null : allTransactions.get(0).getTransactionAt();
 
                 // Get last invoice date
                 Page<com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoice> invoicePage =
-                    billingInvoiceRepository.findByPreceptor_UserIdOrderByInvoiceCreatedAtDesc(
-                        preceptor.getUserId(),
-                        PageRequest.of(0, 1)
-                    );
+                        billingInvoiceRepository.findByPreceptor_UserIdOrderByInvoiceCreatedAtDesc(
+                                preceptor.getUserId(),
+                                PageRequest.of(0, 1)
+                        );
                 LocalDateTime lastInvoiceDate = invoicePage.isEmpty() ?
-                    null : invoicePage.getContent().get(0).getInvoiceCreatedAt();
+                        null : invoicePage.getContent().get(0).getInvoiceCreatedAt();
 
                 String status = allTransactions.isEmpty() ? "NO_ACTIVITY" : "ACTIVE";
 

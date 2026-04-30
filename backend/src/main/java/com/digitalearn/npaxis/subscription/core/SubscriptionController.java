@@ -26,7 +26,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-import static com.digitalearn.npaxis.utils.APIConstants.*;
+import static com.digitalearn.npaxis.utils.APIConstants.ACCESS_CHECK_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BASE_API;
+import static com.digitalearn.npaxis.utils.APIConstants.BILLING_PORTAL_API;
+import static com.digitalearn.npaxis.utils.APIConstants.CANCEL_SUBSCRIPTION_API;
+import static com.digitalearn.npaxis.utils.APIConstants.CHECKOUT_API;
+import static com.digitalearn.npaxis.utils.APIConstants.SUBSCRIPTIONS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.SUBSCRIPTION_HISTORY_API;
+import static com.digitalearn.npaxis.utils.APIConstants.SUBSCRIPTION_STATUS_API;
+import static com.digitalearn.npaxis.utils.APIConstants.UPDATE_SUBSCRIPTION_API;
 
 @RestController
 @RequestMapping(BASE_API + "/" + SUBSCRIPTIONS_API)

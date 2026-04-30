@@ -80,5 +80,5 @@ public interface PreceptorSubscriptionRepository extends BaseRepository<Precepto
     long countByStatusAndDeletedFalse(SubscriptionStatus status);
 
     long countByStatusInAndDeletedFalse(List<SubscriptionStatus> statuses);
-    
+
 }

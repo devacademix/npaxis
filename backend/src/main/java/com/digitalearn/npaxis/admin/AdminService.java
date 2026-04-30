@@ -1,11 +1,20 @@
 package com.digitalearn.npaxis.admin;
 
-import com.digitalearn.npaxis.admin.dto.*;
+import com.digitalearn.npaxis.admin.dto.AdminAnalyticsOverviewDTO;
+import com.digitalearn.npaxis.admin.dto.AdminPreceptorDetailDTO;
+import com.digitalearn.npaxis.admin.dto.AdminPreceptorListDTO;
+import com.digitalearn.npaxis.admin.dto.AdminStudentDetailDTO;
+import com.digitalearn.npaxis.admin.dto.AdminStudentListDTO;
+import com.digitalearn.npaxis.admin.dto.PreceptorAnalyticsDTO;
+import com.digitalearn.npaxis.admin.dto.PreceptorBillingReportDTO;
+import com.digitalearn.npaxis.admin.dto.RevenueReportDTO;
+import com.digitalearn.npaxis.admin.dto.SystemSettingsDTO;
+import com.digitalearn.npaxis.admin.dto.TransactionHistoryDTO;
+import com.digitalearn.npaxis.admin.dto.VerificationHistoryDTO;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.user.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -66,6 +75,7 @@ public interface AdminService {
     AdminAnalyticsOverviewDTO getAdminDashboardStats();
 
     // Admin Preceptor Operations
+
     /**
      * List all preceptors with admin safe data exposure
      */
@@ -117,6 +127,7 @@ public interface AdminService {
     PreceptorAnalyticsDTO getPreceptorAnalytics(Long userId);
 
     // Admin Student Operations
+
     /**
      * List all students with admin access
      */
@@ -138,6 +149,7 @@ public interface AdminService {
     AdminStudentDetailDTO updateStudentAsAdmin(Long userId, AdminStudentDetailDTO updateDTO);
 
     // Admin Settings Operations
+
     /**
      * Get all system settings
      */
@@ -154,6 +166,7 @@ public interface AdminService {
     SystemSettingsDTO updateSetting(String key, Object value);
 
     // Admin Revenue Operations
+
     /**
      * Get revenue summary report
      */

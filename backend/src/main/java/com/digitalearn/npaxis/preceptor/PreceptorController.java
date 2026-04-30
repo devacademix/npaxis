@@ -35,7 +35,6 @@ import java.util.List;
 import static com.digitalearn.npaxis.utils.APIConstants.DOWNLOAD_LICENSE_API;
 import static com.digitalearn.npaxis.utils.APIConstants.GET_ACTIVE_PRECEPTOR_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_PRECEPTOR_BY_ID_API;
-import static com.digitalearn.npaxis.utils.APIConstants.HARD_DELETE_STUDENT_BY_ID_API;
 import static com.digitalearn.npaxis.utils.APIConstants.PRECEPTORS_API;
 import static com.digitalearn.npaxis.utils.APIConstants.PRECEPTORS_SEARCH_API;
 import static com.digitalearn.npaxis.utils.APIConstants.PUT_UPDATE_PRECEPTOR_API;
