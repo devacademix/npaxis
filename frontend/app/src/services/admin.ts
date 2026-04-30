@@ -110,12 +110,12 @@ const normalizeStatus = (value?: string): string => {
 export const adminService = {
   getStats: async (): Promise<DashboardStats> => {
     try {
-      const statsResponse = await api.get('/admin/stats', authConfig());
+      const statsResponse = await api.get('/administration/dashboard', authConfig());
       const stats = unwrapApiData<any>(statsResponse) || {};
       return {
         totalUsers: Number(stats?.totalUsers ?? stats?.users ?? 0),
         premiumUsers: Number(stats?.premiumCount ?? stats?.premiumUsers ?? 0),
-        revenue: Number(stats?.revenue ?? stats?.totalRevenue ?? 0),
+        revenue: Number(stats?.monthlyRevenue ?? stats?.revenue ?? stats?.totalRevenue ?? 0),
         activePreceptors: Number(stats?.activePreceptors ?? stats?.preceptorCount ?? 0),
       };
     } catch {
@@ -157,16 +157,18 @@ export const adminService = {
 
   // Revenue dashboard APIs (kept exactly as requested)
   getRevenueStats: async (): Promise<RevenueStatsApi> => {
-    const response = await api.get('/admin/stats', authConfig());
+    const response = await api.get('/administration/revenue/summary', authConfig());
     return unwrapApiData<RevenueStatsApi>(response) || {};
   },
 
   getPaymentHistory: async (preceptorId: string | number): Promise<PaymentHistoryItem[]> => {
-    const response = await api.get(`/payments/history/${preceptorId}`, authConfig());
+    const response = await api.get('/administration/revenue/transactions', authConfig());
     const payload = unwrapApiData<any>(response);
 
     const list = Array.isArray(payload)
       ? payload
+      : Array.isArray(payload?.content)
+      ? payload.content
       : Array.isArray(payload?.items)
       ? payload.items
       : [];
@@ -176,10 +178,11 @@ export const adminService = {
       preceptorName:
         item?.preceptorName ??
         item?.preceptor?.displayName ??
+        item?.displayName ??
         item?.preceptor?.name ??
         item?.name ??
         `Preceptor #${preceptorId}`,
-      amount: Number(item?.amount ?? item?.paymentAmount ?? 0),
+      amount: Number(item?.amount ?? item?.paymentAmount ?? item?.totalAmount ?? 0),
       status: String(item?.status ?? item?.paymentStatus ?? 'Pending'),
       date: String(item?.date ?? item?.createdAt ?? item?.paymentDate ?? ''),
       invoiceUrl: item?.invoiceUrl ?? item?.invoice?.url ?? undefined,
@@ -187,7 +190,7 @@ export const adminService = {
   },
 
   getPreceptorAnalytics: async (id: string | number): Promise<PreceptorAnalytics> => {
-    const response = await api.get(`/preceptors/${id}/stats`, authConfig());
+    const response = await api.get(`/analytics/preceptors/${id}/stats`, authConfig());
     return unwrapApiData<PreceptorAnalytics>(response) || {};
   },
 

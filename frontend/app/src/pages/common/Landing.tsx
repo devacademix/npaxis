@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { preceptorService, type PreceptorSearchItem } from '../../services/preceptor';
 
 const ParticleBackground: React.FC<{ className?: string }> = ({ className }) => {

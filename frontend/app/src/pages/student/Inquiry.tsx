@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import StudentLayout from '../../components/layout/StudentLayout';
-import inquiryService from '../../services/inquiry';
+import inquiryService, { type InquiryItem } from '../../services/inquiry';
 import { preceptorService, type PreceptorProfile } from '../../services/preceptor';
 
 const MESSAGE_LIMIT = 1000;
@@ -14,9 +14,11 @@ const Inquiry: React.FC = () => {
   const preceptorId = Number(searchParams.get('preceptorId') || 0);
 
   const [preceptor, setPreceptor] = useState<PreceptorProfile | null>(null);
+  const [inquiries, setInquiries] = useState<InquiryItem[]>([]);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [markingInquiryId, setMarkingInquiryId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -27,8 +29,12 @@ const Inquiry: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const profile = await preceptorService.getPreceptorById(preceptorId);
+        const [profile, ownInquiries] = await Promise.all([
+          preceptorService.getPreceptorById(preceptorId),
+          inquiryService.getMyInquiries().catch(() => []),
+        ]);
         setPreceptor(profile);
+        setInquiries(ownInquiries);
       } catch (err: any) {
         setError(err?.message || 'Unable to load preceptor details.');
       } finally {
@@ -69,6 +75,8 @@ const Inquiry: React.FC = () => {
         preceptorId,
         message: trimmed,
       });
+      const refreshedInquiries = await inquiryService.getMyInquiries().catch(() => inquiries);
+      setInquiries(refreshedInquiries);
       setSuccess('Inquiry sent successfully.');
       setMessage('');
       window.setTimeout(() => navigate(`/student/preceptor-detail/${preceptorId}`), 1200);
@@ -76,6 +84,27 @@ const Inquiry: React.FC = () => {
       setError(err?.message || 'Failed to send inquiry.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleMarkAsRead = async (inquiryId: number) => {
+    try {
+      setMarkingInquiryId(inquiryId);
+      await inquiryService.markAsRead(inquiryId);
+      setInquiries((current) =>
+        current.map((item) =>
+          item.inquiryId === inquiryId
+            ? {
+                ...item,
+                inquiryStatus: 'READ',
+              }
+            : item
+        )
+      );
+    } catch (err: any) {
+      setError(err?.message || 'Unable to update inquiry status.');
+    } finally {
+      setMarkingInquiryId(null);
     }
   };
 
@@ -170,6 +199,58 @@ const Inquiry: React.FC = () => {
                   </button>
                 </div>
               </form>
+
+              <section className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Recent Inquiries</h3>
+                  <p className="mt-1 text-xs text-slate-500">Your latest inquiry activity from the backend.</p>
+                </div>
+
+                {inquiries.length > 0 ? (
+                  <div className="space-y-3">
+                    {inquiries.slice(0, 5).map((inquiry) => (
+                      <article key={inquiry.inquiryId} className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">{inquiry.subject || 'Clinical rotation inquiry'}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {inquiry.createdAt
+                                ? new Date(inquiry.createdAt).toLocaleString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : 'Time unavailable'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                              {inquiry.inquiryStatus || 'NEW'}
+                            </span>
+                            {String(inquiry.inquiryStatus || '').toUpperCase() !== 'READ' ? (
+                              <button
+                                type="button"
+                                onClick={() => handleMarkAsRead(inquiry.inquiryId)}
+                                disabled={markingInquiryId === inquiry.inquiryId}
+                                className="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                              >
+                                {markingInquiryId === inquiry.inquiryId ? 'Updating...' : 'Mark Read'}
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">{inquiry.message}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-white px-3 py-8 text-center text-sm text-slate-500">
+                    No inquiry history available yet.
+                  </div>
+                )}
+              </section>
             </>
           )}
         </section>

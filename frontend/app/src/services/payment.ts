@@ -2,6 +2,9 @@ import api from './auth';
 
 interface CheckoutSessionPayload {
   userId: number;
+  billingCycle?: 'MONTHLY' | 'YEARLY';
+  successUrl?: string;
+  cancelUrl?: string;
 }
 
 interface PortalSessionPayload {
@@ -69,7 +72,16 @@ export const paymentService = {
   },
 
   createCheckoutSession: async (payload: CheckoutSessionPayload): Promise<string> => {
-    const response = await api.post('/payments/create-checkout-session', payload, authConfig());
+    const response = await api.post(
+      '/api/payments/create-checkout-session',
+      {
+        preceptorId: payload.userId,
+        billingCycle: payload.billingCycle ?? 'MONTHLY',
+        successUrl: payload.successUrl ?? `${window.location.origin}/subscription/success`,
+        cancelUrl: payload.cancelUrl ?? `${window.location.origin}/subscription/cancel`,
+      },
+      authConfig()
+    );
     const data = unwrapApiData<CheckoutSessionResponse | string>(response);
     return extractUrl(data);
   },

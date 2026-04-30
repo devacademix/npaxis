@@ -35,6 +35,11 @@ export interface PreceptorContact {
   email?: string;
 }
 
+export interface LicenseDocumentInfo {
+  downloadUrl: string;
+  viewUrl: string;
+}
+
 export type AnalyticsEventType = 'PROFILE_VIEW' | 'CONTACT_REVEAL' | 'INQUIRY';
 
 export interface PreceptorSearchFilters {
@@ -242,4 +247,9 @@ export const preceptorService = {
     );
     return extractData<PreceptorProfile>(response);
   },
+
+  getLicenseLinks: (id: number | string): LicenseDocumentInfo => ({
+    downloadUrl: `/api/v1/preceptors/preceptor-${id}/license`,
+    viewUrl: `/api/v1/preceptors/preceptor-${id}/license/view`,
+  }),
 };
