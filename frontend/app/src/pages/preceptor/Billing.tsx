@@ -23,6 +23,7 @@ const Billing: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
+  const [availablePriceId, setAvailablePriceId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -36,13 +37,17 @@ const Billing: React.FC = () => {
         const user = await preceptorService.getLoggedInUser();
         setUserId(user.userId);
 
-        const [history, preceptor] = await Promise.all([
+        const [history, preceptor, plans] = await Promise.all([
           paymentService.getPaymentHistory(user.userId).catch(() => []),
           preceptorService.getPreceptorById(user.userId),
+          paymentService.getSubscriptionPlans().catch(() => []),
         ]);
 
         setPayments(history);
         setProfile(preceptor);
+        const activePlan = plans.find((plan) => plan.active && plan.prices?.length > 0);
+        const activePrice = activePlan?.prices?.find((price) => price.active) || activePlan?.prices?.[0];
+        setAvailablePriceId(activePrice?.subscriptionPriceId ?? null);
       } catch (err: any) {
         setError(err?.message || 'Failed to load billing data.');
       } finally {
@@ -60,6 +65,7 @@ const Billing: React.FC = () => {
   }, [success]);
 
   const isPremium = useMemo(() => Boolean(profile?.isPremium), [profile?.isPremium]);
+  const canUpgrade = Boolean(availablePriceId);
   const planName = isPremium ? 'Premium' : 'Free';
   const planStatus = isPremium ? 'Active' : 'Inactive';
   const nextBillingDate = formatDate((profile as any)?.subscriptionRenewalDate);
@@ -77,7 +83,7 @@ const Billing: React.FC = () => {
     try {
       setIsPortalLoading(true);
       setError(null);
-      const portalUrl = await paymentService.createPortalSession({ userId });
+      const portalUrl = await paymentService.createPortalSession();
       if (!portalUrl) {
         throw new Error('Billing portal URL was not returned.');
       }
@@ -99,7 +105,10 @@ const Billing: React.FC = () => {
     try {
       setIsUpgradeLoading(true);
       setError(null);
-      const checkoutUrl = await paymentService.createCheckoutSession({ userId });
+      if (!availablePriceId) {
+        throw new Error('No active subscription plan is available right now.');
+      }
+      const checkoutUrl = await paymentService.createCheckoutSession({ priceId: availablePriceId });
       if (!checkoutUrl) {
         throw new Error('Checkout URL not returned.');
       }
@@ -199,7 +208,7 @@ const Billing: React.FC = () => {
             <button
               type="button"
               onClick={upgradePlan}
-              disabled={isPremium || isUpgradeLoading}
+              disabled={isPremium || isUpgradeLoading || !canUpgrade}
               className="inline-flex items-center gap-2 rounded-full bg-blue-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isUpgradeLoading ? (
@@ -209,6 +218,8 @@ const Billing: React.FC = () => {
                 </>
               ) : isPremium ? (
                 'Active Plan'
+              ) : !canUpgrade ? (
+                'Upgrade Unavailable'
               ) : (
                 <>
                   <span className="material-symbols-outlined text-base">upgrade</span>
@@ -218,13 +229,20 @@ const Billing: React.FC = () => {
             </button>
           </div>
           {!isPremium ? (
-            <button
-              type="button"
-              onClick={() => navigate('/preceptor/subscription')}
-              className="mt-3 text-sm font-semibold text-blue-700 hover:underline"
-            >
-              Compare plans before upgrading
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => navigate('/preceptor/subscription')}
+                className="mt-3 text-sm font-semibold text-blue-700 hover:underline"
+              >
+                Compare plans before upgrading
+              </button>
+              {!canUpgrade ? (
+                <p className="mt-2 text-sm font-medium text-amber-700">
+                  Upgrade is disabled until an active subscription price is available from the backend.
+                </p>
+              ) : null}
+            </>
           ) : null}
         </section>
       </div>

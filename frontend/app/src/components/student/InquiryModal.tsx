@@ -50,6 +50,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, preceptor, onClose,
       setIsSubmitting(true);
       await inquiryService.sendInquiry({
         preceptorId: preceptor.userId,
+        subject: `Inquiry for ${preceptor.displayName || `Preceptor #${preceptor.userId}`}`,
         message: trimmedMessage,
       });
       onSuccess('Inquiry sent successfully.');

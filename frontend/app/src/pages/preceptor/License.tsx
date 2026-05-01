@@ -21,7 +21,7 @@ const formatDateTime = (value?: string) => {
   });
 };
 
-const License: React.FC = () => {
+  const License: React.FC = () => {
   const role = localStorage.getItem('role');
   const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
 
@@ -36,6 +36,8 @@ const License: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const normalizedVerificationStatus = String(verificationStatus || 'PENDING').toUpperCase();
+  const isApproved = normalizedVerificationStatus === 'APPROVED';
 
   useEffect(() => {
     if (!isPreceptor) return;
@@ -142,6 +144,12 @@ const License: React.FC = () => {
       setVerificationStatus(updated.verificationStatus || 'PENDING');
       setSubmittedAt(updated.verificationSubmittedAt);
       setReviewedAt(updated.verificationReviewedAt);
+      setFile(null);
+      setUploadProgress(100);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
       setSuccess('License submitted successfully for verification.');
     } catch (err: any) {
       setError(err?.message || 'Failed to submit license for verification.');
@@ -172,48 +180,57 @@ const License: React.FC = () => {
           </div>
         ) : null}
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Upload License Document</h2>
-          <p className="mt-1 text-sm text-slate-500">Upload your professional license using drag-and-drop or file browser.</p>
+        {!isApproved ? (
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-lg font-bold text-slate-900">Upload License Document</h2>
+            <p className="mt-1 text-sm text-slate-500">Upload your professional license using drag-and-drop or file browser.</p>
 
-          <div className="mt-4">
-            <FileUpload file={file} previewUrl={previewUrl} disabled={isSubmitting} onFileSelect={onFileSelect} />
-          </div>
-
-          {(isSubmitting || uploadProgress > 0) && (
             <div className="mt-4">
-              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-600">
-                <span>Upload Progress</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-200">
-                <div
-                  className="h-2 rounded-full bg-blue-600 transition-all duration-200"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
+              <FileUpload file={file} previewUrl={previewUrl} disabled={isSubmitting} onFileSelect={onFileSelect} />
             </div>
-          )}
 
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={!file || isSubmitting}
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-blue-700 px-6 py-3 text-sm font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-base">upload</span>
-                Submit for Verification
-              </>
+            {(isSubmitting || uploadProgress > 0) && (
+              <div className="mt-4">
+                <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-600">
+                  <span>Upload Progress</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-200">
+                  <div
+                    className="h-2 rounded-full bg-blue-600 transition-all duration-200"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
             )}
-          </button>
-        </section>
+
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={!file || isSubmitting}
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-blue-700 px-6 py-3 text-sm font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-base">upload</span>
+                  Submit for Verification
+                </>
+              )}
+            </button>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+            <h2 className="text-lg font-bold text-emerald-900">License Already Verified</h2>
+            <p className="mt-1 text-sm text-emerald-800">
+              Your license has already been approved. You do not need to submit it again unless an administrator requests a new document.
+            </p>
+          </section>
+        )}
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -240,10 +257,30 @@ const License: React.FC = () => {
             License verification helps ensure trust and safety for students and institutions. Most reviews complete within
             24 to 72 hours. You will see status updates here once reviewed.
           </p>
+          {userId ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a
+                href={preceptorService.getLicensePreviewUrl(userId)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100"
+              >
+                Preview Existing License
+              </a>
+              <a
+                href={preceptorService.getLicenseDownloadUrl(userId)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-blue-200 bg-white px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100"
+              >
+                Download Existing License
+              </a>
+            </div>
+          ) : null}
         </section>
       </div>
     );
-  }, [error, file, isLoading, isSubmitting, previewUrl, reviewedAt, submittedAt, success, uploadProgress, verificationStatus]);
+  }, [error, file, isApproved, isLoading, isSubmitting, previewUrl, reviewedAt, submittedAt, success, uploadProgress, verificationStatus]);
 
   return (
     <PreceptorLayout pageTitle="License Verification">

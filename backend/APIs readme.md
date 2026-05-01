@@ -141,7 +141,7 @@ requirements, and expected outputs.
 | `/restore/preceptor-{userId}`        | PUT    | Restores a soft-deleted preceptor.       | `userId` (Path)                        | Success message                          |
 | `/verify/preceptor-{userId}`         | PUT    | Verifies a preceptor (Admin).            | `userId` (Path)                        | `PreceptorResponseDTO`                   |
 | `/preceptor-{userId}/submit-license` | POST   | Submits license for verification.        | `userId` (Path), `PreceptorRequestDTO` | `PreceptorResponseDTO`                   |
-| `/preceptor-{userId}/reveal-contact` | POST   | Reveals preceptor contact (Premium).     | `userId` (Path)                        | `PreceptorContactResponseDTO`            |
+| `/active/preceptor-{userId}/reveal-contact` | GET    | Reveals preceptor contact (Premium).     | `userId` (Path)                        | `PreceptorContactResponseDTO`            |
 
 ### Data Objects
 
@@ -278,39 +278,39 @@ requirements, and expected outputs.
 
 | Endpoint                                              | Method | Description                                       | Input                                                   | Output                                    |
 |:------------------------------------------------------|:-------|:--------------------------------------------------|:--------------------------------------------------------|:------------------------------------------|
-| `/preceptors`                                         | GET    | List all preceptors (admin view).                 | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/search`                                  | GET    | Search and filter preceptors (admin view).        | `specialty`, `location`, `verificationStatus`, Pageable | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/approved`                                | GET    | Get approved preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/rejected`                                | GET    | Get rejected preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/preceptor-{userId}`                      | GET    | Get preceptor detail (admin view).                | `userId` (Path)                                         | `AdminPreceptorDetailDTO`                 |
-| `/preceptors/preceptor-{userId}`                      | PUT    | Update preceptor (admin).                         | `userId` (Path), `AdminPreceptorDetailDTO`              | `AdminPreceptorDetailDTO`                 |
-| `/preceptors/preceptor-{userId}/verification-history` | GET    | Get verification history for preceptor.           | `userId` (Path)                                         | List of `VerificationHistoryDTO`          |
-| `/preceptors/preceptor-{userId}/notes`                | POST   | Add verification note to preceptor.               | `userId` (Path), `note`, `noteType` (Query)             | Success message                           |
-| `/preceptors/preceptor-{userId}/reject`               | POST   | Reject preceptor with rejection reason.           | `userId` (Path), `reason` (Query)                       | Success message                           |
-| `/preceptors/preceptor-{userId}/billing-report`       | GET    | Get preceptor billing report.                     | `userId` (Path)                                         | `PreceptorBillingReportDTO`               |
-| `/preceptors/preceptor-{userId}/analytics`            | GET    | Get preceptor analytics.                          | `userId` (Path)                                         | `PreceptorAnalyticsDTO`                   |
-| `/preceptors/preceptor-{userId}/contact`              | GET    | Get preceptor contact (admin - no premium check). | `userId` (Path)                                         | `PreceptorContactResponseDTO`             |
-| `/preceptors/preceptor-{userId}/license/download`     | GET    | Download preceptor license file (admin).          | `userId` (Path)                                         | License file (PDF Resource)               |
-| `/preceptors/preceptor-{userId}/license/view`         | GET    | View preceptor license image (admin).             | `userId` (Path)                                         | License image (Resource)                  |
+| `/preceptors/list`                                    | GET    | List all preceptors (admin view).                 | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/list/search`                             | GET    | Search and filter preceptors (admin view).        | `specialty`, `location`, `verificationStatus`, Pageable | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/verified/approved`                       | GET    | Get approved preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/verified/rejected`                       | GET    | Get rejected preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/detail-{userId}`                         | GET    | Get preceptor detail (admin view).                | `userId` (Path)                                         | `AdminPreceptorDetailDTO`                 |
+| `/preceptors/update-{userId}`                         | PUT    | Update preceptor (admin).                         | `userId` (Path), `AdminPreceptorDetailDTO`              | `AdminPreceptorDetailDTO`                 |
+| `/preceptors/{userId}/verification-history`           | GET    | Get verification history for preceptor.           | `userId` (Path)                                         | List of `VerificationHistoryDTO`          |
+| `/preceptors/{userId}/verification-notes`             | POST   | Add verification note to preceptor.               | `userId` (Path), `note`, `noteType` (Query)             | Success message                           |
+| `/preceptors/detail-{userId}/reject`                  | POST   | Reject preceptor with rejection reason.           | `userId` (Path), `reason` (Query)                       | Success message                           |
+| `/preceptors/{userId}/billing`                        | GET    | Get preceptor billing report.                     | `userId` (Path)                                         | `PreceptorBillingReportDTO`               |
+| `/preceptors/{userId}/analytics`                      | GET    | Get preceptor analytics.                          | `userId` (Path)                                         | `PreceptorAnalyticsDTO`                   |
+| `/preceptors/detail-{userId}/contact`                 | GET    | Get preceptor contact (admin - no premium check). | `userId` (Path)                                         | `PreceptorContactResponseDTO`             |
+| `/preceptors/{userId}/license/download`               | GET    | Download preceptor license file (admin).          | `userId` (Path)                                         | License file (PDF Resource)               |
+| `/preceptors/{userId}/license/review`                 | GET    | View preceptor license image (admin).             | `userId` (Path)                                         | License image (Resource)                  |
 
 ### 5.6 Admin Student Management
 
 | Endpoint                               | Method | Description                              | Input                                    | Output                                  |
 |:---------------------------------------|:-------|:-----------------------------------------|:-----------------------------------------|:----------------------------------------|
-| `/students`                            | GET    | List all students (admin view).          | Pageable params                          | Paginated list of `AdminStudentListDTO` |
+| `/students/list`                       | GET    | List all students (admin view).          | Pageable params                          | Paginated list of `AdminStudentListDTO` |
 | `/students/search`                     | GET    | Search and filter students (admin view). | `university`, `program`, Pageable        | Paginated list of `AdminStudentListDTO` |
-| `/students/student-{userId}`           | GET    | Get student detail (admin view).         | `userId` (Path)                          | `AdminStudentDetailDTO`                 |
-| `/students/student-{userId}`           | PUT    | Update student (admin).                  | `userId` (Path), `AdminStudentDetailDTO` | `AdminStudentDetailDTO`                 |
-| `/students/student-{userId}`           | DELETE | Delete student (soft delete).            | `userId` (Path)                          | Success message                         |
-| `/students/student-{userId}/inquiries` | GET    | Get student inquiries.                   | `userId` (Path)                          | List of inquiries                       |
+| `/students/detail-{userId}`            | GET    | Get student detail (admin view).         | `userId` (Path)                          | `AdminStudentDetailDTO`                 |
+| `/students/update-{userId}`            | PUT    | Update student (admin).                  | `userId` (Path), `AdminStudentDetailDTO` | `AdminStudentDetailDTO`                 |
+| `/students/update-{userId}`            | DELETE | Delete student (soft delete).            | `userId` (Path)                          | Success message                         |
+| `/students/detail-{userId}/inquiries`  | GET    | Get student inquiries.                   | `userId` (Path)                          | List of inquiries                       |
 
 ### 5.7 Admin Webhook Management
 
 | Endpoint                    | Method | Description                         | Input            | Output                                   |
 |:----------------------------|:-------|:------------------------------------|:-----------------|:-----------------------------------------|
 | `/webhooks/history`         | GET    | Get webhook event history.          | Pageable params  | Paginated list of `WebhookEventResponse` |
-| `/webhooks/retry/{eventId}` | POST   | Retry failed webhook event.         | `eventId` (Path) | Success message                          |
-| `/webhooks/{eventId}`       | GET    | Get webhook event details.          | `eventId` (Path) | `WebhookEventDetailDTO`                  |
+| `/webhooks/event-{eventId}/retry` | POST   | Retry failed webhook event.         | `eventId` (Path) | Success message                          |
+| `/webhooks/event-{eventId}`       | GET    | Get webhook event details.          | `eventId` (Path) | `WebhookEventDetailDTO`                  |
 | `/webhooks/metrics`         | GET    | Get webhook metrics and statistics. | None             | `WebhookMetricsDTO`                      |
 
 ### Data Objects for Administration
@@ -565,7 +565,7 @@ requirements, and expected outputs.
 | `/cancel`       | POST   | Cancel subscription at period end (allows usage until expiry).      | None                           | `GenericApiResponse<Void>`          |
 | `/update`       | PUT    | Change subscription plan or billing interval.                       | `UpdateSubscriptionRequest`    | `GenericApiResponse<Void>`          |
 | `/history`      | GET    | List past and current subscriptions with pagination.                | Pageable params                | `Page<SubscriptionHistoryResponse>` |
-| `/portal`       | GET    | Redirect to Stripe customer portal for billing management.          | None                           | Map with `portalUrl` key            |
+| `/billing-portal` | GET    | Redirect to Stripe customer portal for billing management.        | None                           | Map with `portalUrl` key            |
 | `/access-check` | GET    | Verify if user can access premium features (includes grace period). | None                           | Map with `hasAccess` boolean key    |
 
 ### Data Objects
@@ -747,6 +747,7 @@ requirements, and expected outputs.
 | Endpoint                      | Method | Description                      | Input           | Output                      |
 |:------------------------------|:-------|:---------------------------------|:----------------|:----------------------------|
 | `/preceptor-{userId}/license` | GET    | Download preceptor license file. | `userId` (Path) | License file (PDF Resource) |
+| `/preceptor-{userId}/license/view` | GET    | View preceptor license image inline in the browser. | `userId` (Path) | License image/PDF resource |
 
 ---
 
@@ -771,8 +772,7 @@ requirements, and expected outputs.
 
 ## Notes
 
-- **Base URL**: All endpoints are prefixed with `/api/v1` except for specific exceptions like `/webhooks`, `/analytics`,
-  `/inquiries`, `/roles`, `/subscription-plans`.
+- **Base URL**: All endpoints are prefixed with `/api/v1`.
 - **Authentication**: Most endpoints require JWT authentication via the `Authorization` header with a Bearer token.
 - **Pagination**: Endpoints with pageable responses support pagination parameters:
     - `page`: Page number (0-indexed)

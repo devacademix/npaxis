@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import PricingCard from '../../components/preceptor/PricingCard';
+import paymentService, { type SubscriptionPlan, type SubscriptionStatus } from '../../services/payment';
 import { preceptorService, type PreceptorProfile } from '../../services/preceptor';
-import paymentService from '../../services/payment';
 
 const formatRenewalDate = (value?: string) => {
   if (!value) return 'Not available';
@@ -16,10 +16,12 @@ const Subscription: React.FC = () => {
   const role = localStorage.getItem('role');
   const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
 
-  const [userId, setUserId] = useState<number | null>(null);
   const [profile, setProfile] = useState<PreceptorProfile | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -31,9 +33,14 @@ const Subscription: React.FC = () => {
         setIsLoading(true);
         setError(null);
         const user = await preceptorService.getLoggedInUser();
-        setUserId(user.userId);
-        const preceptor = await preceptorService.getPreceptorById(user.userId);
+        const [preceptor, planList, subscriptionStatus] = await Promise.all([
+          preceptorService.getPreceptorById(user.userId),
+          paymentService.getSubscriptionPlans().catch(() => []),
+          paymentService.getSubscriptionStatus().catch(() => null),
+        ]);
         setProfile(preceptor);
+        setPlans(planList);
+        setSubscription(subscriptionStatus);
       } catch (err: any) {
         setError(err?.message || 'Failed to load subscription data.');
       } finally {
@@ -50,20 +57,19 @@ const Subscription: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [success]);
 
-  const isPremium = useMemo(() => Boolean(profile?.isPremium), [profile?.isPremium]);
-  const currentPlan = isPremium ? 'Premium' : 'Free';
-  const statusLabel = isPremium ? 'Active' : 'Inactive';
-  const renewalDate = formatRenewalDate((profile as any)?.subscriptionRenewalDate);
+  const isPremium = useMemo(() => Boolean(profile?.isPremium || subscription?.accessEnabled), [profile?.isPremium, subscription?.accessEnabled]);
+  const premiumPlan = useMemo(() => plans.find((plan) => plan.active && plan.prices?.length > 0) || null, [plans]);
+  const selectedPrice = premiumPlan?.prices?.find((price) => price.active) || premiumPlan?.prices?.[0];
+  const canUpgrade = Boolean(selectedPrice?.subscriptionPriceId);
+  const currentPlan = subscription?.planName || (isPremium ? 'Premium' : 'Free');
+  const statusLabel = subscription?.status || (isPremium ? 'Active' : 'Inactive');
+  const renewalDate = formatRenewalDate(subscription?.currentPeriodEnd);
 
   if (!isPreceptor) {
     return <Navigate to="/login" replace />;
   }
 
   const handleUpgrade = async () => {
-    if (!userId) {
-      setError('Unable to identify account. Please login again.');
-      return;
-    }
     if (isPremium) return;
 
     try {
@@ -71,7 +77,11 @@ const Subscription: React.FC = () => {
       setError(null);
       setSuccess(null);
 
-      const checkoutUrl = await paymentService.createCheckoutSession({ userId });
+      if (!selectedPrice?.subscriptionPriceId) {
+        throw new Error('No active subscription plan is available right now.');
+      }
+
+      const checkoutUrl = await paymentService.createCheckoutSession({ priceId: selectedPrice.subscriptionPriceId });
       if (!checkoutUrl) {
         throw new Error('Checkout URL not returned by server.');
       }
@@ -84,6 +94,29 @@ const Subscription: React.FC = () => {
       setIsUpgrading(false);
     }
   };
+
+  const handleCancel = async () => {
+    try {
+      setIsCanceling(true);
+      setError(null);
+      await paymentService.cancelSubscription();
+      const refreshedStatus = await paymentService.getSubscriptionStatus().catch(() => null);
+      setSubscription(refreshedStatus);
+      setSuccess('Subscription cancellation has been scheduled successfully.');
+    } catch (err: any) {
+      setError(err?.message || 'Unable to cancel subscription.');
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
+  const premiumPriceLabel = selectedPrice
+    ? `${new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: String(selectedPrice.currency || 'INR').toUpperCase(),
+        maximumFractionDigits: 0,
+      }).format((selectedPrice.amountInMinorUnits || 0) / 100)} / ${selectedPrice.billingInterval?.toLowerCase()}`
+    : 'Currently unavailable';
 
   return (
     <PreceptorLayout pageTitle="Subscription Plans">
@@ -109,24 +142,24 @@ const Subscription: React.FC = () => {
           {isLoading ? (
             <div className="h-20 animate-pulse rounded-xl bg-slate-200/70" />
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Current Plan</p>
                 <p className="mt-1 text-xl font-black text-slate-900">{currentPlan}</p>
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</p>
-                <span
-                  className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                    isPremium ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
+                <span className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${isPremium ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
                   {statusLabel}
                 </span>
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Renewal Date</p>
                 <p className="mt-1 text-sm font-semibold text-slate-800">{renewalDate}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Cancel At Period End</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">{subscription?.cancelAtPeriodEnd ? 'Yes' : 'No'}</p>
               </div>
             </div>
           )}
@@ -142,7 +175,7 @@ const Subscription: React.FC = () => {
             <>
               <PricingCard
                 title="Free Plan"
-                price="₹0"
+                price="INR 0"
                 description="For new preceptors getting started"
                 features={['Limited visibility', 'Contact hidden', 'Basic listing']}
                 ctaText="Current Plan"
@@ -150,14 +183,14 @@ const Subscription: React.FC = () => {
                 onCtaClick={() => undefined}
               />
               <PricingCard
-                title="Premium Plan"
-                price="₹1,999 / month"
-                description="Built for maximum student reach and conversion"
+                title={premiumPlan?.name || 'Premium Plan'}
+                price={premiumPriceLabel}
+                description={premiumPlan?.description || 'Built for maximum student reach and conversion'}
                 features={['Contact visibility', 'Higher ranking', 'Analytics access', 'Priority listing']}
-                ctaText={isPremium ? 'Active Plan' : 'Upgrade Now'}
+                ctaText={isPremium ? 'Active Plan' : canUpgrade ? 'Upgrade Now' : 'Plan Unavailable'}
                 highlighted
                 badgeText="Most Popular"
-                disabled={isPremium}
+                disabled={isPremium || !canUpgrade}
                 isLoading={isUpgrading}
                 onCtaClick={handleUpgrade}
               />
@@ -165,8 +198,26 @@ const Subscription: React.FC = () => {
           )}
         </section>
 
+        {!isLoading && !isPremium && !canUpgrade ? (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+            Premium checkout is temporarily unavailable because no active subscription price was returned by the backend yet.
+          </div>
+        ) : null}
+
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-xl font-bold text-slate-900">Feature Comparison</h2>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-xl font-bold text-slate-900">Feature Comparison</h2>
+            {isPremium ? (
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isCanceling}
+                className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-60"
+              >
+                {isCanceling ? 'Scheduling cancel...' : 'Cancel Subscription'}
+              </button>
+            ) : null}
+          </div>
           <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">

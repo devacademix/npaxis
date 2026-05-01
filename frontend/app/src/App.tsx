@@ -25,9 +25,11 @@ import PreceptorBilling from './pages/preceptor/Billing';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentBrowse from './pages/student/Browse';
 import StudentSaved from './pages/student/Saved';
-import StudentPlaceholder from './pages/student/Placeholder';
+import StudentProfile from './pages/student/Profile';
 import StudentPreceptorDetail from './pages/student/PreceptorDetail';
 import StudentInquiry from './pages/student/Inquiry';
+import StudentInquiries from './pages/student/Inquiries';
+import PreceptorInquiries from './pages/preceptor/Inquiries';
 import ProtectedRoute from './routes/ProtectedRoute';
 import InfoPage from './pages/common/InfoPage';
 import Landing from './pages/common/Landing';
@@ -189,6 +191,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/preceptor/inquiries"
+          element={
+            <ProtectedRoute allowedRoles={['PRECEPTOR']}>
+              <PreceptorInquiries />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/student"
@@ -218,7 +228,15 @@ function App() {
           path="/student/profile"
           element={
             <ProtectedRoute allowedRoles={['STUDENT']}>
-              <StudentPlaceholder title="Student Profile" description="Update your profile preferences and academic details." />
+              <StudentProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/inquiries"
+          element={
+            <ProtectedRoute allowedRoles={['STUDENT']}>
+              <StudentInquiries />
             </ProtectedRoute>
           }
         />

@@ -29,15 +29,32 @@ const authConfig = () => {
   };
 };
 
+const ADMIN_API_PREFIX = '/api/v1/administration';
+
 export const userService = {
   getAllUsers: async (): Promise<UserRecord[]> => {
     const response = await api.get('/users/all', authConfig());
     return unwrapApiData<UserRecord[]>(response) || [];
   },
 
+  getAllActiveUsers: async (): Promise<UserRecord[]> => {
+    const response = await api.get('/users/active/all', authConfig());
+    return unwrapApiData<UserRecord[]>(response) || [];
+  },
+
+  getDeletedUsers: async (): Promise<UserRecord[]> => {
+    const response = await api.get('/users/deleted/all', authConfig());
+    return unwrapApiData<UserRecord[]>(response) || [];
+  },
+
+  getDeletedUserById: async (userId: number | string): Promise<UserRecord> => {
+    const response = await api.get(`/users/deleted/user-${userId}`, authConfig());
+    return unwrapApiData<UserRecord>(response);
+  },
+
   toggleAccountStatus: async (userId: number, enabled: boolean) => {
     const response = await api.put(
-      `/administration/user-${userId}/toggle-account?enabled=${enabled}`,
+      `${ADMIN_API_PREFIX}/user-${userId}/toggle-account?enabled=${enabled}`,
       null,
       authConfig()
     );
@@ -58,6 +75,39 @@ export const userService = {
     const response = await api.delete(`/users/hard-delete/user-${userId}`, authConfig());
     return unwrapApiData<string | null>(response);
   },
+
+  uploadProfilePicture: async (userId: number | string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.put(`/users/user-${userId}/upload-profile-picture`, formData, {
+      ...authConfig(),
+      headers: {
+        ...((authConfig() as any).headers ?? {}),
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return unwrapApiData<UserRecord>(response);
+  },
+
+  fetchProfilePictureObjectUrl: async (userId: number | string): Promise<string | null> => {
+    try {
+      const response = await api.get(`/users/user-${userId}/profile-picture`, {
+        ...authConfig(),
+        responseType: 'blob',
+      });
+
+      const blob = response?.data;
+      if (!(blob instanceof Blob) || blob.size === 0) {
+        return null;
+      }
+
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  },
+
+  getProfilePictureUrl: (userId: number | string) => `/api/v1/users/user-${userId}/profile-picture`,
 };
 
 export default userService;

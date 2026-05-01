@@ -67,6 +67,7 @@ const Inquiry: React.FC = () => {
       setIsSubmitting(true);
       await inquiryService.sendInquiry({
         preceptorId,
+        subject: `Inquiry for ${preceptor?.displayName || `Preceptor #${preceptorId}`}`,
         message: trimmed,
       });
       setSuccess('Inquiry sent successfully.');

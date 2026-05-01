@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import ChartSection, { type InteractionsDataPoint, type ViewsDataPoint } from '../../components/preceptor/ChartSection';
 import StatsCard from '../../components/preceptor/StatsCard';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
+import inquiryService, { type InquiryRecord } from '../../services/inquiry';
 import { preceptorService, type LoggedInPreceptorUser, type PreceptorStatsResponse } from '../../services/preceptor';
 
 interface DashboardStats {
@@ -46,20 +47,12 @@ const buildInteractionsSeries = (reveals: number, inquiries: number): Interactio
   }));
 };
 
-const buildRecentActivity = (count: number): InquiryActivity[] => {
-  if (count <= 0) return [];
-  // Generating generic placeholder rows matching the actual tracked count, 
-  // since the backend only supports event tracking, not full message storage yet.
-  return Array.from({ length: Math.min(count, 5) }, (_, index) => {
-    const d = new Date();
-    d.setDate(d.getDate() - index);
-    return {
-      id: `inquiry-${index}`,
-      message: 'A student has submitted a clinical inquiry regarding rotation availability.',
-      date: d.toLocaleDateString(),
-    };
-  });
-};
+const buildRecentActivity = (items: InquiryRecord[]): InquiryActivity[] =>
+  items.slice(0, 5).map((item) => ({
+    id: `inquiry-${item.inquiryId}`,
+    message: item.message,
+    date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A',
+  }));
 
 const Dashboard: React.FC = () => {
   const role = localStorage.getItem('role');
@@ -68,6 +61,7 @@ const Dashboard: React.FC = () => {
 
   const [user, setUser] = useState<LoggedInPreceptorUser | null>(null);
   const [stats, setStats] = useState<DashboardStats>({ profileViews: 0, contactReveals: 0, inquiries: 0 });
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,16 +76,24 @@ const Dashboard: React.FC = () => {
         const currentUser = await preceptorService.getLoggedInUser();
         setUser(currentUser);
 
-        try {
-          const statsResponse = await preceptorService.getStats(currentUser.userId);
-          setStats(normalizeStats(statsResponse));
-        } catch {
+        const [statsResult, inquiriesResult] = await Promise.allSettled([
+          preceptorService.getStats(currentUser.userId),
+          inquiryService.getMyInquiries(),
+        ]);
+
+        if (statsResult.status === 'fulfilled') {
+          setStats(normalizeStats(statsResult.value));
+        } else {
           // Fallback to zeros if stats aren't found or API fails, avoiding dummy data
           setStats({
             profileViews: 0,
             contactReveals: 0,
             inquiries: 0,
           });
+        }
+
+        if (inquiriesResult.status === 'fulfilled') {
+          setInquiries(inquiriesResult.value);
         }
       } catch (err: any) {
         setError(err?.message || 'Failed to load dashboard data.');
@@ -123,7 +125,7 @@ const Dashboard: React.FC = () => {
     () => buildInteractionsSeries(stats.contactReveals, stats.inquiries),
     [stats.contactReveals, stats.inquiries]
   );
-  const recentActivity = useMemo(() => buildRecentActivity(stats.inquiries), [stats.inquiries]);
+  const recentActivity = useMemo(() => buildRecentActivity(inquiries), [inquiries]);
 
   if (!isPreceptor) {
     return <Navigate to="/login" replace />;
@@ -247,6 +249,14 @@ const Dashboard: React.FC = () => {
               className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
             >
               Upload License
+              <span className="material-symbols-outlined text-base">chevron_right</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/preceptor/inquiries')}
+              className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              Review Inquiries
               <span className="material-symbols-outlined text-base">chevron_right</span>
             </button>
             <button

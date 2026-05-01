@@ -6,6 +6,7 @@ export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | string;
 export interface PreceptorProfile {
   userId: number;
   displayName?: string;
+  email?: string;
   credentials?: string;
   specialty?: string;
   location?: string;
@@ -113,6 +114,8 @@ const authConfig = () => {
   };
 };
 
+const ANALYTICS_API_PREFIX = '/api/v1/analytics';
+
 const normalizeUser = (payload: any): LoggedInPreceptorUser => ({
   userId: Number(payload?.userId ?? payload?.id ?? 0),
   displayName: String(payload?.displayName ?? payload?.name ?? payload?.username ?? ''),
@@ -180,7 +183,7 @@ export const preceptorService = {
 
   getStats: async (id: number | string) => {
     try {
-      const response = await api.get(`/analytics/preceptors/${id}/stats`, authConfig());
+      const response = await api.get(`${ANALYTICS_API_PREFIX}/preceptors/${id}/stats`, authConfig());
       return extractData<PreceptorStatsResponse>(response);
     } catch (error: any) {
       throw error;
@@ -199,7 +202,7 @@ export const preceptorService = {
 
   trackAnalyticsEvent: async (eventType: AnalyticsEventType, preceptorId: number | string): Promise<void> => {
     try {
-      await api.post('/analytics/event', { eventType, preceptorId }, authConfig());
+      await api.post(`${ANALYTICS_API_PREFIX}/event`, { eventType, preceptorId }, authConfig());
     } catch {
       // Analytics should never block the primary student workflow.
     }
@@ -265,4 +268,8 @@ export const preceptorService = {
     const response = await api.delete(`/preceptors/hard-delete/preceptor-${id}`, authConfig());
     return extractData<PreceptorProfile>(response);
   },
+
+  getLicenseDownloadUrl: (id: number | string) => `/api/v1/preceptors/preceptor-${id}/license`,
+
+  getLicensePreviewUrl: (id: number | string) => `/api/v1/preceptors/preceptor-${id}/license/view`,
 };
