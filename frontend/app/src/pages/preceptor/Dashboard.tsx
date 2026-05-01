@@ -69,42 +69,81 @@ const Dashboard: React.FC = () => {
     if (!isPreceptor) return;
 
     const loadDashboard = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+      setIsLoading(true);
+      setError(null);
 
-        const currentUser = await preceptorService.getLoggedInUser();
-        setUser(currentUser);
+      const fallbackUserId = Number(localStorage.getItem('userId') || 0);
+      const fallbackDisplayName = localStorage.getItem('displayName') || 'Preceptor';
+      const fallbackEmail = localStorage.getItem('email') || '';
 
-        const [statsResult, inquiriesResult] = await Promise.allSettled([
-          preceptorService.getStats(currentUser.userId),
-          inquiryService.getMyInquiries(),
-        ]);
+      const userResult = await Promise.allSettled([preceptorService.getLoggedInUser()]);
+      const resolvedUser =
+        userResult[0].status === 'fulfilled'
+          ? userResult[0].value
+          : fallbackUserId
+          ? {
+              userId: fallbackUserId,
+              displayName: fallbackDisplayName,
+              email: fallbackEmail,
+            }
+          : null;
 
-        if (statsResult.status === 'fulfilled') {
-          setStats(normalizeStats(statsResult.value));
-        } else {
-          // Fallback to zeros if stats aren't found or API fails, avoiding dummy data
-          setStats({
-            profileViews: 0,
-            contactReveals: 0,
-            inquiries: 0,
-          });
-        }
-
-        if (inquiriesResult.status === 'fulfilled') {
-          setInquiries(inquiriesResult.value);
-        }
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load dashboard data.');
+      if (!resolvedUser) {
+        setError('Unable to load your dashboard session. Please login again.');
         setStats({
           profileViews: 0,
           contactReveals: 0,
           inquiries: 0,
         });
-      } finally {
+        setInquiries([]);
         setIsLoading(false);
+        return;
       }
+
+      setUser(resolvedUser);
+
+      const [statsResult, inquiriesResult] = await Promise.allSettled([
+        preceptorService.getStats(resolvedUser.userId),
+        inquiryService.getMyInquiries(),
+      ]);
+
+      if (statsResult.status === 'fulfilled') {
+        setStats(normalizeStats(statsResult.value));
+      } else {
+        setStats({
+          profileViews: 0,
+          contactReveals: 0,
+          inquiries: 0,
+        });
+      }
+
+      if (inquiriesResult.status === 'fulfilled') {
+        setInquiries(inquiriesResult.value);
+      } else {
+        setInquiries([]);
+      }
+
+      const failures: string[] = [];
+      if (userResult[0].status === 'rejected' && !fallbackUserId) {
+        failures.push(userResult[0].reason?.message || 'User session');
+      }
+      if (statsResult.status === 'rejected') {
+        failures.push(statsResult.reason?.message || 'Analytics');
+      }
+      if (inquiriesResult.status === 'rejected') {
+        failures.push(inquiriesResult.reason?.message || 'Inquiries');
+      }
+
+      const meaningfulFailures = failures.filter((message) => {
+        const normalized = String(message).toLowerCase();
+        return !normalized.includes('unexpected error occurred');
+      });
+
+      if (meaningfulFailures.length > 0) {
+        setError(Array.from(new Set(meaningfulFailures)).join(' | '));
+      }
+
+      setIsLoading(false);
     };
 
     loadDashboard();

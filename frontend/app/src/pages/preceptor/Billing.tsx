@@ -9,7 +9,7 @@ const formatDate = (value?: string) => {
   if (!value) return 'Not available';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Not available';
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const Billing: React.FC = () => {
@@ -238,9 +238,19 @@ const Billing: React.FC = () => {
                 Compare plans before upgrading
               </button>
               {!canUpgrade ? (
-                <p className="mt-2 text-sm font-medium text-amber-700">
-                  Upgrade is disabled until an active subscription price is available from the backend.
-                </p>
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 p-4">
+                  <div className="flex gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                      <span className="material-symbols-outlined text-base">info</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Upgrade temporarily unavailable</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">
+                        Billing will become available once the backend returns an active subscription price for checkout.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ) : null}
             </>
           ) : null}

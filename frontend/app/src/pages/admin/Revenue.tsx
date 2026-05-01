@@ -51,16 +51,16 @@ const Revenue: React.FC = () => {
   const [inlineMessage, setInlineMessage] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-IN', {
+    new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'INR',
+      currency: 'USD',
       maximumFractionDigits: 0,
     }).format(amount || 0);
 
   const formatDate = (dateValue: string) => {
     const date = new Date(dateValue);
     if (Number.isNaN(date.getTime())) return 'N/A';
-    return date.toLocaleDateString('en-IN', {
+    return date.toLocaleDateString('en-US', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -103,12 +103,12 @@ const Revenue: React.FC = () => {
       .slice(-6);
 
     const revenueData: RevenueChartPoint[] = sorted.map((item) => ({
-      label: item.date.toLocaleDateString('en-IN', { month: 'short' }),
+      label: item.date.toLocaleDateString('en-US', { month: 'short' }),
       value: Number(item.revenue.toFixed(0)),
     }));
 
     const transactionData: RevenueChartPoint[] = sorted.map((item) => ({
-      label: item.date.toLocaleDateString('en-IN', { month: 'short' }),
+      label: item.date.toLocaleDateString('en-US', { month: 'short' }),
       value: item.transactions,
     }));
 

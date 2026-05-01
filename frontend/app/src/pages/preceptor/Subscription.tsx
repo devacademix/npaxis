@@ -9,7 +9,7 @@ const formatRenewalDate = (value?: string) => {
   if (!value) return 'Not available';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Not available';
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const Subscription: React.FC = () => {
@@ -111,9 +111,9 @@ const Subscription: React.FC = () => {
   };
 
   const premiumPriceLabel = selectedPrice
-    ? `${new Intl.NumberFormat('en-IN', {
+    ? `${new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: String(selectedPrice.currency || 'INR').toUpperCase(),
+        currency: String(selectedPrice.currency || 'USD').toUpperCase(),
         maximumFractionDigits: 0,
       }).format((selectedPrice.amountInMinorUnits || 0) / 100)} / ${selectedPrice.billingInterval?.toLowerCase()}`
     : 'Currently unavailable';
@@ -175,7 +175,7 @@ const Subscription: React.FC = () => {
             <>
               <PricingCard
                 title="Free Plan"
-                price="INR 0"
+                price="$0"
                 description="For new preceptors getting started"
                 features={['Limited visibility', 'Contact hidden', 'Basic listing']}
                 ctaText="Current Plan"
@@ -199,9 +199,26 @@ const Subscription: React.FC = () => {
         </section>
 
         {!isLoading && !isPremium && !canUpgrade ? (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-            Premium checkout is temporarily unavailable because no active subscription price was returned by the backend yet.
-          </div>
+          <section className="mb-6 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 p-5 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  <span className="material-symbols-outlined">info</span>
+                </div>
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-700">Checkout Unavailable</p>
+                  <h3 className="mt-1 text-lg font-bold text-slate-900">Premium plan is visible, but billing is not ready yet.</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    We could not find an active purchasable subscription price from the backend, so checkout has been paused for now.
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-600 sm:max-w-xs">
+                <p className="font-semibold text-slate-900">What this means</p>
+                <p className="mt-1">Your plan card is available, but the backend has not exposed a checkout-ready price yet.</p>
+              </div>
+            </div>
+          </section>
         ) : null}
 
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
