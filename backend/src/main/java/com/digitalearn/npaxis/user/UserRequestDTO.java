@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.user;
 
+import com.digitalearn.npaxis.validation.ValidPassword;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.NonNull;
@@ -22,7 +24,9 @@ public record UserRequestDTO(
         @NonNull @NotBlank @NotEmpty
         String username,
         @NonNull @NotBlank @NotEmpty
+        @ValidPassword
         String password,
+        @Email(message = "Email should be a valid email format")
         String email,
         Set<Long> roles
 ) {

@@ -185,7 +185,7 @@ public class PreceptorServiceImpl implements PreceptorService {
         }
         return PreceptorContactResponseDTO.builder()
                 .phone(preceptor.getPhone())
-                .email(preceptor.getEmail())
+                .email(preceptor.getUser().getEmail())
                 .build();
     }
 

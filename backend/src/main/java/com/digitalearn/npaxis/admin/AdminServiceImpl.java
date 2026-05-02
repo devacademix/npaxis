@@ -518,7 +518,7 @@ public class AdminServiceImpl implements AdminService {
         // Admin can view contact without premium check
         return com.digitalearn.npaxis.preceptor.PreceptorContactResponseDTO.builder()
                 .phone(preceptor.getPhone())
-                .email(preceptor.getEmail())
+                .email(preceptor.getUser().getEmail())
                 .build();
     }
 
@@ -898,7 +898,7 @@ public class AdminServiceImpl implements AdminService {
         return new AdminPreceptorDetailDTO(
                 preceptor.getUserId(),
                 preceptor.getUser().getDisplayName(),
-                preceptor.getEmail(),
+                preceptor.getUser().getEmail(),
                 preceptor.getPhone(),
                 preceptor.getCredentials(),
                 preceptor.getSpecialty(),

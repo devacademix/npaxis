@@ -70,7 +70,7 @@ public class SubscriptionEmailService {
             // Initialize all lazy-loaded data in transaction context
             SubscriptionEmailData data = SubscriptionEmailData.builder()
                     .preceptorId(subscription.getPreceptor().getUserId())
-                    .preceptorName(subscription.getPreceptor().getName())
+                    .preceptorName(subscription.getPreceptor().getUser().getName())
                     .preceptorEmail(subscription.getPreceptor().getUser().getEmail())
                     .planName(subscription.getPlan().getName())
                     .billingInterval(subscription.getPrice().getBillingInterval().toString())
@@ -151,8 +151,8 @@ public class SubscriptionEmailService {
             // The async method will NOT have access to entities - only to this DTO
             SubscriptionEmailData data = SubscriptionEmailData.builder()
                     .preceptorId(subscription.getPreceptor().getUserId())
-                    .preceptorName(subscription.getPreceptor().getName())
-                    .preceptorEmail(subscription.getPreceptor().getEmail())
+                    .preceptorName(subscription.getPreceptor().getUser().getName())
+                    .preceptorEmail(subscription.getPreceptor().getUser().getEmail())
                     .planName(subscription.getPlan().getName())
                     .oldPlanName(previousSubscription.getPlan().getName())
                     .billingInterval(subscription.getPrice().getBillingInterval().toString())
@@ -236,8 +236,8 @@ public class SubscriptionEmailService {
             // Initialize all lazy-loaded data in transaction context
             SubscriptionEmailData data = SubscriptionEmailData.builder()
                     .preceptorId(subscription.getPreceptor().getUserId())
-                    .preceptorName(subscription.getPreceptor().getName())
-                    .preceptorEmail(subscription.getPreceptor().getEmail())
+                    .preceptorName(subscription.getPreceptor().getUser().getName())
+                    .preceptorEmail(subscription.getPreceptor().getUser().getEmail())
                     .planName(subscription.getPlan().getName())
                     .canceledAt(toInstant(subscription.getCanceledAt()))
                     .currentPeriodEnd(toInstant(subscription.getCurrentPeriodEnd()))

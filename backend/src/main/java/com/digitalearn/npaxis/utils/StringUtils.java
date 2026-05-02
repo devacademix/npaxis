@@ -148,5 +148,33 @@ public class StringUtils {
         String mask = "*".repeat(Math.max(0, maskLength));
         return prefix + mask + suffix;
     }
+
+    /**
+     * Converts a full name to initials.
+     * If only one name is provided, returns the first letter.
+     * If multiple names are provided, returns the first letter of each name.
+     */
+    public static String getInitials(String fullName) {
+        if (isEmpty(fullName)) {
+            return fullName;
+        }
+
+        String trimmed = trim(fullName);
+        String[] parts = trimmed.split("\\s+");
+
+        if (parts.length == 1) {
+            // Only one name, return first letter
+            return parts[0].substring(0, 1).toUpperCase();
+        }
+
+        // Multiple names, return first letter of each
+        StringBuilder initials = new StringBuilder();
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                initials.append(part.substring(0, 1).toUpperCase());
+            }
+        }
+        return initials.toString();
+    }
 }
 

@@ -64,7 +64,7 @@ public class StripeCustomerServiceImpl implements StripeCustomerService {
         }
 
         // Create new customer
-        Customer customer = createCustomer(userId, preceptor.getName(), preceptor.getEmail());
+        Customer customer = createCustomer(userId, preceptor.getUser().getName(), preceptor.getUser().getEmail());
 
         // Persist Stripe customer ID to preceptor
         preceptor.setStripeCustomerId(customer.getId());

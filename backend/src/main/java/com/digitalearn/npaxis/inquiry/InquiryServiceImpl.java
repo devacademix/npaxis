@@ -113,10 +113,10 @@ public class InquiryServiceImpl implements InquiryService {
 
     private void sendInquiryEmail(Preceptor preceptor, Student student, String message) {
         emailService.sendEmail(
-                preceptor.getEmail(),
+                preceptor.getUser().getEmail(),
                 EmailTemplate.INQUIRY_EMAIL,
                 Map.of(
-                        "preceptorName", preceptor.getName() != null ? preceptor.getName() : preceptor.getUser().getDisplayName(),
+                        "preceptorName", preceptor.getUser().getName() != null ? preceptor.getUser().getName() : preceptor.getUser().getDisplayName(),
                         "studentName", student.getUser().getDisplayName(),
                         "message", message
                 ));

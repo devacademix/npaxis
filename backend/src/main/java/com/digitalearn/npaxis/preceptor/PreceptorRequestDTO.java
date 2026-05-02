@@ -1,5 +1,6 @@
 package com.digitalearn.npaxis.preceptor;
 
+import com.digitalearn.npaxis.validation.ValidPhone;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -36,10 +37,11 @@ public record PreceptorRequestDTO(
 
         String requirements,
 
-        @Email(message = "Email must be valid")
+        @Email(message = "Email must be a valid email format")
         @Size(max = 100)
         String email,
 
+        @ValidPhone
         @Size(max = 20)
         String phone,
 

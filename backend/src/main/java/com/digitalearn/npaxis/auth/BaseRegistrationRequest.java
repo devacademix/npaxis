@@ -2,6 +2,9 @@ package com.digitalearn.npaxis.auth;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.digitalearn.npaxis.validation.ValidPassword;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
@@ -16,8 +19,15 @@ import lombok.Data;
         @JsonSubTypes.Type(value = PreceptorRegistrationRequest.class, name = "2")
 })
 public abstract class BaseRegistrationRequest {
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be a valid email format")
     private String email;
+
+    @NotBlank(message = "Password is required")
+    @ValidPassword
     private String password;
+
+    @NotBlank(message = "Display name is required")
     private String displayName;
 
     // The ID of the role in the database (1 = Student, 2 = Preceptor)

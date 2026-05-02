@@ -11,16 +11,20 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -40,14 +44,32 @@ public class Preceptor extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(length = 100)
-    private String name;
+//    @Column(length = 100)
+//    private String name;
 
-    @Column(length = 255)
-    private String credentials;
+    /**
+     * Multiple credentials (e.g., MBBS, MD, Ph.D)
+     * Uses many-to-many relationship with auto-normalization for case-insensitive handling
+     */
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "preceptor_credentials",
+            joinColumns = @JoinColumn(name = "preceptor_id"),
+            inverseJoinColumns = @JoinColumn(name = "credential_id")
+    )
+    private Set<Credential> credentials = new HashSet<>();
 
-    @Column(length = 100)
-    private String specialty;
+    /**
+     * Multiple specialties with auto-normalization for case-insensitive handling
+     * A preceptor can have multiple specialties
+     */
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "preceptor_specialties",
+            joinColumns = @JoinColumn(name = "preceptor_id"),
+            inverseJoinColumns = @JoinColumn(name = "specialty_id")
+    )
+    private Set<Specialty> specialties = new HashSet<>();
 
     @Column(length = 150)
     private String location;
@@ -68,8 +90,8 @@ public class Preceptor extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String requirements;
 
-    @Column(length = 100)
-    private String email;
+//    @Column(length = 100)
+//    private String email;
 
     @Column(length = 20)
     private String phone;

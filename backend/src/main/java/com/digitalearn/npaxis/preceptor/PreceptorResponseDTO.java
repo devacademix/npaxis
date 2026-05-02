@@ -9,8 +9,6 @@ import java.util.List;
 public record PreceptorResponseDTO(
         Long userId,
         String displayName,
-//        String email,
-//        String name,
         String credentials,
         String specialty,
         String location,
@@ -18,8 +16,6 @@ public record PreceptorResponseDTO(
         List<DayOfWeekEnum> availableDays,
         String honorarium,
         String requirements,
-//        String preceptorEmail,
-//        String phone,
         boolean isVerified,
         boolean isPremium,
         String licenseNumber,
