@@ -2,12 +2,22 @@ spring:
   application:
     name: npaxis
 
+  # ============================================
+  # External Configuration Support
+  # Allow loading configuration from external files or env vars
+  # Usage: -Dspring.config.import="file:///path/to/secrets-prod.properties"
+  # ============================================
+  config:
+    import: optional:file:${CONFIG_IMPORT_PATH:./secrets-prod.properties}
+
+  # ============================================
+  # Production Database Configuration
+  # ============================================
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
-    # Connection pool configuration for production
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -15,6 +25,9 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
+  # ============================================
+  # Production JPA/Hibernate Configuration
+  # ============================================
   jpa:
     hibernate:
       ddl-auto: validate
@@ -29,6 +42,9 @@ spring:
         order_inserts: true
         order_updates: true
 
+  # ============================================
+  # Production Mail Configuration
+  # ============================================
   mail:
     host: ${MAIL_HOST}
     port: ${MAIL_PORT}
@@ -47,6 +63,9 @@ spring:
           writetimeout: 10000
           debug: false
 
+  # ============================================
+  # Production Task Execution Configuration
+  # ============================================
   task:
     execution:
       pool:
@@ -59,44 +78,74 @@ spring:
         size: 5
       thread-name-prefix: npaxis-scheduled-
 
+# ============================================
+# Production Security Configuration
+# ============================================
 security:
   jwt:
     secret: ${JWT_SECRET}
     expiration:
-      access: ${JWT_EXPIRATION_ACCESS}
-      refresh: ${JWT_EXPIRATION_REFRESH}
+      access: ${JWT_EXPIRATION_ACCESS:900000}
+      refresh: ${JWT_EXPIRATION_REFRESH:604800000}
 
+# ============================================
+# Production NPAxis Configuration
+# ============================================
 npaxis:
   email:
     from-address: ${EMAIL_FROM_ADDRESS}
     from-name: ${EMAIL_FROM_NAME}
+  cors:
+    allowed-origins: ${NPAXIS_CORS_ALLOWED_ORIGINS:https://npaxis.com,https://www.npaxis.com}
   storage:
-    local-directory: ${STORAGE_LOCAL_DIRECTORY}
-    allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS}
+    local-directory: ${STORAGE_LOCAL_DIRECTORY:/var/app/npaxis/uploads}
+    allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS:pdf,png,jpg,jpeg,doc,docx}
     cloud:
       bucket-name: ${CLOUD_BUCKET_NAME}
       region: ${CLOUD_REGION}
       access-key: ${CLOUD_ACCESS_KEY}
       secret-key: ${CLOUD_SECRET_KEY}
 
-stripe:
-  api-key: ${STRIPE_API_KEY}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET}
-  checkout:
-    success-url: ${STRIPE_SUCCESS_URL}
-    cancel-url: ${STRIPE_CANCEL_URL}
-  portal:
-    return-url: ${STRIPE_PORTAL_RETURN_URL}
-  api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
-  max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
-  connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
-  read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:10000}
-  currency: ${STRIPE_CURRENCY:usd}
-  trial:
-    period-days: ${STRIPE_TRIAL_DAYS:14}
+# ============================================
+# Production DigitalOcean Configuration
+# ============================================
+digitalocean:
+  spaces:
+    endpoint: ${DO_SPACES_ENDPOINT:https://nyc3.digitaloceanspaces.com}
+    region: ${DO_SPACES_REGION:nyc3}
+    access-key: ${DO_SPACES_ACCESS_KEY}
+    secret-key: ${DO_SPACES_SECRET_KEY}
+    bucket-name: ${DO_SPACES_BUCKET}
+    cdn-endpoint: ${DO_SPACES_CDN_ENDPOINT}
+    max-file-size-bytes: 10485760
+    presigned-url-expiry: PT1H
+    allowed-origins:
+      - https://npaxis.com
+      - https://www.npaxis.com
 
 # ============================================
-# Logging Configuration for Production
+# Production Stripe Configuration
+# ============================================
+payment:
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+    checkout:
+      success-url: ${STRIPE_SUCCESS_URL}
+      cancel-url: ${STRIPE_CANCEL_URL}
+    portal:
+      return-url: ${STRIPE_PORTAL_RETURN_URL}
+    api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
+    max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
+    connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:10000}
+    currency: ${STRIPE_CURRENCY:usd}
+    trial:
+      period-days: ${STRIPE_TRIAL_DAYS:14}
+
+# ============================================
+# Production Logging Configuration
 # ============================================
 logging:
   level:
@@ -108,23 +157,15 @@ logging:
     org.hibernate: ERROR
     org.postgresql: WARN
     com.digitalearn.npaxis: INFO
-
-  # Log file configuration
   file:
-    name: /var/log/${spring.application.name}/${spring.application.name}.log
-    max-size: 100MB
-    max-history: 90
-    total-size-cap: 10GB
+    name: ${LOG_FILE_PATH:/var/log/npaxis}/npaxis.log
+    max-size: 10MB
+    max-history: 30
+    total-size-cap: 1GB
 
-  # Log patterns
-  pattern:
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-
-  # Logback configuration
-  config: classpath:logback-spring.xml
 
 # ============================================
-# Server Configuration
+# Production Server Configuration
 # ============================================
 server:
   port: 8080
@@ -134,4 +175,25 @@ server:
   shutdown: graceful
   servlet:
     context-path: /api/v1
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+
+# ============================================
+# Production SpringDoc/Swagger Configuration
+# ============================================
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# ============================================
+# Production Storage Configuration
+# ============================================
+storage:
+  bucket:
+    initialize: true
 

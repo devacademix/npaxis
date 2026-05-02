@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  * that can be assigned to preceptors.
  */
 @RestController
-@RequestMapping("/api/admin/credentials-specialties")
+@RequestMapping("/admin/credentials-specialties")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Admin Credentials & Specialties", description = "Admin APIs for managing preceptor credentials and specialties options")

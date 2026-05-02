@@ -170,7 +170,25 @@ public enum BusinessErrorCodes {
     JAXB_EXCEPTION_ERROR(4003, HttpStatus.INTERNAL_SERVER_ERROR, "Error during XML marshalling or unmarshalling."),
 
     // BUSINESS EXCEPTIONS
-    PRECEPTOR_NOT_PREMIUM(4003, HttpStatus.BAD_REQUEST, "Can not perform this action, this Preceptor is not premium.");
+    PRECEPTOR_NOT_PREMIUM(4003, HttpStatus.BAD_REQUEST, "Can not perform this action, this Preceptor is not premium."),
+
+    // ===== Storage/File Handling Errors =====
+    /**
+     * Indicates that a file was not found in storage.
+     */
+    STORAGE_FILE_NOT_FOUND(5001, HttpStatus.NOT_FOUND, "File not found in storage."),
+    /**
+     * Indicates that a file size exceeds the maximum allowed limit.
+     */
+    FILE_SIZE_EXCEEDED(5002, HttpStatus.BAD_REQUEST, "File size exceeds maximum allowed limit."),
+    /**
+     * Indicates that a file type is not supported or not permitted.
+     */
+    UNSUPPORTED_FILE_TYPE(5003, HttpStatus.UNSUPPORTED_MEDIA_TYPE, "File type is not supported."),
+    /**
+     * Indicates a generic storage operation error.
+     */
+    STORAGE_ERROR(5004, HttpStatus.INTERNAL_SERVER_ERROR, "Storage operation failed.");
 
     @Getter
     private final int code;
@@ -185,7 +203,7 @@ public enum BusinessErrorCodes {
      * Constructor for business error enum.
      *
      * @param code        Application-specific code.
-     * @param httpStatus  Associated HTTP status.
+     * @param httpStatus  Associated HttpStatus.
      * @param description Description of the error.
      */
     BusinessErrorCodes(int code, HttpStatus httpStatus, String description) {
