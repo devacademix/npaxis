@@ -313,6 +313,19 @@ requirements, and expected outputs.
 | `/webhooks/{eventId}`       | GET    | Get webhook event details.          | `eventId` (Path) | `WebhookEventDetailDTO`                  |
 | `/webhooks/metrics`         | GET    | Get webhook metrics and statistics. | None             | `WebhookMetricsDTO`                      |
 
+### 5.8 Admin Credentials & Specialties Management
+
+| Endpoint                                   | Method | Description                                | Input                                       | Output                             |
+|:-------------------------------------------|:-------|:-------------------------------------------|:-------------------------------------------|:-----------------------------------|
+| `/credentials-specialties/credentials`     | GET    | Get all credentials (predefined and user). | None                                        | List of `CredentialDTO`            |
+| `/credentials-specialties/credentials`     | POST   | Create a new credential.                   | `CreateCredentialRequest`                   | `CredentialDTO`                    |
+| `/credentials-specialties/credentials/{credentialId}` | PUT  | Update a credential.                       | `credentialId` (Path), `CreateCredentialRequest` | `CredentialDTO`                |
+| `/credentials-specialties/credentials/{credentialId}` | DELETE | Delete a credential.                      | `credentialId` (Path)                       | Success message                    |
+| `/credentials-specialties/specialties`     | GET    | Get all specialties (predefined and user). | None                                        | List of `SpecialtyDTO`             |
+| `/credentials-specialties/specialties`     | POST   | Create a new specialty.                    | `CreateSpecialtyRequest`                    | `SpecialtyDTO`                     |
+| `/credentials-specialties/specialties/{specialtyId}` | PUT  | Update a specialty.                        | `specialtyId` (Path), `CreateSpecialtyRequest` | `SpecialtyDTO`                 |
+| `/credentials-specialties/specialties/{specialtyId}` | DELETE | Delete a specialty.                       | `specialtyId` (Path)                        | Success message                    |
+
 ### Data Objects for Administration
 
 #### `AdminAnalyticsOverviewDTO`
@@ -492,6 +505,38 @@ requirements, and expected outputs.
 | `displayName` | `String` | Display name.      |
 | `email`       | `String` | Email address.     |
 | `role`        | `String` | Assigned role.     |
+
+#### `CredentialDTO`
+
+| Field         | Type      | Description                              |
+|:--------------|:----------|:-----------------------------------------|
+| `id`          | `Long`    | Credential ID.                           |
+| `name`        | `String`  | Name of the credential (e.g., MBBS, MD). |
+| `description` | `String`  | Description of the credential.           |
+| `isPredefined` | `boolean` | Whether credential is system-predefined. |
+
+#### `CreateCredentialRequest`
+
+| Field         | Type     | Description                    |
+|:--------------|:---------|:-------------------------------|
+| `name`        | `String` | Name of the credential.        |
+| `description` | `String` | Description of the credential. |
+
+#### `SpecialtyDTO`
+
+| Field         | Type      | Description                                       |
+|:--------------|:----------|:--------------------------------------------------|
+| `id`          | `Long`    | Specialty ID.                                    |
+| `name`        | `String`  | Name of the specialty (e.g., Cardiology).        |
+| `description` | `String`  | Description of the specialty.                    |
+| `isPredefined` | `boolean` | Whether specialty is system-predefined.          |
+
+#### `CreateSpecialtyRequest`
+
+| Field         | Type     | Description                  |
+|:--------------|:---------|:-----------------------------|
+| `name`        | `String` | Name of the specialty.       |
+| `description` | `String` | Description of the specialty. |
 
 ---
 

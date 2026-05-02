@@ -6,6 +6,24 @@ spring:
   profiles:
     active: dev
 
+  # ============================================
+  # Flyway Database Migration Configuration
+  # ============================================
+  flyway:
+    enabled: true
+    # Location of migration files
+    locations: classpath:db/migration
+    # Migration baseline version (for existing databases)
+    baseline-on-migrate: false
+    # Automatically repair checksum mismatches
+    validate-on-migrate: true
+    # SQL migration prefix
+    sql-migration-prefix: V
+    # SQL migration suffix
+    sql-migration-separator: __
+    # Placeholders for migration scripts
+    placeholders-replacement: true
+
 # ============================================
 # Logging Configuration
 # ============================================

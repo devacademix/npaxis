@@ -1,0 +1,154 @@
+-- =====================================================
+-- V2__Insert_initial_credentials.sql
+-- Seed data for system-predefined credentials
+-- =====================================================
+-- This migration populates the credentials table with
+-- standard medical credentials that are available
+-- system-wide and cannot be deleted
+-- =====================================================
+
+-- Insert standard medical credentials
+INSERT INTO credentials (name, name_normalized, description, is_predefined, created_at, last_modified_at, deleted)
+VALUES
+    (
+        'MBBS',
+        'MBBS',
+        'Bachelor of Medicine, Bachelor of Surgery - Undergraduate medical degree',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'MD',
+        'MD',
+        'Doctor of Medicine - Graduate medical degree',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'DO',
+        'DO',
+        'Doctor of Osteopathic Medicine - Medical degree focusing on musculoskeletal system',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'PhD',
+        'PHD',
+        'Doctor of Philosophy - Research doctorate',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'DNP',
+        'DNP',
+        'Doctor of Nursing Practice - Advanced nursing degree',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'PA-C',
+        'PA-C',
+        'Physician Assistant-Certified',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'NP',
+        'NP',
+        'Nurse Practitioner',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'MSN',
+        'MSN',
+        'Master of Science in Nursing',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'RN',
+        'RN',
+        'Registered Nurse',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'DDS',
+        'DDS',
+        'Doctor of Dental Surgery',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'DVM',
+        'DVM',
+        'Doctor of Veterinary Medicine',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'MPH',
+        'MPH',
+        'Master of Public Health',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'DPT',
+        'DPT',
+        'Doctor of Physical Therapy',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'BCPS',
+        'BCPS',
+        'Board Certified Pharmacotherapy Specialist',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    ),
+    (
+        'MBA',
+        'MBA',
+        'Master of Business Administration',
+        TRUE,
+        NOW(),
+        NOW(),
+        FALSE
+    );
+
+-- =====================================================
+-- Verify inserts
+-- =====================================================
+-- SELECT COUNT(*) as total_credentials FROM credentials WHERE is_predefined = TRUE AND deleted = FALSE;
+-- Expected: 15 records
+
