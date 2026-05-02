@@ -51,6 +51,7 @@ Thumbs.db
 # =========================
 .env
 secrets.properties
+secrets-*.properties
 .env.local
 .env.*.local
 *.secrets

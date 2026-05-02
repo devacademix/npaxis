@@ -8,42 +8,33 @@ spring:
 
   # ============================================
   # Flyway Database Migration Configuration
+  # Universal settings - same for all environments
   # ============================================
   flyway:
     enabled: true
-    # Location of migration files
     locations: classpath:db/migration
-    # Migration baseline version (for existing databases)
     baseline-on-migrate: false
-    # Automatically repair checksum mismatches
     validate-on-migrate: true
-    # SQL migration prefix
     sql-migration-prefix: V
-    # SQL migration suffix
     sql-migration-separator: __
-    # Placeholders for migration scripts
     placeholders-replacement: true
 
 # ============================================
-# Logging Configuration
+# Logging Configuration - Pattern Templates
+# Environment-specific levels defined in each profile
 # ============================================
 logging:
-  # Path where log files will be stored
-  file:
-    name: logs/${spring.application.name}.log
-    max-size: 100MB
-    max-history: 30
-
-  # Log level configuration
-  level:
-    root: INFO
-    com.digitalearn.npaxis: DEBUG
-
-  # Pattern for console logs
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-
-  # Logback configuration file location
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}:%line - %msg%n"
   config: classpath:logback-spring.xml
+
+# ============================================
+# CORS Configuration
+# Profile-specific overrides in application-{profile}.yml
+# ============================================
+npaxis:
+  cors:
+    allowed-origins: ${NPAXIS_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:5174}
+
 
