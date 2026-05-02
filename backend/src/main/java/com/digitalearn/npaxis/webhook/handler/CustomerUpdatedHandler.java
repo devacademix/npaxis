@@ -45,17 +45,17 @@ public class CustomerUpdatedHandler implements WebhookEventHandler {
             Preceptor preceptor = preceptorRepository.findByStripeCustomerId(customer.getId())
                     .orElse(null);
 
-            if (preceptor != null) {
-                // Sync email and name if changed
-                if (customer.getEmail() != null && !customer.getEmail().equals(preceptor.getEmail())) {
-                    preceptor.setEmail(customer.getEmail());
-                }
-                if (customer.getName() != null && !customer.getName().equals(preceptor.getName())) {
-                    preceptor.setName(customer.getName());
-                }
-                preceptorRepository.save(preceptor);
-                log.debug("Customer details synced for preceptor: {}", preceptor.getUserId());
-            }
+//            if (preceptor != null) {
+//                // Sync email and name if changed
+//                if (customer.getEmail() != null && !customer.getEmail().equals(preceptor.getUser().getEmail())) {
+//                    preceptor.setEmail(customer.getEmail());
+//                }
+//                if (customer.getName() != null && !customer.getName().equals(preceptor.getName())) {
+//                    preceptor.setName(customer.getName());
+//                }
+//                preceptorRepository.save(preceptor);
+//                log.debug("Customer details synced for preceptor: {}", preceptor.getUserId());
+//            }
 
             webhookRecord.markSucceeded();
             log.info("Customer updated successfully: {}", customer.getId());

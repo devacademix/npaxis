@@ -18,8 +18,10 @@ import com.digitalearn.npaxis.auditing.VerificationAuditLogRepository;
 import com.digitalearn.npaxis.exceptions.ResourceAlreadyExistsException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.inquiry.InquiryRepository;
+import com.digitalearn.npaxis.preceptor.CredentialService;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
+import com.digitalearn.npaxis.preceptor.SpecialtyService;
 import com.digitalearn.npaxis.preceptor.VerificationStatus;
 import com.digitalearn.npaxis.role.Role;
 import com.digitalearn.npaxis.role.RoleName;
@@ -71,6 +73,8 @@ public class AdminServiceImpl implements AdminService {
     private final SystemSettingRepository systemSettingRepository;
     private final InquiryRepository inquiryRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CredentialService credentialService;
+    private final SpecialtyService specialtyService;
 
     @Override
     @Transactional
@@ -302,11 +306,13 @@ public class AdminServiceImpl implements AdminService {
         if (updateDTO.displayName() != null) {
             preceptor.getUser().setDisplayName(updateDTO.displayName());
         }
-        if (updateDTO.credentials() != null) {
-            preceptor.setCredentials(updateDTO.credentials());
+        if (updateDTO.credentials() != null && !updateDTO.credentials().isEmpty()) {
+            preceptor.setCredentials(credentialService.getOrCreateCredentials(
+                    new java.util.HashSet<>(updateDTO.credentials())));
         }
-        if (updateDTO.specialty() != null) {
-            preceptor.setSpecialty(updateDTO.specialty());
+        if (updateDTO.specialty() != null && !updateDTO.specialty().isEmpty()) {
+            preceptor.setSpecialties(specialtyService.getOrCreateSpecialties(
+                    new java.util.HashSet<>(updateDTO.specialty())));
         }
         if (updateDTO.location() != null) {
             preceptor.setLocation(updateDTO.location());
@@ -518,7 +524,7 @@ public class AdminServiceImpl implements AdminService {
         // Admin can view contact without premium check
         return com.digitalearn.npaxis.preceptor.PreceptorContactResponseDTO.builder()
                 .phone(preceptor.getPhone())
-                .email(preceptor.getEmail())
+                .email(preceptor.getUser().getEmail())
                 .build();
     }
 
@@ -882,7 +888,12 @@ public class AdminServiceImpl implements AdminService {
         return new AdminPreceptorListDTO(
                 preceptor.getUserId(),
                 preceptor.getUser().getDisplayName(),
-                preceptor.getSpecialty(),
+                preceptor.getSpecialties() != null && !preceptor.getSpecialties().isEmpty()
+                        ? preceptor.getSpecialties().stream()
+                          .map(s -> s.getName())
+                          .sorted()
+                          .collect(Collectors.toList())
+                        : new ArrayList<>(),
                 preceptor.getLocation(),
                 preceptor.isVerified(),
                 preceptor.isPremium(),
@@ -898,10 +909,20 @@ public class AdminServiceImpl implements AdminService {
         return new AdminPreceptorDetailDTO(
                 preceptor.getUserId(),
                 preceptor.getUser().getDisplayName(),
-                preceptor.getEmail(),
+                preceptor.getUser().getEmail(),
                 preceptor.getPhone(),
-                preceptor.getCredentials(),
-                preceptor.getSpecialty(),
+                preceptor.getCredentials() != null && !preceptor.getCredentials().isEmpty()
+                        ? preceptor.getCredentials().stream()
+                          .map(c -> c.getName())
+                          .sorted()
+                          .collect(Collectors.toList())
+                        : new ArrayList<>(),
+                preceptor.getSpecialties() != null && !preceptor.getSpecialties().isEmpty()
+                        ? preceptor.getSpecialties().stream()
+                          .map(s -> s.getName())
+                          .sorted()
+                          .collect(Collectors.toList())
+                        : new ArrayList<>(),
                 preceptor.getLocation(),
                 preceptor.getSetting(),
                 preceptor.getAvailableDays() != null

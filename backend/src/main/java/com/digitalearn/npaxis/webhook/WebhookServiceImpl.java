@@ -411,7 +411,7 @@ public class WebhookServiceImpl implements WebhookService {
                     // Generate, store PDF persistently, and get storage URL
                     String invoicePdfUrl = subscriptionEmailService.generateAndStoreInvoicePdf(
                             invoiceNumber,
-                            p.getName(),
+                            p.getUser().getName(),
                             invoiceCreatedAtDt,
                             amountPaid,
                             currency,
@@ -425,7 +425,7 @@ public class WebhookServiceImpl implements WebhookService {
                     // Send async email WITH PDF attachment
                     subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
                             p.getUserId(),
-                            p.getName(),
+                            p.getUser().getName(),
                             p.getUser().getEmail(),
                             invoiceNumber,
                             amountPaid,
@@ -556,7 +556,7 @@ public class WebhookServiceImpl implements WebhookService {
                     // Generate, store PDF persistently, and get storage URL
                     String invoicePdfUrl = subscriptionEmailService.generateAndStoreInvoicePdf(
                             invoiceNumber,
-                            p.getName(),
+                            p.getUser().getName(),
                             invoiceCreatedAtDt,
                             amountPaid,
                             currency,
@@ -570,7 +570,7 @@ public class WebhookServiceImpl implements WebhookService {
                     // Send async email WITH PDF attachment
                     subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
                             p.getUserId(),
-                            p.getName(),
+                            p.getUser().getName(),
                             p.getUser().getEmail(),
                             invoiceNumber,
                             amountPaid,

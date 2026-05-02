@@ -27,6 +27,8 @@ public class PreceptorServiceImpl implements PreceptorService {
     private final PreceptorRepository preceptorRepository;
     private final PreceptorMapper preceptorMapper;
     private final StorageService storageService;
+    private final CredentialService credentialService;
+    private final SpecialtyService specialtyService;
 
     @Transactional(readOnly = true)
     @Override
@@ -78,6 +80,18 @@ public class PreceptorServiceImpl implements PreceptorService {
         Preceptor updatedPreceptor = preceptorMapper.toPreceptorEntity(preceptorRequestDto);
         updatedPreceptor.setUserId(userId);
         updatedPreceptor.setUser(existingPreceptor.getUser());
+
+        // Handle credentials - get or create based on the provided names
+        if (preceptorRequestDto.credentials() != null && !preceptorRequestDto.credentials().isEmpty()) {
+            updatedPreceptor.setCredentials(credentialService.getOrCreateCredentials(
+                    new java.util.HashSet<>(preceptorRequestDto.credentials())));
+        }
+
+        // Handle specialties - get or create based on the provided names
+        if (preceptorRequestDto.specialties() != null && !preceptorRequestDto.specialties().isEmpty()) {
+            updatedPreceptor.setSpecialties(specialtyService.getOrCreateSpecialties(
+                    new java.util.HashSet<>(preceptorRequestDto.specialties())));
+        }
 
         // Preserve statuses and flags
         updatedPreceptor.setVerified(existingPreceptor.isVerified());
@@ -185,7 +199,7 @@ public class PreceptorServiceImpl implements PreceptorService {
         }
         return PreceptorContactResponseDTO.builder()
                 .phone(preceptor.getPhone())
-                .email(preceptor.getEmail())
+                .email(preceptor.getUser().getEmail())
                 .build();
     }
 
