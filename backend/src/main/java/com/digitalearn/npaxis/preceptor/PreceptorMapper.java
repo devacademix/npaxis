@@ -5,6 +5,10 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * Mapper class for converting Preceptor entities to Preceptor DTOs and vice-versa.
  */
@@ -13,11 +17,17 @@ public abstract class PreceptorMapper {
 
     // Entity to DTO mapping
     @Mapping(target = "displayName", source = "preceptor", qualifiedByName = "mapDisplayName")
+    @Mapping(target = "credentials", source = "preceptor.credentials", qualifiedByName = "mapCredentials")
+    @Mapping(target = "specialties", source = "preceptor.specialties", qualifiedByName = "mapSpecialties")
     @Mapping(target = "isPremium", source = "preceptor.premium")
     @Mapping(target = "isVerified", source = "preceptor.verified")
     public abstract PreceptorResponseDTO toPreceptorDTO(Preceptor preceptor);
 
     // DTO to Entity mapping
+    // Note: credentials and specialties are handled by the service layer via
+    // CredentialService.getOrCreateCredentials() and SpecialtyService.getOrCreateSpecialties()
+    @Mapping(target = "credentials", ignore = true)
+    @Mapping(target = "specialties", ignore = true)
     public abstract Preceptor toPreceptorEntity(PreceptorRequestDTO preceptorRequestDto);
 
     /**
@@ -43,5 +53,35 @@ public abstract class PreceptorMapper {
 
         // If not premium, show only initials
         return StringUtils.getInitials(fullName);
+    }
+
+    /**
+     * Maps Credential entities to their string names
+     */
+    @Named("mapCredentials")
+    protected List<String> mapCredentials(Set<Credential> credentials) {
+        if (credentials == null || credentials.isEmpty()) {
+            return List.of();
+        }
+
+        return credentials.stream()
+                .map(Credential::getName)
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Maps Specialty entities to their string names
+     */
+    @Named("mapSpecialties")
+    protected List<String> mapSpecialties(Set<Specialty> specialties) {
+        if (specialties == null || specialties.isEmpty()) {
+            return List.of();
+        }
+
+        return specialties.stream()
+                .map(Specialty::getName)
+                .sorted()
+                .collect(Collectors.toList());
     }
 }

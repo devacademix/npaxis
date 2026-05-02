@@ -22,10 +22,16 @@ public class PreceptorSpecification {
     }
 
     public static Specification<Preceptor> hasSpecialty(String specialty) {
-        return (root, query, cb) ->
-                specialty == null ? null :
-                        cb.like(cb.lower(root.get("specialty")),
-                                "%" + specialty.toLowerCase() + "%");
+        return (root, query, cb) -> {
+            if (specialty == null) return null;
+
+            // Join with the specialties table (many-to-many)
+            Join<Preceptor, Specialty> specialtyJoin = root.join("specialties");
+
+            // Use case-insensitive search on normalized name
+            return cb.like(cb.lower(specialtyJoin.get("nameNormalized")),
+                    "%" + specialty.toUpperCase() + "%");
+        };
     }
 
     public static Specification<Preceptor> hasLocation(String location) {

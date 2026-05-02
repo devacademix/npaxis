@@ -9,8 +9,14 @@ import java.util.List;
 public record PreceptorResponseDTO(
         Long userId,
         String displayName,
-        String credentials,
-        String specialty,
+        /**
+         * List of credential names (e.g., ["MBBS", "MD", "Ph.D"])
+         */
+        List<String> credentials,
+        /**
+         * List of specialty names (e.g., ["Cardiology", "Internal Medicine"])
+         */
+        List<String> specialties,
         String location,
         String setting,
         List<DayOfWeekEnum> availableDays,

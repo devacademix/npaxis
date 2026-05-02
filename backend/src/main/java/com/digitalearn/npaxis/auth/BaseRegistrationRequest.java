@@ -1,8 +1,8 @@
 package com.digitalearn.npaxis.auth;
 
+import com.digitalearn.npaxis.validation.ValidPassword;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.digitalearn.npaxis.validation.ValidPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

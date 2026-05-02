@@ -6,15 +6,26 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.List;
+
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class PreceptorRegistrationRequest extends BaseRegistrationRequest {
-    @Size(max = 255, message = "Credentials cannot exceed 255 characters")
-    private String credentials;
+    /**
+     * List of credential names (case-insensitive).
+     * Example: ["MBBS", "MD"]
+     */
+    @Size(max = 10, message = "A preceptor can have at most 10 credentials")
+    private List<String> credentials;
 
-    @NotBlank(message = "Specialty is required")
-    @Size(max = 100, message = "Specialty cannot exceed 100 characters")
-    private String specialty;
+    /**
+     * List of specialty names (case-insensitive).
+     * Example: ["Cardiology", "Internal Medicine"]
+     * At least one specialty is required.
+     */
+    @NotBlank(message = "At least one specialty is required")
+    @Size(max = 5, message = "A preceptor can have at most 5 specialties")
+    private List<String> specialties;
 
     @NotBlank(message = "Location is required")
     @Size(max = 150, message = "Location cannot exceed 150 characters")
