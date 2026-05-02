@@ -48,6 +48,13 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, preceptor, onClose,
 
     try {
       setIsSubmitting(true);
+      const alreadySent = await inquiryService.hasExistingInquiryForPreceptor(preceptor.userId, preceptor.displayName);
+      if (alreadySent) {
+        const duplicateMessage = 'You have already sent an inquiry to this preceptor.';
+        setLocalError(duplicateMessage);
+        onError(duplicateMessage);
+        return;
+      }
       await inquiryService.sendInquiry({
         preceptorId: preceptor.userId,
         subject: `Inquiry for ${preceptor.displayName || `Preceptor #${preceptor.userId}`}`,
@@ -56,9 +63,10 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, preceptor, onClose,
       onSuccess('Inquiry sent successfully.');
       onClose();
     } catch (err: any) {
-      const errMessage = err?.message || 'Failed to send inquiry.';
-      setLocalError(errMessage);
-      onError(errMessage);
+      const errMessage = String(err?.message || 'Failed to send inquiry.');
+      const duplicateMessage = errMessage.toLowerCase().includes('duplicate') ? 'You have already sent an inquiry to this preceptor.' : errMessage;
+      setLocalError(duplicateMessage);
+      onError(duplicateMessage);
     } finally {
       setIsSubmitting(false);
     }

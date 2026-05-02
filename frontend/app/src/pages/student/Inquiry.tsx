@@ -65,6 +65,11 @@ const Inquiry: React.FC = () => {
 
     try {
       setIsSubmitting(true);
+      const alreadySent = await inquiryService.hasExistingInquiryForPreceptor(preceptorId, preceptor?.displayName);
+      if (alreadySent) {
+        setError('You have already sent an inquiry to this preceptor.');
+        return;
+      }
       await inquiryService.sendInquiry({
         preceptorId,
         subject: `Inquiry for ${preceptor?.displayName || `Preceptor #${preceptorId}`}`,
@@ -74,7 +79,8 @@ const Inquiry: React.FC = () => {
       setMessage('');
       window.setTimeout(() => navigate(`/student/preceptor-detail/${preceptorId}`), 1200);
     } catch (err: any) {
-      setError(err?.message || 'Failed to send inquiry.');
+      const errMessage = String(err?.message || 'Failed to send inquiry.');
+      setError(errMessage.toLowerCase().includes('duplicate') ? 'You have already sent an inquiry to this preceptor.' : errMessage);
     } finally {
       setIsSubmitting(false);
     }

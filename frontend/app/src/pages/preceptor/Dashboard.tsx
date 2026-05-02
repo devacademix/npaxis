@@ -4,6 +4,7 @@ import ChartSection, { type InteractionsDataPoint, type ViewsDataPoint } from '.
 import StatsCard from '../../components/preceptor/StatsCard';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import inquiryService, { type InquiryRecord } from '../../services/inquiry';
+import paymentService from '../../services/payment';
 import { preceptorService, type LoggedInPreceptorUser, type PreceptorStatsResponse } from '../../services/preceptor';
 
 interface DashboardStats {
@@ -62,8 +63,10 @@ const Dashboard: React.FC = () => {
   const [user, setUser] = useState<LoggedInPreceptorUser | null>(null);
   const [stats, setStats] = useState<DashboardStats>({ profileViews: 0, contactReveals: 0, inquiries: 0 });
   const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isPreceptor) return;
@@ -71,6 +74,7 @@ const Dashboard: React.FC = () => {
     const loadDashboard = async () => {
       setIsLoading(true);
       setError(null);
+      setStatusNote(null);
 
       const fallbackUserId = Number(localStorage.getItem('userId') || 0);
       const fallbackDisplayName = localStorage.getItem('displayName') || 'Preceptor';
@@ -102,12 +106,31 @@ const Dashboard: React.FC = () => {
 
       setUser(resolvedUser);
 
-      const [statsResult, inquiriesResult] = await Promise.allSettled([
-        preceptorService.getStats(resolvedUser.userId),
+      const isActivationPending = localStorage.getItem('premiumActivationPending') === 'true';
+
+      const [premiumResult, inquiriesResult] = await Promise.allSettled([
+        paymentService.checkPremiumAccess(),
         inquiryService.getMyInquiries(),
       ]);
 
-      if (statsResult.status === 'fulfilled') {
+      const premiumEnabled = premiumResult.status === 'fulfilled' && Boolean(premiumResult.value);
+
+      if (premiumResult.status === 'fulfilled') {
+        setHasPremiumAccess(premiumEnabled);
+        localStorage.setItem('isPremium', String(premiumEnabled));
+      }
+
+      if (isActivationPending && !premiumEnabled) {
+        setStatusNote('Payment received. Premium activation is still in progress, so analytics will appear once sync completes.');
+      } else if (!premiumEnabled) {
+        setStatusNote('Premium analytics are available after subscription activation.');
+      }
+
+      const statsResult = premiumEnabled
+        ? await Promise.allSettled([preceptorService.getStats(resolvedUser.userId)]).then((results) => results[0])
+        : null;
+
+      if (statsResult?.status === 'fulfilled') {
         setStats(normalizeStats(statsResult.value));
       } else {
         setStats({
@@ -127,7 +150,7 @@ const Dashboard: React.FC = () => {
       if (userResult[0].status === 'rejected' && !fallbackUserId) {
         failures.push(userResult[0].reason?.message || 'User session');
       }
-      if (statsResult.status === 'rejected') {
+      if (statsResult?.status === 'rejected') {
         failures.push(statsResult.reason?.message || 'Analytics');
       }
       if (inquiriesResult.status === 'rejected') {
@@ -136,7 +159,7 @@ const Dashboard: React.FC = () => {
 
       const meaningfulFailures = failures.filter((message) => {
         const normalized = String(message).toLowerCase();
-        return !normalized.includes('unexpected error occurred');
+        return !normalized.includes('unexpected error occurred') && !normalized.includes('not premium');
       });
 
       if (meaningfulFailures.length > 0) {
@@ -154,10 +177,11 @@ const Dashboard: React.FC = () => {
     [user?.displayName]
   );
 
-  const isPremium = useMemo(() => {
-    const roleValue = String(role || '').toUpperCase();
-    return roleValue.includes('PREMIUM') || localStorage.getItem('isPremium') === 'true';
-  }, [role]);
+  const isPremium = useMemo(() => hasPremiumAccess || localStorage.getItem('isPremium') === 'true', [hasPremiumAccess]);
+  const isActivationPending = useMemo(
+    () => !isPremium && localStorage.getItem('premiumActivationPending') === 'true',
+    [isPremium]
+  );
 
   const viewsData = useMemo(() => buildViewsSeries(stats.profileViews), [stats.profileViews]);
   const interactionsData = useMemo(
@@ -180,6 +204,12 @@ const Dashboard: React.FC = () => {
       {error ? (
         <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
+        </div>
+      ) : null}
+
+      {statusNote ? (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+          {statusNote}
         </div>
       ) : null}
 
@@ -210,10 +240,10 @@ const Dashboard: React.FC = () => {
             />
             <StatsCard
               title="Premium Status"
-              value={isPremium ? 'Active' : 'Inactive'}
-              subtitle={isPremium ? 'Premium features enabled' : 'Upgrade for better visibility'}
+              value={isPremium ? 'Active' : isActivationPending ? 'Pending' : 'Inactive'}
+              subtitle={isPremium ? 'Premium features enabled' : isActivationPending ? 'Payment received, activation in progress' : 'Upgrade for better visibility'}
               icon="workspace_premium"
-              badge={{ text: isPremium ? 'Active' : 'Inactive', tone: isPremium ? 'success' : 'neutral' }}
+              badge={{ text: isPremium ? 'Active' : isActivationPending ? 'Pending' : 'Inactive', tone: isPremium ? 'success' : 'neutral' }}
             />
           </>
         )}

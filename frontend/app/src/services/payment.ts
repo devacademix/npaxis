@@ -53,6 +53,13 @@ interface PortalSessionResponse {
   portalUrl?: string;
 }
 
+interface LegacyCheckoutPayload {
+  preceptorId: number;
+  billingCycle: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
 const unwrapApiData = <T>(response: any): T => {
   if (response?.data?.data !== undefined) {
     return response.data.data as T;
@@ -72,6 +79,7 @@ const authConfig = () => {
 
 const SUBSCRIPTION_API_PREFIX = '/api/v1/subscriptions';
 const PLAN_API_PREFIX = '/api/v1/subscription-plans';
+const LEGACY_PAYMENT_API_PREFIX = '/api/v1/payments';
 
 const extractPageItems = <T>(payload: any): T[] => {
   if (Array.isArray(payload)) return payload;
@@ -85,7 +93,7 @@ const formatHistoryItem = (item: any, index: number): PaymentHistoryItem => ({
   transactionId: String(item?.subscriptionId ?? item?.transactionId ?? `sub-${index + 1}`),
   amount: Number(item?.amountInMinorUnits ?? item?.amount ?? 0) / 100,
   status: String(item?.status ?? 'PENDING').toUpperCase(),
-  date: String(item?.endDate ?? item?.startDate ?? item?.createdAt ?? ''),
+  date: String(item?.paidDate ?? item?.invoiceDate ?? item?.currentPeriodEnd ?? item?.endDate ?? item?.startDate ?? item?.createdAt ?? item?.date ?? ''),
   invoiceUrl: item?.invoiceUrl ?? undefined,
   planName: item?.planName ?? item?.planCode ?? undefined,
 });
@@ -113,16 +121,45 @@ export const paymentService = {
     return extractPageItems<any>(payload).map(formatHistoryItem);
   },
 
-  createCheckoutSession: async (payload: { priceId: number }): Promise<string> => {
-    const response = await api.post(`${SUBSCRIPTION_API_PREFIX}/checkout`, payload, authConfig());
-    const data = unwrapApiData<CheckoutSessionResponse>(response);
-    return data?.checkoutUrl || '';
+  createCheckoutSession: async (payload: {
+    priceId?: number | null;
+    preceptorId?: number | null;
+    billingInterval?: string | null;
+    successUrl?: string;
+    cancelUrl?: string;
+  }): Promise<string> => {
+    if (payload.priceId != null) {
+      const response = await api.post(`${SUBSCRIPTION_API_PREFIX}/checkout`, { priceId: payload.priceId }, authConfig());
+      const data = unwrapApiData<CheckoutSessionResponse>(response);
+      return data?.checkoutUrl || '';
+    }
+
+    if (payload.preceptorId != null && payload.billingInterval) {
+      const legacyPayload: LegacyCheckoutPayload = {
+        preceptorId: payload.preceptorId,
+        billingCycle: String(payload.billingInterval).toUpperCase(),
+        successUrl: payload.successUrl || `${window.location.origin}/preceptor/subscription`,
+        cancelUrl: payload.cancelUrl || `${window.location.origin}/preceptor/subscription`,
+      };
+      const response = await api.post(`${LEGACY_PAYMENT_API_PREFIX}/create-checkout-session`, legacyPayload, authConfig());
+      const data = unwrapApiData<CheckoutSessionResponse>(response);
+      return data?.checkoutUrl || '';
+    }
+
+    throw new Error('No checkout configuration is available right now.');
   },
 
   createPortalSession: async (): Promise<string> => {
     const response = await api.get(`${SUBSCRIPTION_API_PREFIX}/billing-portal`, authConfig());
     const data = unwrapApiData<PortalSessionResponse>(response);
     return data?.portalUrl || '';
+  },
+
+  confirmCheckoutSession: async (sessionId: string): Promise<void> => {
+    await api.get(`${SUBSCRIPTION_API_PREFIX}/checkout/confirm`, {
+      ...authConfig(),
+      params: { sessionId },
+    });
   },
 
   cancelSubscription: async (): Promise<void> => {

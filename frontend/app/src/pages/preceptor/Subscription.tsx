@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import PricingCard from '../../components/preceptor/PricingCard';
 import paymentService, { type SubscriptionPlan, type SubscriptionStatus } from '../../services/payment';
@@ -12,16 +12,37 @@ const formatRenewalDate = (value?: string) => {
   return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const formatBillingInterval = (value?: string) => {
+  if (!value) return 'Plan';
+  const normalized = value.toUpperCase();
+  if (normalized === 'MONTHLY') return 'Monthly';
+  if (normalized === 'YEARLY' || normalized === 'ANNUAL') return 'Yearly';
+  return `${value.charAt(0).toUpperCase()}${value.slice(1).toLowerCase()}`;
+};
+
+const formatPriceSuffix = (value?: string) => {
+  if (!value) return 'plan';
+  const normalized = value.toUpperCase();
+  if (normalized === 'MONTHLY') return 'month';
+  if (normalized === 'YEARLY' || normalized === 'ANNUAL') return 'year';
+  return value.toLowerCase();
+};
+
 const Subscription: React.FC = () => {
   const role = localStorage.getItem('role');
   const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
+  const location = useLocation();
 
+  const [userId, setUserId] = useState<number | null>(null);
   const [profile, setProfile] = useState<PreceptorProfile | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isSyncingCheckout, setIsSyncingCheckout] = useState(false);
+  const [isActivationPending, setIsActivationPending] = useState(false);
+  const [selectedBillingInterval, setSelectedBillingInterval] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -33,6 +54,7 @@ const Subscription: React.FC = () => {
         setIsLoading(true);
         setError(null);
         const user = await preceptorService.getLoggedInUser();
+        setUserId(user.userId);
         const [preceptor, planList, subscriptionStatus] = await Promise.all([
           preceptorService.getPreceptorById(user.userId),
           paymentService.getSubscriptionPlans().catch(() => []),
@@ -41,6 +63,14 @@ const Subscription: React.FC = () => {
         setProfile(preceptor);
         setPlans(planList);
         setSubscription(subscriptionStatus);
+        const hasPremiumAccess = Boolean(preceptor?.isPremium || subscriptionStatus?.accessEnabled);
+        localStorage.setItem('isPremium', String(hasPremiumAccess));
+        if (hasPremiumAccess) {
+          localStorage.removeItem('premiumActivationPending');
+          setIsActivationPending(false);
+        } else {
+          setIsActivationPending(localStorage.getItem('premiumActivationPending') === 'true');
+        }
       } catch (err: any) {
         setError(err?.message || 'Failed to load subscription data.');
       } finally {
@@ -57,12 +87,114 @@ const Subscription: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [success]);
 
+  useEffect(() => {
+    if (!isPreceptor || !userId) return;
+
+    const params = new URLSearchParams(location.search);
+    const checkoutState = params.get('checkout');
+
+    if (checkoutState === 'canceled') {
+      localStorage.removeItem('premiumActivationPending');
+      setIsActivationPending(false);
+      setSuccess('Checkout was canceled. You can try again anytime.');
+      return;
+    }
+
+    if (checkoutState !== 'success') return;
+
+    let cancelled = false;
+
+    const syncCheckoutState = async () => {
+      setIsSyncingCheckout(true);
+      setIsActivationPending(true);
+      localStorage.setItem('premiumActivationPending', 'true');
+      setError(null);
+      setSuccess('Payment received. Confirming your subscription...');
+
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        if (cancelled) return;
+
+        const [preceptorResult, statusResult, accessResult] = await Promise.all([
+          preceptorService.getPreceptorById(userId).catch(() => null),
+          paymentService.getSubscriptionStatus().catch(() => null),
+          paymentService.checkPremiumAccess().catch(() => false),
+        ]);
+
+        if (cancelled) return;
+
+        if (preceptorResult) {
+          setProfile(preceptorResult);
+        }
+        if (statusResult) {
+          setSubscription(statusResult);
+        }
+
+        const hasPremiumAccess = Boolean(preceptorResult?.isPremium || statusResult?.accessEnabled || accessResult);
+        localStorage.setItem('isPremium', String(hasPremiumAccess));
+
+        if (hasPremiumAccess) {
+          localStorage.removeItem('premiumActivationPending');
+          setIsActivationPending(false);
+          setSuccess('Subscription activated successfully.');
+          setIsSyncingCheckout(false);
+          return;
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      }
+
+      setSuccess('Payment completed. Premium access is still syncing. Please refresh shortly.');
+      setIsSyncingCheckout(false);
+    };
+
+    syncCheckoutState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPreceptor, location.search, userId]);
+
   const isPremium = useMemo(() => Boolean(profile?.isPremium || subscription?.accessEnabled), [profile?.isPremium, subscription?.accessEnabled]);
   const premiumPlan = useMemo(() => plans.find((plan) => plan.active && plan.prices?.length > 0) || null, [plans]);
-  const selectedPrice = premiumPlan?.prices?.find((price) => price.active) || premiumPlan?.prices?.[0];
-  const canUpgrade = Boolean(selectedPrice?.subscriptionPriceId);
-  const currentPlan = subscription?.planName || (isPremium ? 'Premium' : 'Free');
-  const statusLabel = subscription?.status || (isPremium ? 'Active' : 'Inactive');
+  const billingOptions = useMemo(() => {
+    if (!premiumPlan?.prices?.length) return [];
+    const activePrices = premiumPlan.prices.filter((price) => price.active);
+    const source = activePrices.length > 0 ? activePrices : premiumPlan.prices;
+    return [...source].sort((left, right) => {
+      const order = ['MONTHLY', 'YEARLY', 'ANNUAL'];
+      const leftIndex = order.indexOf(String(left.billingInterval || '').toUpperCase());
+      const rightIndex = order.indexOf(String(right.billingInterval || '').toUpperCase());
+      return (leftIndex === -1 ? 99 : leftIndex) - (rightIndex === -1 ? 99 : rightIndex);
+    });
+  }, [premiumPlan]);
+
+  useEffect(() => {
+    if (!billingOptions.length) {
+      setSelectedBillingInterval('');
+      return;
+    }
+
+    const availableIntervals = billingOptions.map((price) => String(price.billingInterval || '').toUpperCase());
+    const preferredInterval = String(subscription?.billingInterval || '').toUpperCase();
+
+    if (selectedBillingInterval && availableIntervals.includes(selectedBillingInterval.toUpperCase())) {
+      return;
+    }
+
+    if (preferredInterval && availableIntervals.includes(preferredInterval)) {
+      setSelectedBillingInterval(preferredInterval);
+      return;
+    }
+
+    const monthlyOption = availableIntervals.find((interval) => interval === 'MONTHLY');
+    setSelectedBillingInterval(monthlyOption || availableIntervals[0]);
+  }, [billingOptions, selectedBillingInterval, subscription?.billingInterval]);
+
+  const selectedPrice =
+    billingOptions.find((price) => String(price.billingInterval || '').toUpperCase() === selectedBillingInterval.toUpperCase()) || billingOptions[0];
+  const canUpgrade = Boolean(selectedPrice && (selectedPrice.subscriptionPriceId != null || (userId != null && selectedPrice.billingInterval)));
+  const currentPlan = subscription?.planName || (isPremium ? 'Premium' : isActivationPending ? 'Premium' : 'Free');
+  const statusLabel = subscription?.status || (isPremium ? 'Active' : isActivationPending ? 'Activation Pending' : 'Inactive');
   const renewalDate = formatRenewalDate(subscription?.currentPeriodEnd);
 
   if (!isPreceptor) {
@@ -77,11 +209,19 @@ const Subscription: React.FC = () => {
       setError(null);
       setSuccess(null);
 
-      if (!selectedPrice?.subscriptionPriceId) {
+      if (!selectedPrice) {
         throw new Error('No active subscription plan is available right now.');
       }
 
-      const checkoutUrl = await paymentService.createCheckoutSession({ priceId: selectedPrice.subscriptionPriceId });
+      localStorage.setItem('premiumActivationPending', 'true');
+      setIsActivationPending(true);
+      const checkoutUrl = await paymentService.createCheckoutSession({
+        priceId: selectedPrice.subscriptionPriceId,
+        preceptorId: userId,
+        billingInterval: selectedPrice.billingInterval,
+        successUrl: `${window.location.origin}/preceptor/subscription`,
+        cancelUrl: `${window.location.origin}/preceptor/subscription`,
+      });
       if (!checkoutUrl) {
         throw new Error('Checkout URL not returned by server.');
       }
@@ -115,7 +255,7 @@ const Subscription: React.FC = () => {
         style: 'currency',
         currency: String(selectedPrice.currency || 'USD').toUpperCase(),
         maximumFractionDigits: 0,
-      }).format((selectedPrice.amountInMinorUnits || 0) / 100)} / ${selectedPrice.billingInterval?.toLowerCase()}`
+      }).format((selectedPrice.amountInMinorUnits || 0) / 100)} / ${formatPriceSuffix(selectedPrice.billingInterval)}`
     : 'Currently unavailable';
 
   return (
@@ -149,7 +289,7 @@ const Subscription: React.FC = () => {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</p>
-                <span className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${isPremium ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+                <span className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${isPremium ? 'bg-emerald-100 text-emerald-700' : isActivationPending ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
                   {statusLabel}
                 </span>
               </div>
@@ -186,11 +326,43 @@ const Subscription: React.FC = () => {
                 title={premiumPlan?.name || 'Premium Plan'}
                 price={premiumPriceLabel}
                 description={premiumPlan?.description || 'Built for maximum student reach and conversion'}
+                children={
+                  billingOptions.length > 1 ? (
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Billing Cycle</p>
+                      <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-slate-200">
+                        {billingOptions.map((price) => {
+                          const interval = String(price.billingInterval || '').toUpperCase();
+                          const isSelected = interval === selectedBillingInterval.toUpperCase();
+
+                          return (
+                            <button
+                              key={`${price.subscriptionPriceId ?? interval}-${interval}`}
+                              type="button"
+                              onClick={() => setSelectedBillingInterval(interval)}
+                              className={`rounded-full px-4 py-2 text-sm font-bold transition-colors ${
+                                isSelected ? 'bg-blue-700 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              {formatBillingInterval(interval)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null
+                }
                 features={['Contact visibility', 'Higher ranking', 'Analytics access', 'Priority listing']}
-                ctaText={isPremium ? 'Active Plan' : canUpgrade ? 'Upgrade Now' : 'Plan Unavailable'}
+                ctaText={
+                  isPremium
+                    ? 'Active Plan'
+                    : canUpgrade
+                      ? `Upgrade ${formatBillingInterval(selectedPrice?.billingInterval)}`
+                      : 'Plan Unavailable'
+                }
                 highlighted
                 badgeText="Most Popular"
-                disabled={isPremium || !canUpgrade}
+                disabled={isPremium || !canUpgrade || isSyncingCheckout}
                 isLoading={isUpgrading}
                 onCtaClick={handleUpgrade}
               />

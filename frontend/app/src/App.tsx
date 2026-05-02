@@ -36,6 +36,7 @@ import Landing from './pages/common/Landing';
 import Contact from './pages/common/Contact';
 import PublicBrowse from './pages/common/PublicBrowse';
 import About from './pages/common/About';
+import StripeReturn from './pages/common/StripeReturn';
 
 function App() {
   useEffect(() => {
@@ -265,6 +266,8 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/browse" element={<PublicBrowse />} />
         <Route path="/about" element={<About />} />
+        <Route path="/subscription/success" element={<StripeReturn />} />
+        <Route path="/subscription/cancel" element={<StripeReturn />} />
         <Route path="/*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

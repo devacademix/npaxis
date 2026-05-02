@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import PaymentTable from '../../components/preceptor/PaymentTable';
-import paymentService, { type PaymentHistoryItem } from '../../services/payment';
+import paymentService, { type PaymentHistoryItem, type SubscriptionStatus } from '../../services/payment';
 import { preceptorService, type PreceptorProfile } from '../../services/preceptor';
 
 const formatDate = (value?: string) => {
@@ -19,11 +19,14 @@ const Billing: React.FC = () => {
 
   const [userId, setUserId] = useState<number | null>(null);
   const [profile, setProfile] = useState<PreceptorProfile | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
+  const [isActivationPending, setIsActivationPending] = useState(false);
   const [availablePriceId, setAvailablePriceId] = useState<number | null>(null);
+  const [availableBillingInterval, setAvailableBillingInterval] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -37,17 +40,29 @@ const Billing: React.FC = () => {
         const user = await preceptorService.getLoggedInUser();
         setUserId(user.userId);
 
-        const [history, preceptor, plans] = await Promise.all([
+        const [history, preceptor, plans, subscriptionStatus, accessEnabled] = await Promise.all([
           paymentService.getPaymentHistory(user.userId).catch(() => []),
           preceptorService.getPreceptorById(user.userId),
           paymentService.getSubscriptionPlans().catch(() => []),
+          paymentService.getSubscriptionStatus().catch(() => null),
+          paymentService.checkPremiumAccess().catch(() => false),
         ]);
 
         setPayments(history);
         setProfile(preceptor);
+        setSubscription(subscriptionStatus);
+        const hasPremiumAccess = Boolean(preceptor?.isPremium || subscriptionStatus?.accessEnabled || accessEnabled);
+        localStorage.setItem('isPremium', String(hasPremiumAccess));
+        if (hasPremiumAccess) {
+          localStorage.removeItem('premiumActivationPending');
+          setIsActivationPending(false);
+        } else {
+          setIsActivationPending(localStorage.getItem('premiumActivationPending') === 'true');
+        }
         const activePlan = plans.find((plan) => plan.active && plan.prices?.length > 0);
         const activePrice = activePlan?.prices?.find((price) => price.active) || activePlan?.prices?.[0];
         setAvailablePriceId(activePrice?.subscriptionPriceId ?? null);
+        setAvailableBillingInterval(activePrice?.billingInterval ?? null);
       } catch (err: any) {
         setError(err?.message || 'Failed to load billing data.');
       } finally {
@@ -64,11 +79,15 @@ const Billing: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [success]);
 
-  const isPremium = useMemo(() => Boolean(profile?.isPremium), [profile?.isPremium]);
-  const canUpgrade = Boolean(availablePriceId);
-  const planName = isPremium ? 'Premium' : 'Free';
-  const planStatus = isPremium ? 'Active' : 'Inactive';
-  const nextBillingDate = formatDate((profile as any)?.subscriptionRenewalDate);
+  const isPremium = useMemo(() => Boolean(profile?.isPremium || subscription?.accessEnabled), [profile?.isPremium, subscription?.accessEnabled]);
+  const canUpgrade = Boolean(availablePriceId != null || (userId != null && availableBillingInterval));
+  const planName = subscription?.planName || (isPremium ? 'Premium' : isActivationPending ? 'Premium' : 'Free');
+  const planStatus = subscription?.status || (isPremium ? 'Active' : isActivationPending ? 'Activation Pending' : 'Inactive');
+  const nextBillingDate = formatDate(
+    subscription?.currentPeriodEnd ??
+      (profile as any)?.subscriptionRenewalDate ??
+      payments.find((payment) => Boolean(payment.date))?.date
+  );
 
   if (!isPreceptor) {
     return <Navigate to="/login" replace />;
@@ -108,7 +127,15 @@ const Billing: React.FC = () => {
       if (!availablePriceId) {
         throw new Error('No active subscription plan is available right now.');
       }
-      const checkoutUrl = await paymentService.createCheckoutSession({ priceId: availablePriceId });
+      localStorage.setItem('premiumActivationPending', 'true');
+      setIsActivationPending(true);
+      const checkoutUrl = await paymentService.createCheckoutSession({
+        priceId: availablePriceId,
+        preceptorId: userId,
+        billingInterval: availableBillingInterval,
+        successUrl: `${window.location.origin}/preceptor/billing`,
+        cancelUrl: `${window.location.origin}/preceptor/billing`,
+      });
       if (!checkoutUrl) {
         throw new Error('Checkout URL not returned.');
       }
@@ -162,7 +189,7 @@ const Billing: React.FC = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</p>
                 <span
                   className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                    isPremium ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                    isPremium ? 'bg-emerald-100 text-emerald-700' : isActivationPending ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
                   }`}
                 >
                   {planStatus}

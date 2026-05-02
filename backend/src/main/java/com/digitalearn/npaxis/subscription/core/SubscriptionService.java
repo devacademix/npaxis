@@ -1,5 +1,5 @@
-package com.digitalearn.npaxis.subscription.core;
 
+package com.digitalearn.npaxis.subscription.core;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

@@ -4,6 +4,7 @@ interface PricingCardProps {
   title: string;
   price: string;
   description: string;
+  children?: React.ReactNode;
   features: string[];
   ctaText: string;
   highlighted?: boolean;
@@ -17,6 +18,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
   title,
   price,
   description,
+  children,
   features,
   ctaText,
   highlighted = false,
@@ -42,6 +44,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
       <h3 className="text-2xl font-black tracking-tight text-slate-900">{title}</h3>
       <p className="mt-1 text-sm text-slate-500">{description}</p>
       <p className="mt-4 text-4xl font-black tracking-tight text-slate-900">{price}</p>
+      {children ? <div className="mt-4">{children}</div> : null}
 
       <ul className="mt-5 space-y-2">
         {features.map((feature) => (

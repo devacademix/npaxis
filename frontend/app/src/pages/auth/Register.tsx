@@ -2,6 +2,43 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth';
 
+const CREDENTIAL_OPTIONS = [
+  'MBBS', 'MD', 'DO', 'PhD', 'DNP', 'PA-C', 'NP', 'MSN', 'RN', 'DDS', 'DVM', 'MPH', 'DPT', 'BCPS', 'MBA',
+].map((value) => ({ label: value, value }));
+
+const SPECIALTY_OPTIONS = [
+  'Cardiology',
+  'Internal Medicine',
+  'Pediatrics',
+  'Surgery',
+  'Orthopedic Surgery',
+  'Neurology',
+  'Psychiatry',
+  'Obstetrics & Gynecology',
+  'Dermatology',
+  'Radiology',
+  'Pathology',
+  'Anesthesiology',
+  'Emergency Medicine',
+  'Family Medicine',
+  'Oncology',
+  'Pulmonology',
+  'Gastroenterology',
+  'Nephrology',
+  'Endocrinology',
+  'Rheumatology',
+  'Infectious Diseases',
+  'Immunology',
+  'Hematology',
+  'Ophthalmology',
+  'Otolaryngology',
+  'Urology',
+  'Neurosurgery',
+  'Psychiatry & Psychology',
+  'Nursing',
+  'Physical Therapy',
+].map((value) => ({ label: value, value }));
+
 const Register: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'student' | 'preceptor'>('student');
 
@@ -17,7 +54,7 @@ const Register: React.FC = () => {
   const [graduationYear, setGraduationYear] = useState('');
 
   // Preceptor Specific
-  const [credentials, setCredentials] = useState('');
+  const [credential, setCredential] = useState('');
   const [specialty, setSpecialty] = useState('');
   const [location, setLocation] = useState('');
 
@@ -47,13 +84,17 @@ const Register: React.FC = () => {
         };
         await authService.register(payload);
       } else {
+        if (!specialty) {
+          throw new Error('Please select at least one specialty.');
+        }
+
         const payload = {
           roleId: 2, // 2: Preceptor
           displayName: fullName,
           email,
           password,
-          specialty,
-          credentials,
+          credentials: credential ? [credential] : [],
+          specialties: [specialty],
           location,
           phone: phoneNumber
         };
@@ -191,7 +232,20 @@ const Register: React.FC = () => {
                         <label className="block text-[0.6875rem] font-bold tracking-[0.05em] uppercase text-outline">Credentials</label>
                         <div className="relative">
                           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl">verified_user</span>
-                          <input className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline-variant" placeholder="MD, NP, PA" type="text" value={credentials} onChange={(e) => setCredentials(e.target.value)} required />
+                          <select
+                            className="w-full appearance-none pl-12 pr-10 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-slate-900"
+                            value={credential}
+                            onChange={(e) => setCredential(e.target.value)}
+                            disabled={isLoading}
+                          >
+                            <option value="">Select credential</option>
+                            {CREDENTIAL_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">expand_more</span>
                         </div>
                       </div>
 
@@ -199,7 +253,21 @@ const Register: React.FC = () => {
                         <label className="block text-[0.6875rem] font-bold tracking-[0.05em] uppercase text-outline">Specialty</label>
                         <div className="relative">
                           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl">medical_services</span>
-                          <input className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline-variant" placeholder="Emergency Medicine" type="text" value={specialty} onChange={(e) => setSpecialty(e.target.value)} required />
+                          <select
+                            className="w-full appearance-none pl-12 pr-10 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-slate-900"
+                            value={specialty}
+                            onChange={(e) => setSpecialty(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          >
+                            <option value="">Select specialty</option>
+                            {SPECIALTY_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-xl pointer-events-none">expand_more</span>
                         </div>
                       </div>
 

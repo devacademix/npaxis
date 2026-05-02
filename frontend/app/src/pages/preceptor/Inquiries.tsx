@@ -34,6 +34,19 @@ const Inquiries: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
+  const formatDateTime = (value?: string) => {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const markAsRead = async (inquiryId: number) => {
     try {
       setActionError(null);
@@ -75,6 +88,7 @@ const Inquiries: React.FC = () => {
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Student</th>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Subject</th>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Message</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Received</th>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Action</th>
                 </tr>
@@ -85,6 +99,7 @@ const Inquiries: React.FC = () => {
                     <td className="px-4 py-3 text-sm font-semibold text-slate-900">{item.studentName || 'Student'}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-slate-900">{item.subject}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{item.message}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{formatDateTime(item.createdAt)}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-slate-700">{item.status}</td>
                     <td className="px-4 py-3">
                       <button

@@ -24,6 +24,19 @@ const emptyForm: PreceptorProfileFormData = {
   licenseFileUrl: '',
 };
 
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PROFILE_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+
+const parseCommaSeparatedList = (value: string): string[] =>
+  Array.from(
+    new Set(
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+
 const Profile: React.FC = () => {
   const role = localStorage.getItem('role');
   const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
@@ -32,6 +45,7 @@ const Profile: React.FC = () => {
   const [formData, setFormData] = useState<PreceptorProfileFormData>(emptyForm);
   const [initialFormData, setInitialFormData] = useState<PreceptorProfileFormData>(emptyForm);
   const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [savedProfileImageUrl, setSavedProfileImageUrl] = useState('');
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -51,6 +65,7 @@ const Profile: React.FC = () => {
         const profile = await preceptorService.getPreceptorById(user.userId);
         const imageUrl = await userService.fetchProfilePictureObjectUrl(user.userId);
         setProfileImageUrl(imageUrl || '');
+        setSavedProfileImageUrl(imageUrl || '');
         const merged: PreceptorProfileFormData = {
           fullName: profile.displayName || user.displayName || '',
           credentials: profile.credentials || '',
@@ -131,8 +146,8 @@ const Profile: React.FC = () => {
 
     const payload: PreceptorUpdatePayload = {
       name: formData.fullName.trim(),
-      credentials: formData.credentials.trim(),
-      specialty: formData.specialty.trim(),
+      credentials: parseCommaSeparatedList(formData.credentials),
+      specialties: parseCommaSeparatedList(formData.specialty),
       location: formData.location.trim(),
       setting: formData.setting.trim(),
       availableDays: formData.availableDays,
@@ -152,6 +167,7 @@ const Profile: React.FC = () => {
         await userService.uploadProfilePicture(userId, profileImageFile);
         const imageUrl = await userService.fetchProfilePictureObjectUrl(userId);
         setProfileImageUrl(imageUrl || profileImageUrl);
+        setSavedProfileImageUrl(imageUrl || profileImageUrl);
         setProfileImageFile(null);
       }
       const nextData: PreceptorProfileFormData = {
@@ -185,6 +201,8 @@ const Profile: React.FC = () => {
     setError(null);
     setSuccess(null);
     setFormData(initialFormData);
+    setProfileImageFile(null);
+    setProfileImageUrl(savedProfileImageUrl);
   };
 
   return (
@@ -227,21 +245,58 @@ const Profile: React.FC = () => {
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">Profile Picture</h2>
                   <p className="mt-1 text-sm text-slate-500">Upload a clear photo to personalize your account.</p>
-                  <label className="mt-3 inline-flex cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <label className="inline-flex cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                     Choose Image
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg"
                       className="hidden"
                       onChange={(event) => {
                         const nextFile = event.target.files?.[0] || null;
+                        if (!nextFile) {
+                          setProfileImageFile(null);
+                          return;
+                        }
+
+                        if (!ALLOWED_PROFILE_IMAGE_TYPES.includes(nextFile.type)) {
+                          setError('Please choose a PNG or JPG profile image.');
+                          event.currentTarget.value = '';
+                          return;
+                        }
+
+                        if (nextFile.size > MAX_PROFILE_IMAGE_SIZE_BYTES) {
+                          setError('Profile image must be 10 MB or smaller.');
+                          event.currentTarget.value = '';
+                          return;
+                        }
+
+                        setError(null);
+                        setSuccess(`Image selected: ${nextFile.name}`);
                         setProfileImageFile(nextFile);
                         if (nextFile) {
                           setProfileImageUrl(URL.createObjectURL(nextFile));
                         }
                       }}
                     />
-                  </label>
+                    </label>
+                    {profileImageFile ? (
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="inline-flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-60"
+                      >
+                        {isSaving ? 'Updating...' : 'Update Photo'}
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">Allowed: PNG, JPG, JPEG. Max size: 10 MB.</p>
+                  {profileImageFile ? (
+                    <p className="mt-1 text-xs font-medium text-blue-700">
+                      Ready to upload: {profileImageFile.name} ({(profileImageFile.size / (1024 * 1024)).toFixed(2)} MB)
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </section>

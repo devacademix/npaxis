@@ -271,6 +271,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             LocalDateTime periodEnd = toLocalDateTime(firstItem.getCurrentPeriodEnd());
 
             SubscriptionStatus status = mapStripeStatusToLocal(stripeSubscription.getStatus());
+            boolean accessEnabled = status == SubscriptionStatus.ACTIVE
+                    || status == SubscriptionStatus.TRIALING
+                    || (status == SubscriptionStatus.CANCELED
+                    && periodEnd != null
+                    && periodEnd.isAfter(LocalDateTime.now()));
 
             upsertSubscription(
                     preceptor.getUserId(),
@@ -283,11 +288,19 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     periodEnd
             );
 
-            if (isNew) {
-                PreceptorSubscription refreshed = subscriptionRepository
-                        .findByStripeSubscriptionId(stripeSubscriptionId)
-                        .orElseThrow();
+            PreceptorSubscription refreshed = subscriptionRepository
+                    .findByStripeSubscriptionId(stripeSubscriptionId)
+                    .orElseThrow();
+            refreshed.setStripeCustomerId(customerId);
+            refreshed.setAccessEnabled(accessEnabled);
+            subscriptionRepository.save(refreshed);
 
+            preceptor.setStripeCustomerId(customerId);
+            preceptor.setStripeSubscriptionId(stripeSubscriptionId);
+            preceptor.setPremium(accessEnabled);
+            preceptorRepository.save(preceptor);
+
+            if (isNew) {
                 subscriptionEmailService.sendSubscriptionCreatedEmail(refreshed);
             }
 
