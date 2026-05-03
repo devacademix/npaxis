@@ -497,7 +497,7 @@ public class WebhookServiceImpl implements WebhookService {
                 metadata.put("amount", invoice.getAmountDue());
                 metadata.put("currency", invoice.getCurrency() != null ? invoice.getCurrency() : "usd");
                 metadata.put("paymentStatus", "failed");
-//                metadata.put("failureReason", invoice.getLastPaymentError() != null ? invoice.getLastPaymentError().getMessage() : "unknown");
+                metadata.put("failureReason", "Payment failed - check Stripe dashboard for details");
                 analyticsService.trackBackendEvent(
                     EventType.PAYMENT_FAILED,
                     p.getUserId(),

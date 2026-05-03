@@ -1,11 +1,15 @@
 package com.digitalearn.npaxis.preceptor;
 
+import com.digitalearn.npaxis.analytics.AnalyticsService;
+import com.digitalearn.npaxis.analytics.EventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -18,6 +22,7 @@ import java.util.Set;
 public class CredentialServiceImpl implements CredentialService {
 
     private final CredentialRepository credentialRepository;
+    private final AnalyticsService analyticsService;
 
     @Override
     public Credential getOrCreateCredential(String name) {
@@ -60,7 +65,20 @@ public class CredentialServiceImpl implements CredentialService {
         credential.setName(name);
         credential.setDescription(description);
         credential.setPredefined(true);
-        return credentialRepository.save(credential);
+        Credential savedCredential = credentialRepository.save(credential);
+
+        // Track admin operation
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("credentialName", name);
+        metadata.put("credentialId", savedCredential.getId());
+        analyticsService.trackBackendEvent(
+            EventType.API_CALLED,
+            null,
+            savedCredential.getId().toString(),
+            metadata
+        );
+
+        return savedCredential;
     }
 
     @Override

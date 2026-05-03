@@ -8,6 +8,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.digitalearn.npaxis.analytics.AnalyticsService;
+import com.digitalearn.npaxis.analytics.EventType;
 import com.digitalearn.npaxis.exceptions.StorageException;
 import com.digitalearn.npaxis.exceptions.StorageFileNotFoundException;
 import com.digitalearn.npaxis.exceptions.StorageFileSizeExceededException;
@@ -29,6 +31,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.time.Duration;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -58,6 +62,7 @@ public class DigitalOceanStorageServiceImpl implements StorageService {
     private final AmazonS3 amazonS3;
     private final TransferManager transferManager;
     private final DigitalOceanStorageProperties properties;
+    private final AnalyticsService analyticsService;
 
     @Override
     public String storeFile(MultipartFile file, String subDirectory, String identifier) {
@@ -124,6 +129,19 @@ public class DigitalOceanStorageServiceImpl implements StorageService {
 
             // 7. Logging
             log.info("File stored: key={}, size={} bytes, type={}", objectKey, fileSize, contentType);
+
+            // 8. Track analytics
+            Map<String, Object> analyticsMetadata = new HashMap<>();
+            analyticsMetadata.put("fileSize", fileSize);
+            analyticsMetadata.put("contentType", contentType);
+            analyticsMetadata.put("subDirectory", subDirectory);
+            analyticsMetadata.put("uploadTimeMs", System.currentTimeMillis());
+            analyticsService.trackBackendEvent(
+                EventType.RESOURCE_UPLOADED,
+                null,
+                identifier,
+                analyticsMetadata
+            );
 
             return cdnUrl;
 
