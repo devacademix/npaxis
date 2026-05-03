@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.subscription.stripe;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.subscription.exceptions.StripeIntegrationException;
@@ -14,6 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Implementation of StripeCustomerService.
  * Handles all Stripe Customer API operations with proper error handling and transactional boundaries.
+ * <p>
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * Tracks Stripe customer operations:
+ * - API_CALLED: stripe customer creation and updates
  */
 @Slf4j
 @Service
@@ -24,6 +32,11 @@ public class StripeCustomerServiceImpl implements StripeCustomerService {
 
     @Override
     @Transactional
+    @TrackEvent(
+            eventType = EventType.API_CALLED,
+            targetIdExpression = "#userId.toString()",
+            metadataExpression = "{'apiEndpoint': 'stripe.customer.create', 'email': #email, 'status': 'success'}"
+    )
     public Customer createCustomer(Long userId, String name, String email) {
         log.info("Creating Stripe Customer for userId: {}, email: {}", userId, email);
 
@@ -49,6 +62,11 @@ public class StripeCustomerServiceImpl implements StripeCustomerService {
 
     @Override
     @Transactional
+    @TrackEvent(
+            eventType = EventType.API_CALLED,
+            targetIdExpression = "#userId.toString()",
+            metadataExpression = "{'apiEndpoint': 'stripe.customer.get_or_create', 'isExisting': #preceptor.getStripeCustomerId() != null}"
+    )
     public String getOrCreateCustomer(Long userId) {
         log.info("Getting or creating Stripe Customer for userId: {}", userId);
 

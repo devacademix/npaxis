@@ -15,10 +15,9 @@
 -- Format: INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id, stripe_price_id, active, created_at, last_modified_at, deleted)
 
 -- FREE Plan Prices
-INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id, stripe_price_id, active, created_at, last_modified_at, deleted)
-VALUES
-    (
-        (SELECT subscription_plan_id FROM subscription_plans WHERE code = 'FREE' AND deleted = FALSE),
+INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id,
+                                 stripe_price_id, active, created_at, last_modified_at, deleted)
+VALUES ((SELECT subscription_plan_id FROM subscription_plans WHERE code = 'FREE' AND deleted = FALSE),
         'MONTHLY',
         'usd',
         0,
@@ -27,10 +26,8 @@ VALUES
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        (SELECT subscription_plan_id FROM subscription_plans WHERE code = 'FREE' AND deleted = FALSE),
+        FALSE),
+       ((SELECT subscription_plan_id FROM subscription_plans WHERE code = 'FREE' AND deleted = FALSE),
         'YEARLY',
         'usd',
         0,
@@ -39,14 +36,12 @@ VALUES
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    );
+        FALSE);
 
 -- PRO Plan Prices (with user-provided Stripe IDs)
-INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id, stripe_price_id, active, created_at, last_modified_at, deleted)
-VALUES
-    (
-        (SELECT subscription_plan_id FROM subscription_plans WHERE code = 'PRO' AND deleted = FALSE),
+INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id,
+                                 stripe_price_id, active, created_at, last_modified_at, deleted)
+VALUES ((SELECT subscription_plan_id FROM subscription_plans WHERE code = 'PRO' AND deleted = FALSE),
         'MONTHLY',
         'usd',
         999,
@@ -55,10 +50,8 @@ VALUES
         TRUE,
         '2026-04-22 21:36:10.669327'::TIMESTAMP,
         '2026-04-22 21:36:10.669327'::TIMESTAMP,
-        FALSE
-    ),
-    (
-        (SELECT subscription_plan_id FROM subscription_plans WHERE code = 'PRO' AND deleted = FALSE),
+        FALSE),
+       ((SELECT subscription_plan_id FROM subscription_plans WHERE code = 'PRO' AND deleted = FALSE),
         'YEARLY',
         'usd',
         9999,
@@ -67,14 +60,12 @@ VALUES
         TRUE,
         '2026-04-22 21:36:10.669327'::TIMESTAMP,
         '2026-04-22 21:36:10.669327'::TIMESTAMP,
-        FALSE
-    );
+        FALSE);
 
 -- ELITE Plan Prices
-INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id, stripe_price_id, active, created_at, last_modified_at, deleted)
-VALUES
-    (
-        (SELECT subscription_plan_id FROM subscription_plans WHERE code = 'ELITE' AND deleted = FALSE),
+INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id,
+                                 stripe_price_id, active, created_at, last_modified_at, deleted)
+VALUES ((SELECT subscription_plan_id FROM subscription_plans WHERE code = 'ELITE' AND deleted = FALSE),
         'MONTHLY',
         'usd',
         1999,
@@ -83,10 +74,8 @@ VALUES
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        (SELECT subscription_plan_id FROM subscription_plans WHERE code = 'ELITE' AND deleted = FALSE),
+        FALSE),
+       ((SELECT subscription_plan_id FROM subscription_plans WHERE code = 'ELITE' AND deleted = FALSE),
         'YEARLY',
         'usd',
         19999,
@@ -95,8 +84,7 @@ VALUES
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    );
+        FALSE);
 
 -- =====================================================
 -- Verify inserts

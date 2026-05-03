@@ -1,8 +1,8 @@
 package com.digitalearn.npaxis.storage.init;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CreateBucketRequest;
-import com.amazonaws.AmazonServiceException;
 import com.digitalearn.npaxis.storage.config.DigitalOceanStorageProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * Application startup initializer for DigitalOcean Spaces bucket.
  * Checks if the configured bucket exists and creates it if necessary.
  * Also applies CORS configuration for the bucket.
- *
+ * <p>
  * Disabled by default in development to avoid bucket creation errors with dummy credentials.
  * Enable via: -Dstorage.bucket.initialize=true or STORAGE_BUCKET_INITIALIZE=true
  */

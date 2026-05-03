@@ -16,7 +16,9 @@ public record SubscriptionDetailResponse(
         LocalDateTime trialEndsAt,
         boolean cancelAtPeriodEnd,
         LocalDateTime canceledAt,
-        String canceledReason
+        String canceledReason,
+        boolean cancelled,
+        LocalDateTime nextBillingDate
 ) {
 }
 

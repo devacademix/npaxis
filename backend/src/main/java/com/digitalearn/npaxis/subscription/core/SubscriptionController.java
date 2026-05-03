@@ -44,6 +44,7 @@ import static com.digitalearn.npaxis.utils.APIConstants.UPDATE_SUBSCRIPTION_API;
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
+    private final SubscriptionEventService eventService;
 
     @Operation(summary = "Create checkout session", description = "Initiates subscription via Stripe checkout")
     @ApiResponse(responseCode = "201", description = "Checkout session created successfully")
@@ -167,6 +168,29 @@ public class SubscriptionController {
         return ResponseHandler.generateResponse(
                 Map.of("hasAccess", hasAccess),
                 "Premium access verified",
+                true,
+                HttpStatus.OK
+        );
+    }
+
+    @Operation(
+            summary = "Get subscription event history",
+            description = "Retrieve audit trail of all subscription lifecycle events for the current user"
+    )
+    @ApiResponse(responseCode = "200", description = "Event history retrieved successfully")
+    @GetMapping("/events")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<GenericApiResponse<Page<SubscriptionEventResponse>>> getSubscriptionEventHistory(
+            @AuthenticationPrincipal User loggedInUser,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        log.info("Fetching subscription event history for preceptor: {}", loggedInUser.getUserId());
+        Page<SubscriptionEvent> events = eventService.getPreceptorEventHistory(loggedInUser.getUserId(), pageable);
+        Page<SubscriptionEventResponse> response = events.map(SubscriptionEventResponse::fromEntity);
+        return ResponseHandler.<Page<SubscriptionEventResponse>>generatePaginatedResponse(
+                response,
+                response,
+                "Subscription event history retrieved successfully",
                 true,
                 HttpStatus.OK
         );

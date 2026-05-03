@@ -27,9 +27,9 @@ public class StorageFileSizeExceededException extends BusinessException {
     /**
      * Constructor that initializes the exception with custom message, file size, and max allowed size.
      *
-     * @param message     Custom message describing the error.
-     * @param fileSize    The actual size of the file in bytes.
-     * @param maxAllowed  The maximum allowed file size in bytes.
+     * @param message    Custom message describing the error.
+     * @param fileSize   The actual size of the file in bytes.
+     * @param maxAllowed The maximum allowed file size in bytes.
      */
     public StorageFileSizeExceededException(String message, long fileSize, long maxAllowed) {
         super(CODE, message);
@@ -40,10 +40,10 @@ public class StorageFileSizeExceededException extends BusinessException {
     /**
      * Constructor that initializes the exception with custom message, cause, file size, and max allowed size.
      *
-     * @param message     Custom message describing the error.
-     * @param cause       The root cause exception.
-     * @param fileSize    The actual size of the file in bytes.
-     * @param maxAllowed  The maximum allowed file size in bytes.
+     * @param message    Custom message describing the error.
+     * @param cause      The root cause exception.
+     * @param fileSize   The actual size of the file in bytes.
+     * @param maxAllowed The maximum allowed file size in bytes.
      */
     public StorageFileSizeExceededException(String message, Throwable cause, long fileSize, long maxAllowed) {
         super(CODE, message);

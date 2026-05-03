@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.subscription.payment;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.subscription.BillingCycle;
@@ -30,6 +32,11 @@ public class StripePaymentServiceImpl implements PaymentGatewayService {
     }
 
     @Override
+    @TrackEvent(
+            eventType = EventType.SUBSCRIPTION_PAGE_VIEWED,
+            targetIdExpression = "#request.preceptorId().toString()",
+            metadataExpression = "{'billingCycle': #request.billingCycle().name(), 'isExistingCustomer': #preceptor.getStripeCustomerId() != null}"
+    )
     public CheckoutSessionResponse createCheckoutSession(CheckoutSessionRequest request) {
 
         Preceptor preceptor = preceptorRepository.findById(request.preceptorId())
