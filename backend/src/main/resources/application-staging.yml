@@ -2,6 +2,9 @@ spring:
   application:
     name: npaxis
 
+  # ============================================
+  # Staging Database Configuration
+  # ============================================
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -14,6 +17,9 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
+  # ============================================
+  # Staging JPA/Hibernate Configuration
+  # ============================================
   jpa:
     hibernate:
       ddl-auto: validate
@@ -23,6 +29,9 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         generate_statistics: false
 
+  # ============================================
+  # Staging Mail Configuration
+  # ============================================
   mail:
     host: ${MAIL_HOST}
     port: ${MAIL_PORT}
@@ -41,6 +50,9 @@ spring:
           writetimeout: 10000
           debug: false
 
+  # ============================================
+  # Staging Task Execution Configuration
+  # ============================================
   task:
     execution:
       pool:
@@ -49,6 +61,9 @@ spring:
         queue-capacity: 250
       thread-name-prefix: npaxis-async-
 
+# ============================================
+# Staging Security Configuration
+# ============================================
 security:
   jwt:
     secret: ${JWT_SECRET}
@@ -56,10 +71,15 @@ security:
       access: ${JWT_EXPIRATION_ACCESS}
       refresh: ${JWT_EXPIRATION_REFRESH}
 
+# ============================================
+# Staging NPAxis Configuration
+# ============================================
 npaxis:
   email:
     from-address: ${EMAIL_FROM_ADDRESS}
     from-name: ${EMAIL_FROM_NAME}
+  cors:
+    allowed-origins: ${NPAXIS_CORS_ALLOWED_ORIGINS:https://staging.npaxis.com,https://www.staging.npaxis.com}
   storage:
     local-directory: ${STORAGE_LOCAL_DIRECTORY}
     allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS}
@@ -69,24 +89,45 @@ npaxis:
       access-key: ${CLOUD_ACCESS_KEY}
       secret-key: ${CLOUD_SECRET_KEY}
 
-stripe:
-  api-key: ${STRIPE_API_KEY}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET}
-  checkout:
-    success-url: ${STRIPE_SUCCESS_URL}
-    cancel-url: ${STRIPE_CANCEL_URL}
-  portal:
-    return-url: ${STRIPE_PORTAL_RETURN_URL}
-  api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
-  max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
-  connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
-  read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:10000}
-  currency: ${STRIPE_CURRENCY:usd}
-  trial:
-    period-days: ${STRIPE_TRIAL_DAYS:14}
+# ============================================
+# Staging DigitalOcean Configuration
+# ============================================
+digitalocean:
+  spaces:
+    endpoint: ${DO_SPACES_ENDPOINT:https://nyc3.digitaloceanspaces.com}
+    region: ${DO_SPACES_REGION:nyc3}
+    access-key: ${DO_SPACES_ACCESS_KEY}
+    secret-key: ${DO_SPACES_SECRET_KEY}
+    bucket-name: ${DO_SPACES_BUCKET}
+    cdn-endpoint: ${DO_SPACES_CDN_ENDPOINT}
+    max-file-size-bytes: 10485760
+    presigned-url-expiry: PT1H
+    allowed-origins:
+      - https://staging.npaxis.com
 
 # ============================================
-# Logging Configuration for Staging
+# Staging Stripe Configuration
+# ============================================
+payment:
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+    checkout:
+      success-url: ${STRIPE_SUCCESS_URL}
+      cancel-url: ${STRIPE_CANCEL_URL}
+    portal:
+      return-url: ${STRIPE_PORTAL_RETURN_URL}
+    api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
+    max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
+    connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:10000}
+    currency: ${STRIPE_CURRENCY:usd}
+    trial:
+      period-days: ${STRIPE_TRIAL_DAYS:14}
+
+# ============================================
+# Staging Logging Configuration
 # ============================================
 logging:
   level:
@@ -99,23 +140,9 @@ logging:
     org.postgresql: INFO
     com.digitalearn.npaxis: DEBUG
 
-  # Log file configuration
-  file:
-    name: /var/log/${spring.application.name}/${spring.application.name}.log
-    max-size: 100MB
-    max-history: 60
-    total-size-cap: 8GB
-
-  # Log patterns
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}:%line - %msg%n"
-
-  # Logback configuration
-  config: classpath:logback-spring.xml
 
 # ============================================
-# Server Configuration
+# Staging Server Configuration
 # ============================================
 server:
   port: 8080
@@ -125,4 +152,22 @@ server:
   shutdown: graceful
   servlet:
     context-path: /api/v1
+
+# ============================================
+# Staging SpringDoc/Swagger Configuration
+# Can be enabled for testing but should be disabled before prod
+# ============================================
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# ============================================
+# Staging Storage Configuration
+# Bucket initialization enabled to test with real credentials
+# ============================================
+storage:
+  bucket:
+    initialize: true
 

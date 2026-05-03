@@ -32,7 +32,7 @@ import static com.digitalearn.npaxis.utils.APIConstants.WEBHOOK_EVENTS_API;
  * Handles signature verification and event processing
  */
 @RestController
-@RequestMapping(BASE_API + "/" + WEBHOOKS_API)
+@RequestMapping( WEBHOOKS_API)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Webhooks", description = "Webhook endpoints for Stripe events")

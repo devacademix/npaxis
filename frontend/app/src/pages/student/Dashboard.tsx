@@ -200,6 +200,14 @@ const Dashboard: React.FC = () => {
               <span className="material-symbols-outlined text-base">favorite</span>
               View Saved
             </button>
+            <button
+              type="button"
+              onClick={() => navigate('/student/inquiries')}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <span className="material-symbols-outlined text-base">forum</span>
+              My Inquiries
+            </button>
           </div>
         </section>
 

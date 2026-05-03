@@ -3,8 +3,6 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import Card from '../../components/Card';
 import { type RevenueChartPoint } from '../../components/admin/RevenueChart';
 import { adminService, type PendingPreceptorView } from '../../services/admin';
-import { preceptorService } from '../../services/preceptor';
-import { studentService, type StudentProfile } from '../../services/student';
 
 interface DashboardStats {
   totalUsers: number;
@@ -57,10 +55,12 @@ const buildGrowthTrend = (pendingPreceptors: PendingPreceptorView[]) => {
   }));
 };
 
-const buildRevenueSources = (students: StudentProfile[], preceptorCount: number): RevenueSourceEntry[] => {
-  const normalizedStudents = students.length;
-  const institutionCount =
-    new Set(students.map((student) => student.university?.trim() || 'Unknown')).size || 1;
+const buildRevenueSources = (
+  totalUsers: number,
+  preceptorCount: number,
+  premiumUsers: number
+): RevenueSourceEntry[] => {
+  const normalizedStudents = Math.max(totalUsers - preceptorCount, 0);
 
   return [
     {
@@ -76,9 +76,9 @@ const buildRevenueSources = (students: StudentProfile[], preceptorCount: number)
       colorClass: 'bg-gradient-to-r from-indigo-500 to-indigo-400',
     },
     {
-      label: 'Institutions',
-      value: institutionCount,
-      description: `${institutionCount.toLocaleString()} unique campuses`,
+      label: 'Premium',
+      value: premiumUsers,
+      description: `${premiumUsers.toLocaleString()} premium accounts active`,
       colorClass: 'bg-gradient-to-r from-emerald-500 to-emerald-400',
     },
   ];
@@ -151,37 +151,51 @@ const Dashboard: React.FC = () => {
       setInsightsLoading(true);
       setInsightsError(null);
       try {
-        const [students, pending, preceptorOverview] = await Promise.all([
-          studentService.getActiveStudents(),
+        const [pending, overview] = await Promise.all([
           adminService.getPendingPreceptors({ size: 120 }),
-          preceptorService.searchPreceptors({ size: 1 }),
+          adminService.getDashboardOverview(),
         ]);
 
         setGrowthTrend(buildGrowthTrend(pending));
-        setRevenueSources(buildRevenueSources(students, preceptorOverview.totalElements));
+        setRevenueSources(
+          buildRevenueSources(
+            Number(overview?.totalUsers ?? stats?.totalUsers ?? 0),
+            Number(overview?.totalPreceptors ?? stats?.activePreceptors ?? 0),
+            Number(overview?.activeSubscriptions ?? overview?.verifiedPreceptors ?? stats?.premiumUsers ?? 0)
+          )
+        );
       } catch (err: any) {
-        setInsightsError(err?.message || 'Unable to load live insights.');
+        const message = String(err?.message || '');
+        const lowerMessage = message.toLowerCase();
+        const isPermissionIssue =
+          lowerMessage.includes('permission') ||
+          lowerMessage.includes('forbidden') ||
+          lowerMessage.includes('unauthorized');
+
+        setInsightsError(isPermissionIssue ? null : message || 'Unable to load live insights.');
         setGrowthTrend(buildGrowthTrend([]));
-        setRevenueSources(buildRevenueSources([], 0));
+        setRevenueSources(
+          buildRevenueSources(stats?.totalUsers ?? 0, stats?.activePreceptors ?? 0, stats?.premiumUsers ?? 0)
+        );
       } finally {
         setInsightsLoading(false);
       }
     };
 
     loadInsights();
-  }, []);
+  }, [stats?.activePreceptors, stats?.premiumUsers, stats?.totalUsers]);
 
   const renderSkeletons = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+    <div className="grid grid-cols-1 gap-6 mb-10 md:grid-cols-2 lg:grid-cols-4">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="bg-surface-container-lowest p-6 rounded-xl border border-transparent animate-pulse">
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 rounded-lg bg-slate-200"></div>
-              <div className="w-10 h-4 bg-slate-200 rounded-full"></div>
-            </div>
-            <div className="h-3 w-1/2 bg-slate-200 mb-2 rounded"></div>
-            <div className="h-8 w-3/4 bg-slate-200 mt-2 mb-2 rounded"></div>
-            <div className="h-2 w-1/3 bg-slate-200 rounded"></div>
+          <div className="flex justify-between items-start mb-4">
+            <div className="w-12 h-12 rounded-lg bg-slate-200" />
+            <div className="w-10 h-4 bg-slate-200 rounded-full" />
+          </div>
+          <div className="h-3 w-1/2 bg-slate-200 mb-2 rounded" />
+          <div className="h-8 w-3/4 bg-slate-200 mt-2 mb-2 rounded" />
+          <div className="h-2 w-1/3 bg-slate-200 rounded" />
         </div>
       ))}
     </div>
@@ -192,7 +206,7 @@ const Dashboard: React.FC = () => {
       <div className="mb-10 flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight text-on-surface mb-2 font-headline">Admin Dashboard</h1>
-          <p className="text-slate-500 font-medium">Welcome back, Sarah. Here's what's happening across NPaxis today.</p>
+          <p className="text-slate-500 font-medium">Welcome back, Sarah. Here&apos;s what&apos;s happening across NPaxis today.</p>
         </div>
         <button
           type="button"
@@ -211,9 +225,9 @@ const Dashboard: React.FC = () => {
             <h3 className="font-bold">Error Loading Dashboard Data</h3>
             <p className="text-sm opacity-90">{error}</p>
           </div>
-          <button 
-             onClick={() => window.location.reload()}
-             className="ml-auto text-sm font-bold bg-white/50 px-4 py-2 rounded-md hover:bg-white transition-colors"
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-auto text-sm font-bold bg-white/50 px-4 py-2 rounded-md hover:bg-white transition-colors"
           >
             Retry
           </button>
@@ -221,26 +235,25 @@ const Dashboard: React.FC = () => {
       )}
 
       {isLoading ? renderSkeletons() : (
-       <>
-         {!error && stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <Card title="Total Users" value={stats.totalUsers.toLocaleString()} subtitle="vs. 11,116 last month" trendText="+12%" icon="group" colorClass="bg-blue-50 text-blue-700" />
-            <Card title="Premium Users" value={stats.premiumUsers.toLocaleString()} subtitle="25.7% conversion rate" trendText="+8%" icon="verified" colorClass="bg-indigo-50 text-indigo-700" />
-            <Card title="Monthly Revenue" value={`$${stats.revenue.toLocaleString()}`} subtitle="New record high" trendText="+15%" icon="payments" colorClass="bg-emerald-50 text-emerald-700" />
-            <Card title="Active Preceptors" value={stats.activePreceptors.toLocaleString()} subtitle="across 42 specialties" trendText="+5%" icon="medical_services" colorClass="bg-amber-50 text-amber-700" />
-          </div>
-         )}
-         
-         {/* If backend api fails, we show mock data here just for layout demonstration */}
-         {error && !stats && (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 opacity-60 grayscale pointer-events-none">
-             <Card title="Total Users" value="12,450" subtitle="vs. 11,116 last month" trendText="+12%" icon="group" colorClass="bg-blue-50 text-blue-700" />
-             <Card title="Premium Users" value="3,210" subtitle="25.7% conversion rate" trendText="+8%" icon="verified" colorClass="bg-indigo-50 text-indigo-700" />
-             <Card title="Monthly Revenue" value="$92,450" subtitle="New record high" trendText="+15%" icon="payments" colorClass="bg-emerald-50 text-emerald-700" />
-             <Card title="Active Preceptors" value="845" subtitle="across 42 specialties" trendText="+5%" icon="medical_services" colorClass="bg-amber-50 text-amber-700" />
-           </div>
-         )}
-       </>
+        <>
+          {!error && stats && (
+            <div className="grid grid-cols-1 gap-6 mb-10 md:grid-cols-2 lg:grid-cols-4">
+              <Card title="Total Users" value={stats.totalUsers.toLocaleString()} subtitle="vs. 11,116 last month" trendText="+12%" icon="group" colorClass="bg-blue-50 text-blue-700" />
+              <Card title="Premium Users" value={stats.premiumUsers.toLocaleString()} subtitle="25.7% conversion rate" trendText="+8%" icon="verified" colorClass="bg-indigo-50 text-indigo-700" />
+              <Card title="Monthly Revenue" value={`$${stats.revenue.toLocaleString()}`} subtitle="New record high" trendText="+15%" icon="payments" colorClass="bg-emerald-50 text-emerald-700" />
+              <Card title="Active Preceptors" value={stats.activePreceptors.toLocaleString()} subtitle="across 42 specialties" trendText="+5%" icon="medical_services" colorClass="bg-amber-50 text-amber-700" />
+            </div>
+          )}
+
+          {error && !stats && (
+            <div className="grid grid-cols-1 gap-6 mb-10 opacity-60 grayscale pointer-events-none md:grid-cols-2 lg:grid-cols-4">
+              <Card title="Total Users" value="12,450" subtitle="vs. 11,116 last month" trendText="+12%" icon="group" colorClass="bg-blue-50 text-blue-700" />
+              <Card title="Premium Users" value="3,210" subtitle="25.7% conversion rate" trendText="+8%" icon="verified" colorClass="bg-indigo-50 text-indigo-700" />
+              <Card title="Monthly Revenue" value="$92,450" subtitle="New record high" trendText="+15%" icon="payments" colorClass="bg-emerald-50 text-emerald-700" />
+              <Card title="Active Preceptors" value="845" subtitle="across 42 specialties" trendText="+5%" icon="medical_services" colorClass="bg-amber-50 text-amber-700" />
+            </div>
+          )}
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
@@ -252,13 +265,13 @@ const Dashboard: React.FC = () => {
               <option>Last Year</option>
             </select>
           </div>
-          
+
           <div className="h-64 flex items-end gap-4 relative">
             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-              <div className="border-b border-slate-100 w-full h-0"></div>
-              <div className="border-b border-slate-100 w-full h-0"></div>
-              <div className="border-b border-slate-100 w-full h-0"></div>
-              <div className="border-b border-slate-100 w-full h-0"></div>
+              <div className="border-b border-slate-100 w-full h-0" />
+              <div className="border-b border-slate-100 w-full h-0" />
+              <div className="border-b border-slate-100 w-full h-0" />
+              <div className="border-b border-slate-100 w-full h-0" />
             </div>
 
             {displayTrend.map((point) => {
@@ -293,7 +306,7 @@ const Dashboard: React.FC = () => {
             <p className="mt-3 text-xs font-semibold text-rose-600">{insightsError}</p>
           )}
         </div>
-        
+
         <div className="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
           <h4 className="text-lg font-bold text-on-surface mb-6">Revenue Sources</h4>
           <div className="space-y-5">
@@ -304,7 +317,7 @@ const Dashboard: React.FC = () => {
                   <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <span>{source.label}</span>
                     <span className="text-slate-700">
-                      {source.value.toLocaleString()} · {percent.toFixed(0)}%
+                      {source.value.toLocaleString()} | {percent.toFixed(0)}%
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400">{source.description}</p>
@@ -328,7 +341,7 @@ const Dashboard: React.FC = () => {
           <div className="mt-10 p-4 rounded-xl bg-blue-50 border border-blue-100">
             <p className="text-[11px] text-blue-800 font-semibold leading-relaxed">
               <span className="material-symbols-outlined text-sm inline-block mr-1">trending_up</span>
-              Revenue segments are generated from remote data (learners, preceptors, and institutions) and update in real time.
+              Revenue segments are generated from live admin data and gracefully fall back when a restricted feed is unavailable.
             </p>
           </div>
         </div>

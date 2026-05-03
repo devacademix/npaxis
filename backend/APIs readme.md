@@ -131,17 +131,17 @@ requirements, and expected outputs.
 
 ## 3. Preceptor Management (`/preceptors`)
 
-| Endpoint                             | Method | Description                              | Input                                  | Output                                   |
-|:-------------------------------------|:-------|:-----------------------------------------|:---------------------------------------|:-----------------------------------------|
-| `/search`                            | GET    | Search and filter preceptors.            | Query params                           | Paginated list of `PreceptorResponseDTO` |
-| `/active/preceptor-{userId}`         | GET    | Fetches preceptor by ID.                 | `userId` (Path)                        | `PreceptorResponseDTO`                   |
-| `/preceptor-{userId}`                | PUT    | Updates preceptor details.               | `userId` (Path), `PreceptorRequestDTO` | `PreceptorResponseDTO`                   |
-| `/soft-delete/preceptor-{userId}`    | DELETE | Deactivates a preceptor.                 | `userId` (Path)                        | Success message                          |
-| `/hard-delete/preceptor-{userId}`    | DELETE | Permanently deletes a preceptor (Admin). | `userId` (Path)                        | Success message                          |
-| `/restore/preceptor-{userId}`        | PUT    | Restores a soft-deleted preceptor.       | `userId` (Path)                        | Success message                          |
-| `/verify/preceptor-{userId}`         | PUT    | Verifies a preceptor (Admin).            | `userId` (Path)                        | `PreceptorResponseDTO`                   |
-| `/preceptor-{userId}/submit-license` | POST   | Submits license for verification.        | `userId` (Path), `PreceptorRequestDTO` | `PreceptorResponseDTO`                   |
-| `/preceptor-{userId}/reveal-contact` | POST   | Reveals preceptor contact (Premium).     | `userId` (Path)                        | `PreceptorContactResponseDTO`            |
+| Endpoint                                    | Method | Description                              | Input                                  | Output                                   |
+|:--------------------------------------------|:-------|:-----------------------------------------|:---------------------------------------|:-----------------------------------------|
+| `/search`                                   | GET    | Search and filter preceptors.            | Query params                           | Paginated list of `PreceptorResponseDTO` |
+| `/active/preceptor-{userId}`                | GET    | Fetches preceptor by ID.                 | `userId` (Path)                        | `PreceptorResponseDTO`                   |
+| `/preceptor-{userId}`                       | PUT    | Updates preceptor details.               | `userId` (Path), `PreceptorRequestDTO` | `PreceptorResponseDTO`                   |
+| `/soft-delete/preceptor-{userId}`           | DELETE | Deactivates a preceptor.                 | `userId` (Path)                        | Success message                          |
+| `/hard-delete/preceptor-{userId}`           | DELETE | Permanently deletes a preceptor (Admin). | `userId` (Path)                        | Success message                          |
+| `/restore/preceptor-{userId}`               | PUT    | Restores a soft-deleted preceptor.       | `userId` (Path)                        | Success message                          |
+| `/verify/preceptor-{userId}`                | PUT    | Verifies a preceptor (Admin).            | `userId` (Path)                        | `PreceptorResponseDTO`                   |
+| `/preceptor-{userId}/submit-license`        | POST   | Submits license for verification.        | `userId` (Path), `PreceptorRequestDTO` | `PreceptorResponseDTO`                   |
+| `/active/preceptor-{userId}/reveal-contact` | GET    | Reveals preceptor contact (Premium).     | `userId` (Path)                        | `PreceptorContactResponseDTO`            |
 
 ### Data Objects
 
@@ -276,55 +276,55 @@ requirements, and expected outputs.
 
 ### 5.5 Admin Preceptor Management
 
-| Endpoint                                              | Method | Description                                       | Input                                                   | Output                                    |
-|:------------------------------------------------------|:-------|:--------------------------------------------------|:--------------------------------------------------------|:------------------------------------------|
-| `/preceptors`                                         | GET    | List all preceptors (admin view).                 | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/search`                                  | GET    | Search and filter preceptors (admin view).        | `specialty`, `location`, `verificationStatus`, Pageable | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/approved`                                | GET    | Get approved preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/rejected`                                | GET    | Get rejected preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
-| `/preceptors/preceptor-{userId}`                      | GET    | Get preceptor detail (admin view).                | `userId` (Path)                                         | `AdminPreceptorDetailDTO`                 |
-| `/preceptors/preceptor-{userId}`                      | PUT    | Update preceptor (admin).                         | `userId` (Path), `AdminPreceptorDetailDTO`              | `AdminPreceptorDetailDTO`                 |
-| `/preceptors/preceptor-{userId}/verification-history` | GET    | Get verification history for preceptor.           | `userId` (Path)                                         | List of `VerificationHistoryDTO`          |
-| `/preceptors/preceptor-{userId}/notes`                | POST   | Add verification note to preceptor.               | `userId` (Path), `note`, `noteType` (Query)             | Success message                           |
-| `/preceptors/preceptor-{userId}/reject`               | POST   | Reject preceptor with rejection reason.           | `userId` (Path), `reason` (Query)                       | Success message                           |
-| `/preceptors/preceptor-{userId}/billing-report`       | GET    | Get preceptor billing report.                     | `userId` (Path)                                         | `PreceptorBillingReportDTO`               |
-| `/preceptors/preceptor-{userId}/analytics`            | GET    | Get preceptor analytics.                          | `userId` (Path)                                         | `PreceptorAnalyticsDTO`                   |
-| `/preceptors/preceptor-{userId}/contact`              | GET    | Get preceptor contact (admin - no premium check). | `userId` (Path)                                         | `PreceptorContactResponseDTO`             |
-| `/preceptors/preceptor-{userId}/license/download`     | GET    | Download preceptor license file (admin).          | `userId` (Path)                                         | License file (PDF Resource)               |
-| `/preceptors/preceptor-{userId}/license/view`         | GET    | View preceptor license image (admin).             | `userId` (Path)                                         | License image (Resource)                  |
+| Endpoint                                    | Method | Description                                       | Input                                                   | Output                                    |
+|:--------------------------------------------|:-------|:--------------------------------------------------|:--------------------------------------------------------|:------------------------------------------|
+| `/preceptors/list`                          | GET    | List all preceptors (admin view).                 | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/list/search`                   | GET    | Search and filter preceptors (admin view).        | `specialty`, `location`, `verificationStatus`, Pageable | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/verified/approved`             | GET    | Get approved preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/verified/rejected`             | GET    | Get rejected preceptors.                          | Pageable params                                         | Paginated list of `AdminPreceptorListDTO` |
+| `/preceptors/detail-{userId}`               | GET    | Get preceptor detail (admin view).                | `userId` (Path)                                         | `AdminPreceptorDetailDTO`                 |
+| `/preceptors/update-{userId}`               | PUT    | Update preceptor (admin).                         | `userId` (Path), `AdminPreceptorDetailDTO`              | `AdminPreceptorDetailDTO`                 |
+| `/preceptors/{userId}/verification-history` | GET    | Get verification history for preceptor.           | `userId` (Path)                                         | List of `VerificationHistoryDTO`          |
+| `/preceptors/{userId}/verification-notes`   | POST   | Add verification note to preceptor.               | `userId` (Path), `note`, `noteType` (Query)             | Success message                           |
+| `/preceptors/detail-{userId}/reject`        | POST   | Reject preceptor with rejection reason.           | `userId` (Path), `reason` (Query)                       | Success message                           |
+| `/preceptors/{userId}/billing`              | GET    | Get preceptor billing report.                     | `userId` (Path)                                         | `PreceptorBillingReportDTO`               |
+| `/preceptors/{userId}/analytics`            | GET    | Get preceptor analytics.                          | `userId` (Path)                                         | `PreceptorAnalyticsDTO`                   |
+| `/preceptors/detail-{userId}/contact`       | GET    | Get preceptor contact (admin - no premium check). | `userId` (Path)                                         | `PreceptorContactResponseDTO`             |
+| `/preceptors/{userId}/license/download`     | GET    | Download preceptor license file (admin).          | `userId` (Path)                                         | License file (PDF Resource)               |
+| `/preceptors/{userId}/license/review`       | GET    | View preceptor license image (admin).             | `userId` (Path)                                         | License image (Resource)                  |
 
 ### 5.6 Admin Student Management
 
-| Endpoint                               | Method | Description                              | Input                                    | Output                                  |
-|:---------------------------------------|:-------|:-----------------------------------------|:-----------------------------------------|:----------------------------------------|
-| `/students`                            | GET    | List all students (admin view).          | Pageable params                          | Paginated list of `AdminStudentListDTO` |
-| `/students/search`                     | GET    | Search and filter students (admin view). | `university`, `program`, Pageable        | Paginated list of `AdminStudentListDTO` |
-| `/students/student-{userId}`           | GET    | Get student detail (admin view).         | `userId` (Path)                          | `AdminStudentDetailDTO`                 |
-| `/students/student-{userId}`           | PUT    | Update student (admin).                  | `userId` (Path), `AdminStudentDetailDTO` | `AdminStudentDetailDTO`                 |
-| `/students/student-{userId}`           | DELETE | Delete student (soft delete).            | `userId` (Path)                          | Success message                         |
-| `/students/student-{userId}/inquiries` | GET    | Get student inquiries.                   | `userId` (Path)                          | List of inquiries                       |
+| Endpoint                              | Method | Description                              | Input                                    | Output                                  |
+|:--------------------------------------|:-------|:-----------------------------------------|:-----------------------------------------|:----------------------------------------|
+| `/students/list`                      | GET    | List all students (admin view).          | Pageable params                          | Paginated list of `AdminStudentListDTO` |
+| `/students/search`                    | GET    | Search and filter students (admin view). | `university`, `program`, Pageable        | Paginated list of `AdminStudentListDTO` |
+| `/students/detail-{userId}`           | GET    | Get student detail (admin view).         | `userId` (Path)                          | `AdminStudentDetailDTO`                 |
+| `/students/update-{userId}`           | PUT    | Update student (admin).                  | `userId` (Path), `AdminStudentDetailDTO` | `AdminStudentDetailDTO`                 |
+| `/students/update-{userId}`           | DELETE | Delete student (soft delete).            | `userId` (Path)                          | Success message                         |
+| `/students/detail-{userId}/inquiries` | GET    | Get student inquiries.                   | `userId` (Path)                          | List of inquiries                       |
 
 ### 5.7 Admin Webhook Management
 
-| Endpoint                    | Method | Description                         | Input            | Output                                   |
-|:----------------------------|:-------|:------------------------------------|:-----------------|:-----------------------------------------|
-| `/webhooks/history`         | GET    | Get webhook event history.          | Pageable params  | Paginated list of `WebhookEventResponse` |
-| `/webhooks/retry/{eventId}` | POST   | Retry failed webhook event.         | `eventId` (Path) | Success message                          |
-| `/webhooks/{eventId}`       | GET    | Get webhook event details.          | `eventId` (Path) | `WebhookEventDetailDTO`                  |
-| `/webhooks/metrics`         | GET    | Get webhook metrics and statistics. | None             | `WebhookMetricsDTO`                      |
+| Endpoint                          | Method | Description                         | Input            | Output                                   |
+|:----------------------------------|:-------|:------------------------------------|:-----------------|:-----------------------------------------|
+| `/webhooks/history`               | GET    | Get webhook event history.          | Pageable params  | Paginated list of `WebhookEventResponse` |
+| `/webhooks/event-{eventId}/retry` | POST   | Retry failed webhook event.         | `eventId` (Path) | Success message                          |
+| `/webhooks/event-{eventId}`       | GET    | Get webhook event details.          | `eventId` (Path) | `WebhookEventDetailDTO`                  |
+| `/webhooks/metrics`               | GET    | Get webhook metrics and statistics. | None             | `WebhookMetricsDTO`                      |
 
 ### 5.8 Admin Credentials & Specialties Management
 
-| Endpoint                                   | Method | Description                                | Input                                       | Output                             |
-|:-------------------------------------------|:-------|:-------------------------------------------|:-------------------------------------------|:-----------------------------------|
-| `/credentials-specialties/credentials`     | GET    | Get all credentials (predefined and user). | None                                        | List of `CredentialDTO`            |
-| `/credentials-specialties/credentials`     | POST   | Create a new credential.                   | `CreateCredentialRequest`                   | `CredentialDTO`                    |
-| `/credentials-specialties/credentials/{credentialId}` | PUT  | Update a credential.                       | `credentialId` (Path), `CreateCredentialRequest` | `CredentialDTO`                |
-| `/credentials-specialties/credentials/{credentialId}` | DELETE | Delete a credential.                      | `credentialId` (Path)                       | Success message                    |
-| `/credentials-specialties/specialties`     | GET    | Get all specialties (predefined and user). | None                                        | List of `SpecialtyDTO`             |
-| `/credentials-specialties/specialties`     | POST   | Create a new specialty.                    | `CreateSpecialtyRequest`                    | `SpecialtyDTO`                     |
-| `/credentials-specialties/specialties/{specialtyId}` | PUT  | Update a specialty.                        | `specialtyId` (Path), `CreateSpecialtyRequest` | `SpecialtyDTO`                 |
-| `/credentials-specialties/specialties/{specialtyId}` | DELETE | Delete a specialty.                       | `specialtyId` (Path)                        | Success message                    |
+| Endpoint                                              | Method | Description                                | Input                                            | Output                  |
+|:------------------------------------------------------|:-------|:-------------------------------------------|:-------------------------------------------------|:------------------------|
+| `/credentials-specialties/credentials`                | GET    | Get all credentials (predefined and user). | None                                             | List of `CredentialDTO` |
+| `/credentials-specialties/credentials`                | POST   | Create a new credential.                   | `CreateCredentialRequest`                        | `CredentialDTO`         |
+| `/credentials-specialties/credentials/{credentialId}` | PUT    | Update a credential.                       | `credentialId` (Path), `CreateCredentialRequest` | `CredentialDTO`         |
+| `/credentials-specialties/credentials/{credentialId}` | DELETE | Delete a credential.                       | `credentialId` (Path)                            | Success message         |
+| `/credentials-specialties/specialties`                | GET    | Get all specialties (predefined and user). | None                                             | List of `SpecialtyDTO`  |
+| `/credentials-specialties/specialties`                | POST   | Create a new specialty.                    | `CreateSpecialtyRequest`                         | `SpecialtyDTO`          |
+| `/credentials-specialties/specialties/{specialtyId}`  | PUT    | Update a specialty.                        | `specialtyId` (Path), `CreateSpecialtyRequest`   | `SpecialtyDTO`          |
+| `/credentials-specialties/specialties/{specialtyId}`  | DELETE | Delete a specialty.                        | `specialtyId` (Path)                             | Success message         |
 
 ### Data Objects for Administration
 
@@ -508,11 +508,11 @@ requirements, and expected outputs.
 
 #### `CredentialDTO`
 
-| Field         | Type      | Description                              |
-|:--------------|:----------|:-----------------------------------------|
-| `id`          | `Long`    | Credential ID.                           |
-| `name`        | `String`  | Name of the credential (e.g., MBBS, MD). |
-| `description` | `String`  | Description of the credential.           |
+| Field          | Type      | Description                              |
+|:---------------|:----------|:-----------------------------------------|
+| `id`           | `Long`    | Credential ID.                           |
+| `name`         | `String`  | Name of the credential (e.g., MBBS, MD). |
+| `description`  | `String`  | Description of the credential.           |
 | `isPredefined` | `boolean` | Whether credential is system-predefined. |
 
 #### `CreateCredentialRequest`
@@ -524,18 +524,18 @@ requirements, and expected outputs.
 
 #### `SpecialtyDTO`
 
-| Field         | Type      | Description                                       |
-|:--------------|:----------|:--------------------------------------------------|
-| `id`          | `Long`    | Specialty ID.                                    |
-| `name`        | `String`  | Name of the specialty (e.g., Cardiology).        |
-| `description` | `String`  | Description of the specialty.                    |
-| `isPredefined` | `boolean` | Whether specialty is system-predefined.          |
+| Field          | Type      | Description                               |
+|:---------------|:----------|:------------------------------------------|
+| `id`           | `Long`    | Specialty ID.                             |
+| `name`         | `String`  | Name of the specialty (e.g., Cardiology). |
+| `description`  | `String`  | Description of the specialty.             |
+| `isPredefined` | `boolean` | Whether specialty is system-predefined.   |
 
 #### `CreateSpecialtyRequest`
 
-| Field         | Type     | Description                  |
-|:--------------|:---------|:-----------------------------|
-| `name`        | `String` | Name of the specialty.       |
+| Field         | Type     | Description                   |
+|:--------------|:---------|:------------------------------|
+| `name`        | `String` | Name of the specialty.        |
 | `description` | `String` | Description of the specialty. |
 
 ---
@@ -603,15 +603,16 @@ requirements, and expected outputs.
 
 ## 8. Subscriptions (`/api/subscriptions`)
 
-| Endpoint        | Method | Description                                                         | Input                          | Output                              |
-|:----------------|:-------|:--------------------------------------------------------------------|:-------------------------------|:------------------------------------|
-| `/checkout`     | POST   | Initiates subscription via Stripe checkout.                         | `CreateCheckoutSessionRequest` | `CreateCheckoutSessionResponse`     |
-| `/status`       | GET    | Fetch current subscription details.                                 | None                           | `SubscriptionDetailResponse`        |
-| `/cancel`       | POST   | Cancel subscription at period end (allows usage until expiry).      | None                           | `GenericApiResponse<Void>`          |
-| `/update`       | PUT    | Change subscription plan or billing interval.                       | `UpdateSubscriptionRequest`    | `GenericApiResponse<Void>`          |
-| `/history`      | GET    | List past and current subscriptions with pagination.                | Pageable params                | `Page<SubscriptionHistoryResponse>` |
-| `/portal`       | GET    | Redirect to Stripe customer portal for billing management.          | None                           | Map with `portalUrl` key            |
-| `/access-check` | GET    | Verify if user can access premium features (includes grace period). | None                           | Map with `hasAccess` boolean key    |
+| Endpoint          | Method | Description                                                         | Input                          | Output                              |
+|:------------------|:-------|:--------------------------------------------------------------------|:-------------------------------|:------------------------------------|
+| `/checkout`       | POST   | Initiates subscription via Stripe checkout.                         | `CreateCheckoutSessionRequest` | `CreateCheckoutSessionResponse`     |
+| `/status`         | GET    | Fetch current subscription details.                                 | None                           | `SubscriptionDetailResponse`        |
+| `/cancel`         | POST   | Cancel subscription at period end (allows usage until expiry).      | None                           | `GenericApiResponse<Void>`          |
+| `/update`         | PUT    | Change subscription plan or billing interval.                       | `UpdateSubscriptionRequest`    | `GenericApiResponse<Void>`          |
+| `/history`        | GET    | List past and current subscriptions with pagination.                | Pageable params                | `Page<SubscriptionHistoryResponse>` |
+| `/billing-portal` | GET    | Redirect to Stripe customer portal for billing management.          | None                           | Map with `portalUrl` key            |
+| `/access-check`   | GET    | Verify if user can access premium features (includes grace period). | None                           | Map with `hasAccess` boolean key    |
+| `/events`         | GET    | Retrieve audit trail of all subscription lifecycle events.          | Pageable params                | `Page<SubscriptionEventResponse>`   |
 
 ### Data Objects
 
@@ -665,6 +666,19 @@ requirements, and expected outputs.
 | `startDate`      | `LocalDateTime` | Subscription start date. |
 | `endDate`        | `LocalDateTime` | Subscription end date.   |
 | `cancelReason`   | `String`        | Cancellation reason.     |
+
+#### `SubscriptionEventResponse`
+
+| Field          | Type              | Description                                      |
+|:---------------|:------------------|:-------------------------------------------------|
+| `eventId`      | `Long`            | Unique subscription event identifier.            |
+| `subscriptionId` | `Long`          | Subscription ID this event belongs to.           |
+| `eventType`    | `String`          | Type of event (CREATED, CANCELLED, PLAN_UPGRADED, etc.). |
+| `status`       | `String`          | Event processing status (SUCCESS, FAILED).       |
+| `createdAt`    | `LocalDateTime`   | When the event occurred.                         |
+| `details`      | `Map<String, Object>` | JSON metadata with event-specific details.    |
+| `stripeEventId` | `String`         | Stripe webhook event ID (for idempotency).       |
+| `errorMessage` | `String`          | Error message if event processing failed.        |
 
 ---
 
@@ -789,9 +803,10 @@ requirements, and expected outputs.
 
 ## 14. Preceptor License Management (`/preceptors`)
 
-| Endpoint                      | Method | Description                      | Input           | Output                      |
-|:------------------------------|:-------|:---------------------------------|:----------------|:----------------------------|
-| `/preceptor-{userId}/license` | GET    | Download preceptor license file. | `userId` (Path) | License file (PDF Resource) |
+| Endpoint                           | Method | Description                                         | Input           | Output                      |
+|:-----------------------------------|:-------|:----------------------------------------------------|:----------------|:----------------------------|
+| `/preceptor-{userId}/license`      | GET    | Download preceptor license file.                    | `userId` (Path) | License file (PDF Resource) |
+| `/preceptor-{userId}/license/view` | GET    | View preceptor license image inline in the browser. | `userId` (Path) | License image/PDF resource  |
 
 ---
 
@@ -816,8 +831,7 @@ requirements, and expected outputs.
 
 ## Notes
 
-- **Base URL**: All endpoints are prefixed with `/api/v1` except for specific exceptions like `/webhooks`, `/analytics`,
-  `/inquiries`, `/roles`, `/subscription-plans`.
+- **Base URL**: All endpoints are prefixed with `/api/v1`.
 - **Authentication**: Most endpoints require JWT authentication via the `Authorization` header with a Bearer token.
 - **Pagination**: Endpoints with pageable responses support pagination parameters:
     - `page`: Page number (0-indexed)

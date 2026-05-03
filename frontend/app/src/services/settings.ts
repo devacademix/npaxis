@@ -15,14 +15,19 @@ export interface AdminUpdateRequest {
   roles: number[];
 }
 
+export interface SystemSetting {
+  settingKey: string;
+  value: any;
+  description?: string;
+  isActive?: boolean;
+}
+
 const unwrapApiData = <T>(response: any): T => {
   if (response?.data?.data !== undefined) {
     return response.data.data as T;
   }
   return response.data as T;
 };
-
-const TEMP_SETTINGS_KEY = 'npaxis.admin.settings.draft';
 
 const authConfig = () => {
   const token = localStorage.getItem('accessToken');
@@ -33,6 +38,8 @@ const authConfig = () => {
     },
   };
 };
+
+const ADMIN_API_PREFIX = '/api/v1/administration';
 
 const normalizeAdminUser = (payload: any, fallbackUserId?: number | null): AdminCurrentUser => {
   const userId = Number(payload?.userId ?? payload?.id ?? fallbackUserId ?? 0);
@@ -70,22 +77,19 @@ export const settingsService = {
     return unwrapApiData(response);
   },
 
-  getTemporarySettings: <T>() => {
-    const raw = localStorage.getItem(TEMP_SETTINGS_KEY);
-    if (!raw) return null as T | null;
-
-    try {
-      return JSON.parse(raw) as T;
-    } catch {
-      localStorage.removeItem(TEMP_SETTINGS_KEY);
-      return null as T | null;
-    }
+  getAllSettings: async (): Promise<SystemSetting[]> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/settings`, authConfig());
+    return unwrapApiData<SystemSetting[]>(response) || [];
   },
 
-  saveTemporarySettings: async (settings: unknown) => {
-    // Placeholder storage as backend settings APIs are not yet available.
-    localStorage.setItem(TEMP_SETTINGS_KEY, JSON.stringify(settings));
-    return true;
+  getSettingByKey: async (key: string): Promise<SystemSetting> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/settings/${key}`, authConfig());
+    return unwrapApiData<SystemSetting>(response);
+  },
+
+  updateSetting: async (key: string, value: any): Promise<SystemSetting> => {
+    const response = await api.put(`${ADMIN_API_PREFIX}/settings/${key}`, { value }, authConfig());
+    return unwrapApiData<SystemSetting>(response);
   },
 };
 

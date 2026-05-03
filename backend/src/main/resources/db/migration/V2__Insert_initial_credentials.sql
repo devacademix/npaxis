@@ -9,142 +9,111 @@
 
 -- Insert standard medical credentials
 INSERT INTO credentials (name, name_normalized, description, is_predefined, created_at, last_modified_at, deleted)
-VALUES
-    (
-        'MBBS',
+VALUES ('MBBS',
         'MBBS',
         'Bachelor of Medicine, Bachelor of Surgery - Undergraduate medical degree',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'MD',
+        FALSE),
+       ('MD',
         'MD',
         'Doctor of Medicine - Graduate medical degree',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'DO',
+        FALSE),
+       ('DO',
         'DO',
         'Doctor of Osteopathic Medicine - Medical degree focusing on musculoskeletal system',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'PhD',
+        FALSE),
+       ('PhD',
         'PHD',
         'Doctor of Philosophy - Research doctorate',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'DNP',
+        FALSE),
+       ('DNP',
         'DNP',
         'Doctor of Nursing Practice - Advanced nursing degree',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'PA-C',
+        FALSE),
+       ('PA-C',
         'PA-C',
         'Physician Assistant-Certified',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'NP',
+        FALSE),
+       ('NP',
         'NP',
         'Nurse Practitioner',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'MSN',
+        FALSE),
+       ('MSN',
         'MSN',
         'Master of Science in Nursing',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'RN',
+        FALSE),
+       ('RN',
         'RN',
         'Registered Nurse',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'DDS',
+        FALSE),
+       ('DDS',
         'DDS',
         'Doctor of Dental Surgery',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'DVM',
+        FALSE),
+       ('DVM',
         'DVM',
         'Doctor of Veterinary Medicine',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'MPH',
+        FALSE),
+       ('MPH',
         'MPH',
         'Master of Public Health',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'DPT',
+        FALSE),
+       ('DPT',
         'DPT',
         'Doctor of Physical Therapy',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'BCPS',
+        FALSE),
+       ('BCPS',
         'BCPS',
         'Board Certified Pharmacotherapy Specialist',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'MBA',
+        FALSE),
+       ('MBA',
         'MBA',
         'Master of Business Administration',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    );
+        FALSE);
 
 -- =====================================================
 -- Verify inserts

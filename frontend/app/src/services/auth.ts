@@ -6,6 +6,14 @@ const api = axios.create({
   withCredentials: true, // For refresh token cookie
 });
 
+let backendUnavailableUntil = 0;
+const BACKEND_RETRY_COOLDOWN_MS = 15_000;
+
+const createBackendUnavailableError = () => ({
+  message: 'Unable to reach the server. Please ensure backend is running on port 8080.',
+  isBackendUnavailable: true,
+});
+
 const clearAuthStorage = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('role');
@@ -36,6 +44,10 @@ const isPublicAuthRequest = (url?: string) => {
 };
 
 api.interceptors.request.use((config) => {
+  if (Date.now() < backendUnavailableUntil) {
+    return Promise.reject(createBackendUnavailableError());
+  }
+
   const token = localStorage.getItem('accessToken');
   if (token && config.headers && !config.headers.Authorization && !isPublicAuthRequest(config.url)) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -45,7 +57,10 @@ api.interceptors.request.use((config) => {
 
 // Response interceptor for generic error handling could be added here
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    backendUnavailableUntil = 0;
+    return response;
+  },
   async (error: AxiosError<any>) => {
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
     const statusCode = error.response?.status;
@@ -110,6 +125,7 @@ api.interceptors.response.use(
     }
 
     if (!error.response) {
+      backendUnavailableUntil = Date.now() + BACKEND_RETRY_COOLDOWN_MS;
       if (error.message === 'Network Error') {
         message = 'Unable to reach the server. Please ensure backend is running on port 8080.';
       } else if (error.message) {

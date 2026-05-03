@@ -6,8 +6,11 @@ export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | string;
 export interface PreceptorProfile {
   userId: number;
   displayName?: string;
+  email?: string;
   credentials?: string;
+  credentialsList?: string[];
   specialty?: string;
+  specialtiesList?: string[];
   location?: string;
   setting?: string;
   availableDays?: string[];
@@ -82,8 +85,8 @@ interface SubmitLicensePayload {
 
 export interface PreceptorUpdatePayload {
   name: string;
-  credentials: string;
-  specialty: string;
+  credentials: string[];
+  specialties: string[];
   location: string;
   setting: string;
   availableDays: string[];
@@ -113,6 +116,8 @@ const authConfig = () => {
   };
 };
 
+const ANALYTICS_API_PREFIX = '/api/v1/analytics';
+
 const normalizeUser = (payload: any): LoggedInPreceptorUser => ({
   userId: Number(payload?.userId ?? payload?.id ?? 0),
   displayName: String(payload?.displayName ?? payload?.name ?? payload?.username ?? ''),
@@ -123,8 +128,16 @@ const normalizeUser = (payload: any): LoggedInPreceptorUser => ({
 const normalizeSearchItem = (payload: any): PreceptorSearchItem => ({
   userId: Number(payload?.userId ?? payload?.id ?? 0),
   displayName: String(payload?.displayName ?? payload?.name ?? 'Preceptor'),
-  credentials: payload?.credentials ? String(payload.credentials) : undefined,
-  specialty: payload?.specialty ? String(payload.specialty) : undefined,
+  credentials: Array.isArray(payload?.credentials)
+    ? payload.credentials.map((item: unknown) => String(item)).filter(Boolean).join(', ')
+    : payload?.credentials
+    ? String(payload.credentials)
+    : undefined,
+  specialty: Array.isArray(payload?.specialties)
+    ? payload.specialties.map((item: unknown) => String(item)).filter(Boolean).join(', ')
+    : payload?.specialty
+    ? String(payload.specialty)
+    : undefined,
   location: payload?.location ? String(payload.location) : undefined,
   setting: payload?.setting ? String(payload.setting) : undefined,
   honorarium: payload?.honorarium ? String(payload.honorarium) : undefined,
@@ -133,6 +146,44 @@ const normalizeSearchItem = (payload: any): PreceptorSearchItem => ({
   isPremium: Boolean(payload?.isPremium),
   verificationStatus: payload?.verificationStatus ? String(payload.verificationStatus) as VerificationStatus : undefined,
 });
+
+const normalizeStringList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
+};
+
+const normalizeProfile = (payload: any): PreceptorProfile => {
+  const credentialsList = normalizeStringList(payload?.credentials);
+  const specialtiesList = normalizeStringList(payload?.specialties);
+
+  return {
+    userId: Number(payload?.userId ?? payload?.id ?? 0),
+    displayName: payload?.displayName ? String(payload.displayName) : payload?.name ? String(payload.name) : undefined,
+    email: payload?.email ? String(payload.email) : undefined,
+    credentials: credentialsList.length > 0 ? credentialsList.join(', ') : payload?.credentials ? String(payload.credentials) : undefined,
+    credentialsList,
+    specialty: specialtiesList.length > 0 ? specialtiesList.join(', ') : payload?.specialty ? String(payload.specialty) : undefined,
+    specialtiesList,
+    location: payload?.location ? String(payload.location) : undefined,
+    setting: payload?.setting ? String(payload.setting) : undefined,
+    availableDays: Array.isArray(payload?.availableDays)
+      ? payload.availableDays.map((day: unknown) => String(day))
+      : [],
+    honorarium: payload?.honorarium ? String(payload.honorarium) : undefined,
+    requirements: payload?.requirements ? String(payload.requirements) : undefined,
+    isVerified: Boolean(payload?.isVerified),
+    isPremium: Boolean(payload?.isPremium),
+    phone: payload?.phone ? String(payload.phone) : undefined,
+    licenseNumber: payload?.licenseNumber ? String(payload.licenseNumber) : undefined,
+    licenseState: payload?.licenseState ? String(payload.licenseState) : undefined,
+    licenseFileUrl: payload?.licenseFileUrl ? String(payload.licenseFileUrl) : undefined,
+    verificationStatus: payload?.verificationStatus ? String(payload.verificationStatus) as VerificationStatus : undefined,
+    verificationSubmittedAt: payload?.verificationSubmittedAt ? String(payload.verificationSubmittedAt) : undefined,
+    verificationReviewedAt: payload?.verificationReviewedAt ? String(payload.verificationReviewedAt) : undefined,
+  };
+};
 
 export const preceptorService = {
   searchPreceptors: async (filters: PreceptorSearchFilters = {}): Promise<PreceptorSearchResult> => {
@@ -180,7 +231,7 @@ export const preceptorService = {
 
   getStats: async (id: number | string) => {
     try {
-      const response = await api.get(`/analytics/preceptors/${id}/stats`, authConfig());
+      const response = await api.get(`${ANALYTICS_API_PREFIX}/preceptors/${id}/stats`, authConfig());
       return extractData<PreceptorStatsResponse>(response);
     } catch (error: any) {
       throw error;
@@ -189,7 +240,7 @@ export const preceptorService = {
 
   getPreceptorById: async (id: number | string): Promise<PreceptorProfile> => {
     const response = await api.get(`/preceptors/active/preceptor-${id}`, authConfig());
-    return extractData<PreceptorProfile>(response);
+    return normalizeProfile(extractData<any>(response));
   },
 
   revealContact: async (id: number | string): Promise<PreceptorContact> => {
@@ -199,7 +250,7 @@ export const preceptorService = {
 
   trackAnalyticsEvent: async (eventType: AnalyticsEventType, preceptorId: number | string): Promise<void> => {
     try {
-      await api.post('/analytics/event', { eventType, preceptorId }, authConfig());
+      await api.post(`${ANALYTICS_API_PREFIX}/event`, { eventType, preceptorId }, authConfig());
     } catch {
       // Analytics should never block the primary student workflow.
     }
@@ -210,7 +261,7 @@ export const preceptorService = {
     payload: PreceptorUpdatePayload
   ): Promise<PreceptorProfile> => {
     const response = await api.put(`/preceptors/preceptor-${id}`, payload, authConfig());
-    return extractData<PreceptorProfile>(response);
+    return normalizeProfile(extractData<any>(response));
   },
 
   submitLicense: async (
@@ -242,7 +293,7 @@ export const preceptorService = {
         onUploadProgress,
       }
     );
-    return extractData<PreceptorProfile>(response);
+    return normalizeProfile(extractData<any>(response));
   },
 
 
@@ -265,4 +316,8 @@ export const preceptorService = {
     const response = await api.delete(`/preceptors/hard-delete/preceptor-${id}`, authConfig());
     return extractData<PreceptorProfile>(response);
   },
+
+  getLicenseDownloadUrl: (id: number | string) => `/api/v1/preceptors/preceptor-${id}/license`,
+
+  getLicensePreviewUrl: (id: number | string) => `/api/v1/preceptors/preceptor-${id}/license/view`,
 };

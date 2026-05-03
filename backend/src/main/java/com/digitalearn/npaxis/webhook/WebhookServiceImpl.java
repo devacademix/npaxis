@@ -1,6 +1,8 @@
 package com.digitalearn.npaxis.webhook;
 
 
+import com.digitalearn.npaxis.analytics.AnalyticsService;
+import com.digitalearn.npaxis.analytics.EventType;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoiceRepository;
@@ -25,13 +27,23 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * Service implementation for processing Stripe webhook events
  * Handles subscription lifecycle, invoices, and payment events
  * Saves all transactions and updates preceptor premium status
+ *
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * This service tracks all critical payment events:
+ * - PAYMENT_SUCCEEDED: invoice/payment successful
+ * - PAYMENT_FAILED: invoice/payment failed
+ * - SUBSCRIPTION_* events: subscription lifecycle
  */
 @Service
 @RequiredArgsConstructor
@@ -57,6 +69,7 @@ public class WebhookServiceImpl implements WebhookService {
     private final BillingInvoiceRepository billingInvoiceRepository;
     private final BillingTransactionRepository billingTransactionRepository;
     private final SubscriptionEmailService subscriptionEmailService;
+    private final AnalyticsService analyticsService;
 
     @Override
     public void process(Event event, String payload) {
@@ -398,6 +411,19 @@ public class WebhookServiceImpl implements WebhookService {
                     // Save transaction
                     saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
 
+                    // Track analytics event BEFORE email operations
+                    Map<String, Object> metadata = new HashMap<>();
+                    metadata.put("invoiceId", invoice.getId());
+                    metadata.put("amount", invoice.getAmountPaid());
+                    metadata.put("currency", invoice.getCurrency() != null ? invoice.getCurrency() : "usd");
+                    metadata.put("paymentStatus", "succeeded");
+                    analyticsService.trackBackendEvent(
+                        EventType.PAYMENT_SUCCEEDED,
+                        p.getUserId(),
+                        p.getUserId().toString(),
+                        metadata
+                    );
+
                     // Extract invoice data for PDF generation and storage
                     String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
                     String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
@@ -444,7 +470,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     /**
-     * Handle invoice.payment_failed event - Save failed transaction
+     * Handle invoice.payment_failed event - Save failed transaction and track analytics
      */
     private void handleInvoicePaymentFailed(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice payment failed event");
@@ -464,6 +490,20 @@ public class WebhookServiceImpl implements WebhookService {
 
                 // Save failed transaction
                 saveBillingTransaction(p, invoice, TransactionStatus.FAILED);
+
+                // Track analytics event
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("invoiceId", invoice.getId());
+                metadata.put("amount", invoice.getAmountDue());
+                metadata.put("currency", invoice.getCurrency() != null ? invoice.getCurrency() : "usd");
+                metadata.put("paymentStatus", "failed");
+                metadata.put("failureReason", invoice.getLastPaymentError() != null ? invoice.getLastPaymentError().getMessage() : "unknown");
+                analyticsService.trackBackendEvent(
+                    EventType.PAYMENT_FAILED,
+                    p.getUserId(),
+                    p.getUserId().toString(),
+                    metadata
+                );
 
                 // Update invoice record as open (still needs payment)
                 updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.OPEN);
@@ -543,44 +583,15 @@ public class WebhookServiceImpl implements WebhookService {
                     // Save transaction
                     saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
 
-                    // Extract invoice data for PDF generation and storage
-                    String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
-                    String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
-                    Long amountPaid = invoice.getAmountPaid() != null ? invoice.getAmountPaid() : 0L;
-                    String currency = invoice.getCurrency() != null ? invoice.getCurrency() : "usd";
-                    Long invoiceCreatedAt = invoice.getCreated();
-                    LocalDateTime invoiceCreatedAtDt = invoiceCreatedAt != null ?
-                            LocalDateTime.ofInstant(java.time.Instant.ofEpochSecond(invoiceCreatedAt), ZoneId.systemDefault())
-                            : LocalDateTime.now();
+                    // NOTE: PDF generation and email are handled by handleInvoicePaymentSucceeded event
+                    // Do NOT generate PDF here to avoid duplicate PDFs in storage
+                    // invoice.paid fires AFTER invoice.payment_succeeded, so payment_succeeded is authoritative
 
-                    // Generate, store PDF persistently, and get storage URL
-                    String invoicePdfUrl = subscriptionEmailService.generateAndStoreInvoicePdf(
-                            invoiceNumber,
-                            p.getUser().getName(),
-                            invoiceCreatedAtDt,
-                            amountPaid,
-                            currency,
-                            hostedInvoiceUrl
-                    );
+                    // Just update invoice status to PAID
+                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID);
 
-                    // UPSERT invoice WITH stored PDF URL (PostgreSQL ON CONFLICT DO UPDATE)
-                    // Safe for concurrent webhook events
-                    updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.PAID, invoicePdfUrl);
-
-                    // Send async email WITH PDF attachment
-                    subscriptionEmailService.sendInvoicePaymentEmailWithPdf(
-                            p.getUserId(),
-                            p.getUser().getName(),
-                            p.getUser().getEmail(),
-                            invoiceNumber,
-                            amountPaid,
-                            currency,
-                            invoiceCreatedAtDt,
-                            hostedInvoiceUrl
-                    );
-
-                    log.info("✓ Invoice marked as paid (UPSERT + EMAIL WITH PDF): preceptor={}, invoiceId={}, status=PAID, pdfUrl={}",
-                            p.getUserId(), invoice.getId(), invoicePdfUrl);
+                    log.info("✓ Invoice marked as paid (UPSERT only): preceptor={}, invoiceId={}, status=PAID",
+                            p.getUserId(), invoice.getId());
                 } else {
                     log.warn("Preceptor not found for customer ID: {}. Premium status not set.", customerId);
                 }

@@ -219,15 +219,15 @@ public class AdminServiceImpl implements AdminService {
             long count = (long) row[1];
 
             switch (type) {
-                case PROFILE_VIEW -> views = count;
-                case CONTACT_REVEAL -> contacts = count;
-                case INQUIRY -> inquiries = count;
+                case PROFILE_VIEWED -> views = count;
+                case CONTACT_REVEALED -> contacts = count;
+                case INQUIRY_SUBMITTED -> inquiries = count;
             }
         }
 
 //         --- Top Preceptors ---
         List<TopPreceptorDTO> topPreceptors =
-                analyticsRepository.findTopPreceptors(EventType.INQUIRY, PageRequest.of(0, 5))
+                analyticsRepository.findTopPreceptors(EventType.INQUIRY_SUBMITTED, PageRequest.of(0, 5))
                         .stream()
                         .map(p -> TopPreceptorDTO.builder()
                                 .preceptorId(p.getPreceptorId())
@@ -476,9 +476,9 @@ public class AdminServiceImpl implements AdminService {
             long count = (long) row[1];
 
             switch (type) {
-                case PROFILE_VIEW -> profileViews = count;
-                case CONTACT_REVEAL -> contactReveals = count;
-                case INQUIRY -> inquiries = count;
+                case PROFILE_VIEWED -> profileViews = count;
+                case CONTACT_REVEALED -> contactReveals = count;
+                case INQUIRY_SUBMITTED -> inquiries = count;
             }
         }
 

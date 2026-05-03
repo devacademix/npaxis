@@ -17,6 +17,7 @@ const navItems = [
   { label: 'Dashboard', icon: 'dashboard', to: '/student' },
   { label: 'Browse', icon: 'travel_explore', to: '/student/browse' },
   { label: 'Saved', icon: 'favorite', to: '/student/saved' },
+  { label: 'Inquiries', icon: 'forum', to: '/student/inquiries' },
   { label: 'Profile', icon: 'person', to: '/student/profile' },
 ];
 

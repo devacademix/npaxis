@@ -15,7 +15,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,7 +28,9 @@ import java.time.LocalDateTime;
 @Table(
         name = "preceptor_subscriptions",
         indexes = {
-                @Index(name = "idx_preceptor_subscription_preceptor", columnList = "preceptor_id"),
+                @Index(name = "idx_preceptor_subscription_active", columnList = "preceptor_id,is_active"),
+                @Index(name = "idx_preceptor_subscription_history", columnList = "preceptor_id,created_at DESC"),
+                @Index(name = "idx_preceptor_subscription_status_active", columnList = "status,is_active"),
                 @Index(name = "idx_preceptor_subscription_stripe_sub", columnList = "stripe_subscription_id")
         }
 )
@@ -44,7 +45,11 @@ public class PreceptorSubscription extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long preceptorSubscriptionId;
 
-    @OneToOne(optional = false, fetch = FetchType.LAZY)
+    /**
+     * Many-to-one relationship: Multiple subscriptions per preceptor (historical tracking)
+     * This replaced the one-to-one relationship to support subscription history
+     */
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "preceptor_id", nullable = false)
     private Preceptor preceptor;
 
@@ -95,4 +100,37 @@ public class PreceptorSubscription extends BaseEntity {
 
     @Column(name = "next_billing_date")
     private LocalDateTime nextBillingDate;
+
+    @Column(name = "is_cancelled", nullable = false)
+    private boolean cancelled = false;
+
+    /**
+     * Start date of the subscription lifecycle
+     * Represents when this particular subscription instance began
+     */
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
+
+    /**
+     * End date of the subscription lifecycle
+     * Represents when this subscription ends (could be due to cancellation, expiration, etc.)
+     * NULL for active subscriptions
+     */
+    @Column(name = "end_date")
+    private LocalDateTime endDate;
+
+    /**
+     * Date when subscription is scheduled to be cancelled at period end
+     * Different from cancelled_at - this is future-scheduled cancellation
+     */
+    @Column(name = "cancel_date")
+    private LocalDateTime cancelDate;
+
+    /**
+     * Flag indicating if this is an active subscription
+     * Application-level enforcement of "one active subscription per preceptor"
+     * When subscribing again, old subscriptions are marked active = false
+     */
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
 }

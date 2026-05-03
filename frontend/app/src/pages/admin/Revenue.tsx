@@ -37,7 +37,8 @@ const Revenue: React.FC = () => {
   const isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
   const navigate = useNavigate();
 
-  const [preceptorId, setPreceptorId] = useState('1');
+  const [preceptorId, setPreceptorId] = useState('');
+  const [appliedPreceptorId, setAppliedPreceptorId] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateRange, setDateRange] = useState('30d');
 
@@ -50,16 +51,16 @@ const Revenue: React.FC = () => {
   const [inlineMessage, setInlineMessage] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-IN', {
+    new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'INR',
+      currency: 'USD',
       maximumFractionDigits: 0,
     }).format(amount || 0);
 
   const formatDate = (dateValue: string) => {
     const date = new Date(dateValue);
     if (Number.isNaN(date.getTime())) return 'N/A';
-    return date.toLocaleDateString('en-IN', {
+    return date.toLocaleDateString('en-US', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -102,12 +103,12 @@ const Revenue: React.FC = () => {
       .slice(-6);
 
     const revenueData: RevenueChartPoint[] = sorted.map((item) => ({
-      label: item.date.toLocaleDateString('en-IN', { month: 'short' }),
+      label: item.date.toLocaleDateString('en-US', { month: 'short' }),
       value: Number(item.revenue.toFixed(0)),
     }));
 
     const transactionData: RevenueChartPoint[] = sorted.map((item) => ({
-      label: item.date.toLocaleDateString('en-IN', { month: 'short' }),
+      label: item.date.toLocaleDateString('en-US', { month: 'short' }),
       value: item.transactions,
     }));
 
@@ -156,11 +157,17 @@ const Revenue: React.FC = () => {
     setError(null);
     setInlineMessage(null);
 
-    const [statsResult, paymentsResult, analyticsResult] = await Promise.allSettled([
+    const requests: Promise<any>[] = [
       adminService.getRevenueStats(),
-      adminService.getPaymentHistory(preceptorId),
-      adminService.getPreceptorAnalytics(preceptorId),
-    ]);
+      adminService.getPaymentHistory(appliedPreceptorId),
+    ];
+
+    if (appliedPreceptorId.trim()) {
+      requests.push(adminService.getPreceptorAnalytics(appliedPreceptorId.trim()));
+    }
+
+    const results = await Promise.allSettled(requests);
+    const [statsResult, paymentsResult, analyticsResult] = results;
 
     const failedCalls: string[] = [];
     let stats: RevenueStatsApi = {};
@@ -179,9 +186,9 @@ const Revenue: React.FC = () => {
       failedCalls.push(paymentsResult.reason?.message || 'Payment history');
     }
 
-    if (analyticsResult.status === 'fulfilled') {
+    if (analyticsResult?.status === 'fulfilled') {
       analytics = analyticsResult.value;
-    } else {
+    } else if (analyticsResult?.status === 'rejected') {
       failedCalls.push(analyticsResult.reason?.message || 'Analytics');
     }
 
@@ -201,10 +208,17 @@ const Revenue: React.FC = () => {
         if (lower.includes('jwt expired') || lower.includes('session expired')) {
           return 'Session expired. Please login again.';
         }
+        if (lower.includes('preceptor not found')) {
+          return 'No analytics found for the selected preceptor ID.';
+        }
         return String(message);
       });
       const uniqueFailures = Array.from(new Set(normalized));
-      setError(`Some data could not be loaded: ${uniqueFailures.join(' | ')}`);
+      if (appliedPreceptorId.trim()) {
+        setError(`Some data could not be loaded: ${uniqueFailures.join(' | ')}`);
+      } else {
+        setInlineMessage(uniqueFailures.join(' | '));
+      }
     }
 
     setIsLoading(false);
@@ -213,7 +227,7 @@ const Revenue: React.FC = () => {
   useEffect(() => {
     if (!isAdmin) return;
     loadRevenueData();
-  }, [preceptorId, isAdmin]);
+  }, [appliedPreceptorId, isAdmin]);
 
   const filteredPayments = useMemo(() => {
     return payments.filter((payment) => {
@@ -294,7 +308,7 @@ const Revenue: React.FC = () => {
             value={preceptorId}
             onChange={(event) => setPreceptorId(event.target.value)}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            placeholder="Enter preceptor ID"
+            placeholder="Optional: enter preceptor ID"
           />
         </div>
 
@@ -325,6 +339,30 @@ const Revenue: React.FC = () => {
             <option value="failed">Failed</option>
           </select>
         </div>
+      </div>
+
+      <div className="mb-6 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setAppliedPreceptorId(preceptorId.trim())}
+          className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+        >
+          Apply Filters
+        </button>
+        {preceptorId.trim() ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPreceptorId('');
+              setAppliedPreceptorId('');
+              setInlineMessage(null);
+              setError(null);
+            }}
+            className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Clear Preceptor
+          </button>
+        ) : null}
       </div>
 
       {error ? (

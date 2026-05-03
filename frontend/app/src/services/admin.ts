@@ -1,32 +1,4 @@
 import api from './auth';
-import { preceptorService } from './preceptor';
-import { studentService } from './student';
-import { userService } from './user';
-
-interface UserSummary {
-  userId: number;
-  role?: string;
-}
-
-interface PendingPreceptorApiItem {
-  userId?: number | string;
-  user?: {
-    displayName?: string;
-    email?: string;
-  };
-  credentials?: string;
-  licenseNumber?: string;
-  licenseFileUrl?: string;
-  verificationSubmittedAt?: string;
-  verificationStatus?: string;
-}
-
-interface DashboardStats {
-  totalUsers: number;
-  premiumUsers: number;
-  revenue: number;
-  activePreceptors: number;
-}
 
 export interface PendingPreceptorView {
   id: number | string;
@@ -55,6 +27,9 @@ export interface RevenueStatsApi {
   revenue?: number;
   monthlyRevenue?: number;
   totalTransactions?: number;
+  totalRevenue?: number;
+  successfulTransactions?: number;
+  failedTransactions?: number;
 }
 
 export interface PaymentHistoryItem {
@@ -70,8 +45,50 @@ export interface PreceptorAnalytics {
   profileViews?: number;
   contactReveals?: number;
   inquiries?: number;
+  responseRate?: number;
+  conversionRate?: number;
+  successfulTransactions?: number;
+  totalTransactions?: number;
   revenueTrend?: Array<{ label: string; value: number }>;
   transactionTrend?: Array<{ label: string; value: number }>;
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  premiumUsers: number;
+  revenue: number;
+  activePreceptors: number;
+}
+
+export interface AdminPreceptorDetail {
+  userId: number;
+  displayName: string;
+  email: string;
+  credentials?: string;
+  specialty?: string;
+  location?: string;
+  phone?: string;
+  honorarium?: string;
+  requirements?: string;
+  isVerified?: boolean;
+  isPremium?: boolean;
+  verificationStatus?: string;
+}
+
+export interface VerificationHistoryItem {
+  auditId: number;
+  previousStatus?: string;
+  newStatus?: string;
+  reviewerUserId?: number;
+  reviewNote?: string;
+  changeTimestamp?: string;
+}
+
+export interface SystemSetting {
+  settingKey: string;
+  value: any;
+  description?: string;
+  isActive?: boolean;
 }
 
 const unwrapApiData = <T>(response: any): T => {
@@ -89,6 +106,21 @@ const authConfig = () => {
       Authorization: `Bearer ${token}`,
     },
   };
+};
+
+const ADMIN_API_PREFIX = '/api/v1/administration';
+
+const buildPaginationConfig = (params?: Record<string, any>) => {
+  if (!params) return {};
+  return { params };
+};
+
+const extractPageItems = <T>(payload: any): T[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.content)) return payload.content;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
 };
 
 const formatDate = (value?: string): string => {
@@ -111,173 +143,208 @@ const normalizeStatus = (value?: string): string => {
     .join(' ');
 };
 
-const toNumericValue = (input?: string | number): number => {
-  if (input === undefined || input === null) return 0;
-  if (typeof input === 'number') {
-    return Number.isFinite(input) ? input : 0;
-  }
-  const normalized = String(input).replace(/[^0-9.]/g, '');
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
+const mapPendingPreceptor = (item: any): PendingPreceptorView => ({
+  id: item?.userId ?? item?.id ?? '',
+  name: item?.displayName || item?.user?.displayName || 'Unknown Preceptor',
+  email: item?.email || item?.user?.email || 'N/A',
+  credentials: item?.credentials || 'N/A',
+  licenseNumber: item?.licenseNumber || 'N/A',
+  licenseFileUrl: item?.licenseFileUrl || undefined,
+  dateSubmitted: formatDate(item?.verificationSubmittedAt),
+  submittedAtRaw: item?.verificationSubmittedAt ?? null,
+  status: normalizeStatus(item?.verificationStatus),
+});
 
-const buildPaginationConfig = (params?: { page?: number; size?: number }) => {
-  if (!params) return {};
-  const query: Record<string, number> = {};
-  if (params.page !== undefined) query.page = params.page;
-  if (params.size !== undefined) query.size = params.size;
-  if (Object.keys(query).length === 0) return {};
-  return { params: query };
-};
+const mapRevenueTransaction = (item: any, index: number): PaymentHistoryItem => ({
+  id: item?.transactionId ?? item?.id ?? index,
+  preceptorName: item?.preceptorName ?? item?.displayName ?? `Preceptor ${index + 1}`,
+  amount: Number(item?.amountInMinorUnits ?? item?.amount ?? 0) / 100,
+  status: String(item?.status ?? 'PENDING'),
+  date: String(item?.transactionAt ?? item?.createdAt ?? ''),
+  invoiceUrl: item?.invoiceUrl ?? undefined,
+});
+
+const mapDashboardStats = (payload: any): DashboardStats => ({
+  totalUsers: Number(payload?.totalUsers ?? 0),
+  premiumUsers: Number(payload?.verifiedPreceptors ?? payload?.premiumUsers ?? payload?.premiumCount ?? 0),
+  revenue: Number(payload?.revenueThisMonth ?? payload?.totalRevenue ?? 0),
+  activePreceptors: Number(payload?.totalPreceptors ?? 0),
+});
 
 export const adminService = {
   getStats: async (): Promise<DashboardStats> => {
-    try {
-      const [users, students, preceptorOverview] = await Promise.all([
-        userService.getAllUsers(),
-        studentService.getActiveStudents(),
-        preceptorService.searchPreceptors({ size: 1 }),
-      ]);
+    const response = await api.get(`${ADMIN_API_PREFIX}/dashboard`, authConfig());
+    return mapDashboardStats(unwrapApiData<any>(response));
+  },
 
-      const preceptorPageSize = Math.min(Math.max(preceptorOverview.totalElements, 1), 200);
-      const preceptorPage =
-        preceptorPageSize <= 1
-          ? preceptorOverview
-          : await preceptorService.searchPreceptors({ page: 0, size: preceptorPageSize });
+  getDashboardOverview: async () => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/analytics/overview`, authConfig());
+    return unwrapApiData<any>(response);
+  },
 
-      const premiumUsers = preceptorPage.items.filter((item) => Boolean(item.isPremium)).length;
-      const parsedHonorariums = preceptorPage.items.reduce(
-        (sum, item) => sum + toNumericValue(item.honorarium),
-        0
-      );
-      const studentsContribution = students.length * 45;
-      const computedRevenue =
-        parsedHonorariums > 0
-          ? parsedHonorariums
-          : Math.max(premiumUsers * 185, studentsContribution);
+  getTopPreceptorsOverview: async () => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/analytics/top-preceptors`, authConfig());
+    return unwrapApiData<any>(response);
+  },
 
-      return {
-        totalUsers: users.length,
-        premiumUsers,
-        revenue: Number(computedRevenue.toFixed(0)),
-        activePreceptors: preceptorOverview.totalElements,
-      };
-    } catch (primaryError) {
-      console.warn('Dashboard aggregation failed, falling back to legacy endpoint.', primaryError);
-    }
-
-    try {
-      const statsResponse = await api.get('/admin/stats', authConfig());
-      const stats = unwrapApiData<any>(statsResponse) || {};
-      return {
-        totalUsers: Number(stats?.totalUsers ?? stats?.users ?? 0),
-        premiumUsers: Number(stats?.premiumCount ?? stats?.premiumUsers ?? 0),
-        revenue: Number(stats?.revenue ?? stats?.totalRevenue ?? 0),
-        activePreceptors: Number(stats?.activePreceptors ?? stats?.preceptorCount ?? 0),
-      };
-    } catch {
-      const usersResponse = await api.get('/users/all', authConfig());
-      const users = unwrapApiData<UserSummary[]>(usersResponse) || [];
-
-      const totalUsers = users.length;
-      const activePreceptors = users.filter((user) => (user.role || '').includes('PRECEPTOR')).length;
-
-      return {
-        totalUsers,
-        premiumUsers: activePreceptors,
-        revenue: 0,
-        activePreceptors,
-      };
-    }
+  getTrendOverview: async () => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/analytics/trends`, authConfig());
+    return unwrapApiData<any>(response);
   },
 
   getPendingPreceptors: async (params?: { page?: number; size?: number }): Promise<PendingPreceptorView[]> => {
     const response = await api.get(
-      '/administration/preceptors/pending',
+      `${ADMIN_API_PREFIX}/preceptors/pending`,
       { ...authConfig(), ...buildPaginationConfig(params) }
     );
-    const items = unwrapApiData<PendingPreceptorApiItem[]>(response) || [];
-
-    return items.map((item) => ({
-      id: item.userId ?? '',
-      name: item.user?.displayName || 'Unknown Preceptor',
-      email: item.user?.email || 'N/A',
-      credentials: item.credentials || 'N/A',
-      licenseNumber: item.licenseNumber || 'N/A',
-      licenseFileUrl: item.licenseFileUrl || undefined,
-      dateSubmitted: formatDate(item.verificationSubmittedAt),
-      submittedAtRaw: item.verificationSubmittedAt ?? null,
-      status: normalizeStatus(item.verificationStatus),
-    }));
+    const payload = unwrapApiData<any>(response);
+    return extractPageItems<any>(payload).map(mapPendingPreceptor);
   },
 
   getAllUsers: async (): Promise<AdminUser[]> => {
-    const response = await api.get('/users/all', authConfig());
+    const response = await api.get(`${ADMIN_API_PREFIX}/users`, authConfig());
     return unwrapApiData<AdminUser[]>(response) || [];
   },
 
-  // Revenue dashboard APIs (kept exactly as requested)
   getRevenueStats: async (): Promise<RevenueStatsApi> => {
-    const response = await api.get('/admin/stats', authConfig());
-    return unwrapApiData<RevenueStatsApi>(response) || {};
+    const response = await api.get(`${ADMIN_API_PREFIX}/revenue/summary`, authConfig());
+    const payload = unwrapApiData<any>(response) || {};
+    return {
+      totalRevenue: Number(payload?.totalRevenue ?? 0),
+      monthlyRevenue: Number(payload?.revenueThisMonth ?? 0),
+      totalTransactions: Number(payload?.totalTransactions ?? 0),
+      premiumCount: Number(payload?.successfulTransactions ?? 0),
+      revenue: Number(payload?.totalRevenue ?? 0),
+      successfulTransactions: Number(payload?.successfulTransactions ?? 0),
+      failedTransactions: Number(payload?.failedTransactions ?? 0),
+    };
   },
 
-  getPaymentHistory: async (preceptorId: string | number): Promise<PaymentHistoryItem[]> => {
-    const response = await api.get(`/payments/history/${preceptorId}`, authConfig());
+  getPaymentHistory: async (_preceptorId?: string | number): Promise<PaymentHistoryItem[]> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/revenue/transactions`, authConfig());
     const payload = unwrapApiData<any>(response);
+    return extractPageItems<any>(payload).map(mapRevenueTransaction);
+  },
 
-    const list = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.items)
-      ? payload.items
-      : [];
-
-    return list.map((item: any, index: number) => ({
-      id: item?.id ?? item?.paymentId ?? item?.transactionId ?? `${preceptorId}-${index}`,
-      preceptorName:
-        item?.preceptorName ??
-        item?.preceptor?.displayName ??
-        item?.preceptor?.name ??
-        item?.name ??
-        `Preceptor #${preceptorId}`,
-      amount: Number(item?.amount ?? item?.paymentAmount ?? 0),
-      status: String(item?.status ?? item?.paymentStatus ?? 'Pending'),
-      date: String(item?.date ?? item?.createdAt ?? item?.paymentDate ?? ''),
-      invoiceUrl: item?.invoiceUrl ?? item?.invoice?.url ?? undefined,
-    }));
+  getRevenueByPreceptor: async (): Promise<any[]> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/revenue/by-preceptor`, authConfig());
+    const payload = unwrapApiData<any>(response);
+    return extractPageItems<any>(payload);
   },
 
   getPreceptorAnalytics: async (id: string | number): Promise<PreceptorAnalytics> => {
-    const response = await api.get(`/preceptors/${id}/stats`, authConfig());
+    const response = await api.get(`${ADMIN_API_PREFIX}/preceptors/${id}/analytics`, authConfig());
     return unwrapApiData<PreceptorAnalytics>(response) || {};
   },
 
   approvePreceptor: async (id: number | string) => {
-    const response = await api.post(`/administration/preceptors/approve-${id}`, null, authConfig());
+    const response = await api.post(`${ADMIN_API_PREFIX}/preceptors/approve-${id}`, null, authConfig());
     return unwrapApiData(response);
   },
 
   rejectPreceptor: async (id: number | string) => {
-    const response = await api.post(`/administration/preceptors/reject-${id}`, null, authConfig());
+    const response = await api.post(`${ADMIN_API_PREFIX}/preceptors/reject-${id}`, null, authConfig());
     return unwrapApiData(response);
   },
 
   createAdmin: async (payload: { email: string; password?: string; displayName: string }) => {
-    const response = await api.post('/administration/add-admin', payload, authConfig());
+    const response = await api.post(`${ADMIN_API_PREFIX}/add-admin`, payload, authConfig());
     return unwrapApiData(response);
   },
 
   getAdminRoster: async (): Promise<AdminUser[]> => {
-    const response = await api.get('/administration/all-admins', authConfig());
+    const response = await api.get(`${ADMIN_API_PREFIX}/all-admins`, authConfig());
     return unwrapApiData<AdminUser[]>(response) || [];
   },
 
   toggleAdminAccount: async (userId: number | string, enabled: boolean) => {
     const response = await api.put(
-      `/administration/user-${userId}/toggle-account?enabled=${enabled}`,
+      `${ADMIN_API_PREFIX}/user-${userId}/toggle-account?enabled=${enabled}`,
       null,
       authConfig()
     );
     return unwrapApiData(response);
   },
+
+  getSettings: async (): Promise<SystemSetting[]> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/settings`, authConfig());
+    return unwrapApiData<SystemSetting[]>(response) || [];
+  },
+
+  updateSetting: async (key: string, value: any) => {
+    const response = await api.put(`${ADMIN_API_PREFIX}/settings/${key}`, value, authConfig());
+    return unwrapApiData<SystemSetting>(response);
+  },
+
+  getAdminPreceptors: async (filters?: { specialty?: string; location?: string; verificationStatus?: string; page?: number; size?: number }) => {
+    const hasFilters = Boolean(filters?.specialty || filters?.location || filters?.verificationStatus);
+    const endpoint = hasFilters ? `${ADMIN_API_PREFIX}/preceptors/list/search` : `${ADMIN_API_PREFIX}/preceptors/list`;
+    const response = await api.get(endpoint, {
+      ...authConfig(),
+      params: filters,
+    });
+    const payload = unwrapApiData<any>(response);
+    return extractPageItems<any>(payload);
+  },
+
+  getApprovedPreceptors: async () => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/preceptors/verified/approved`, authConfig());
+    const payload = unwrapApiData<any>(response);
+    return extractPageItems<any>(payload);
+  },
+
+  getRejectedPreceptors: async () => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/preceptors/verified/rejected`, authConfig());
+    const payload = unwrapApiData<any>(response);
+    return extractPageItems<any>(payload);
+  },
+
+  getAdminPreceptorDetail: async (userId: number | string): Promise<AdminPreceptorDetail> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/preceptors/detail-${userId}`, authConfig());
+    return unwrapApiData<AdminPreceptorDetail>(response);
+  },
+
+  updateAdminPreceptor: async (userId: number | string, payload: Record<string, any>) => {
+    const response = await api.put(`${ADMIN_API_PREFIX}/preceptors/update-${userId}`, payload, authConfig());
+    return unwrapApiData<AdminPreceptorDetail>(response);
+  },
+
+  getPreceptorVerificationHistory: async (userId: number | string): Promise<VerificationHistoryItem[]> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/preceptors/${userId}/verification-history`, authConfig());
+    return unwrapApiData<VerificationHistoryItem[]>(response) || [];
+  },
+
+  addPreceptorVerificationNote: async (userId: number | string, note: string, noteType = 'REVIEW') => {
+    const response = await api.post(
+      `${ADMIN_API_PREFIX}/preceptors/${userId}/verification-notes?note=${encodeURIComponent(note)}&noteType=${encodeURIComponent(noteType)}`,
+      null,
+      authConfig()
+    );
+    return unwrapApiData(response);
+  },
+
+  rejectPreceptorWithReason: async (userId: number | string, reason: string) => {
+    const response = await api.post(
+      `${ADMIN_API_PREFIX}/preceptors/detail-${userId}/reject?reason=${encodeURIComponent(reason)}`,
+      null,
+      authConfig()
+    );
+    return unwrapApiData(response);
+  },
+
+  getAdminPreceptorBilling: async (userId: number | string) => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/preceptors/${userId}/billing`, authConfig());
+    return unwrapApiData<any>(response);
+  },
+
+  getAdminPreceptorContact: async (userId: number | string) => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/preceptors/detail-${userId}/contact`, authConfig());
+    return unwrapApiData<any>(response);
+  },
+
+  getAdminLicenseDownloadUrl: (userId: number | string) => `/api/v1/api/v1/administration/preceptors/${userId}/license/download`,
+
+  getAdminLicenseReviewUrl: (userId: number | string) => `/api/v1/api/v1/administration/preceptors/${userId}/license/review`,
 };
+
+export default adminService;

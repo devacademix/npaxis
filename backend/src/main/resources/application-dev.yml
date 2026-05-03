@@ -4,12 +4,18 @@ spring:
   config:
     import: optional:file:secrets.properties
 
+  # ============================================
+  # Development Database Configuration
+  # ============================================
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/npaxis}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:root}
     driver-class-name: org.postgresql.Driver
 
+  # ============================================
+  # Development JPA/Hibernate Configuration
+  # ============================================
   jpa:
     hibernate:
       ddl-auto: update
@@ -18,24 +24,30 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  # ============================================
+  # Development Mail Configuration
+  # ============================================
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:team@npaxis.com}
-    password: ${MAIL_PASSWORD:}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:dev@localhost}
+    password: ${MAIL_PASSWORD:dev-password}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
-            enable: true
+            enable: enabled
             required: true
           trust: "*"
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
-          debug: false
+          debug: true
 
+  # ============================================
+  # Development Task Execution Configuration
+  # ============================================
   task:
     execution:
       pool:
@@ -44,36 +56,62 @@ spring:
         queue-capacity: 100
       thread-name-prefix: npaxis-async-
 
+# ============================================
+# Development Security Configuration
+# ============================================
 security:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET:dev-secret-key-please-change-in-production}
     expiration:
       access: ${JWT_EXPIRATION_ACCESS:900000}
       refresh: ${JWT_EXPIRATION_REFRESH:604800000}
 
+# ============================================
+# Development NPAxis Configuration
+# ============================================
 npaxis:
   email:
-    from-address: ${EMAIL_FROM_ADDRESS:noreply@npaxis.com}
-    from-name: ${EMAIL_FROM_NAME:NPaxis Platform}
+    from-address: ${EMAIL_FROM_ADDRESS:noreply@localhost}
+    from-name: ${EMAIL_FROM_NAME:NPaxis Dev}
+  cors:
+    allowed-origins: ${NPAXIS_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:5174}
   storage:
     local-directory: ${STORAGE_LOCAL_DIRECTORY:uploads}
     allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS:pdf,png,jpg,jpeg}
     cloud:
-      bucket-name: ${CLOUD_BUCKET_NAME:npaxis-files}
+      bucket-name: ${CLOUD_BUCKET_NAME:npaxis-dev-files}
       region: ${CLOUD_REGION:us-east-1}
-      access-key: ${CLOUD_ACCESS_KEY:}
-      secret-key: ${CLOUD_SECRET_KEY:}
+      access-key: ${CLOUD_ACCESS_KEY:dev-access-key}
+      secret-key: ${CLOUD_SECRET_KEY:dev-secret-key}
 
+# ============================================
+# Development DigitalOcean Configuration
+# ============================================
+digitalocean:
+  spaces:
+    endpoint: ${DO_SPACES_ENDPOINT:https://nyc3.digitaloceanspaces.com}
+    region: ${DO_SPACES_REGION:nyc3}
+    access-key: ${DO_SPACES_ACCESS_KEY:dev-access-key}
+    secret-key: ${DO_SPACES_SECRET_KEY:dev-secret-key}
+    bucket-name: ${DO_SPACES_BUCKET:npaxis-dev}
+    cdn-endpoint: ${DO_SPACES_CDN_ENDPOINT:https://npaxis-dev.nyc3.cdn.digitaloceanspaces.com}
+    max-file-size-bytes: 10485760
+    presigned-url-expiry: PT1H
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
+
+# ============================================
+# Development Stripe Configuration
+# ============================================
 payment:
   stripe:
-    secret-key: ${STRIPE_SECRET_KEY:}
-    publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-    checkout:
-      success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/subscription/success}
-      cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/subscription/cancel}
-    portal:
-      return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:5173/dashboard}
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_dev}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_dev}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_test_dev}
+    success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/subscription/success}
+    cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/subscription/cancel}
+    return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:5173/dashboard}
     api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
     max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
     connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
@@ -83,7 +121,7 @@ payment:
       period-days: ${STRIPE_TRIAL_DAYS:14}
 
 # ============================================
-# Logging Configuration for Development
+# Development Logging Configuration
 # ============================================
 logging:
   level:
@@ -96,22 +134,30 @@ logging:
     org.postgresql: INFO
     com.digitalearn.npaxis: DEBUG
 
-  # Log file configuration
-  file:
-    name: logs/${spring.application.name}.log
-    max-size: 100MB
-    max-history: 30
-    total-size-cap: 5GB
-
-  # Log patterns
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}:%line - %msg%n"
 
 # ============================================
-# Server Configuration
+# Development Server Configuration
 # ============================================
 server:
   port: 8080
   servlet:
     context-path: /api/v1
+
+# ============================================
+# Development SpringDoc/Swagger Configuration
+# Keep enabled for development and testing
+# ============================================
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# ============================================
+# Development Storage Configuration
+# Bucket initialization disabled by default in dev
+# Enable via environment variable: STORAGE_BUCKET_INITIALIZE=true
+# ============================================
+storage:
+  bucket:
+    initialize: false

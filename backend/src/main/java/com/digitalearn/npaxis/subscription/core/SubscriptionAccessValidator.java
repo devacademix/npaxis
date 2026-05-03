@@ -22,7 +22,7 @@ public class SubscriptionAccessValidator {
      * Check if preceptor has an active/valid subscription
      */
     public boolean hasActiveSubscription(Long preceptorId) {
-        return subscriptionRepo.findByPreceptor_UserId(preceptorId)
+        return subscriptionRepo.findByPreceptor_UserIdAndActiveTrue(preceptorId)
                 .map(sub -> {
                     if (sub.getStatus() != SubscriptionStatus.ACTIVE &&
                             sub.getStatus() != SubscriptionStatus.TRIALING) {
@@ -47,7 +47,7 @@ public class SubscriptionAccessValidator {
      * (until period end)
      */
     public boolean canAccessUntilPeriodEnd(Long preceptorId) {
-        return subscriptionRepo.findByPreceptor_UserId(preceptorId)
+        return subscriptionRepo.findByPreceptor_UserIdAndActiveTrue(preceptorId)
                 .map(sub -> {
                     LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
 
@@ -64,7 +64,7 @@ public class SubscriptionAccessValidator {
      * Combined check: can access if ACTIVE or if CANCELED within grace period
      */
     public boolean canAccessPremiumFeatures(Long preceptorId) {
-        return subscriptionRepo.findByPreceptor_UserId(preceptorId)
+        return subscriptionRepo.findByPreceptor_UserIdAndActiveTrue(preceptorId)
                 .map(sub -> {
                     // Must be access enabled
                     if (!sub.isAccessEnabled()) {

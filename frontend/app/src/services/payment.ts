@@ -1,20 +1,38 @@
 import api from './auth';
 
-interface CheckoutSessionPayload {
-  userId: number;
+export interface SubscriptionPlanPrice {
+  subscriptionPriceId: number;
+  billingInterval: string;
+  currency: string;
+  amountInMinorUnits: number;
+  active: boolean;
 }
 
-interface PortalSessionPayload {
-  userId: number;
+export interface SubscriptionPlan {
+  subscriptionPlanId: number;
+  code: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  prices: SubscriptionPlanPrice[];
 }
 
-interface CheckoutSessionResponse {
-  checkoutUrl?: string;
-  url?: string;
-  checkout_url?: string;
+export interface SubscriptionStatus {
+  subscriptionId?: number;
+  planCode?: string;
+  planName?: string;
+  billingInterval?: string;
+  amountInMinorUnits?: number;
+  currency?: string;
+  status?: string;
+  accessEnabled?: boolean;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  trialEndsAt?: string;
+  cancelAtPeriodEnd?: boolean;
+  canceledAt?: string;
+  canceledReason?: string;
 }
-
-type PortalSessionResponse = CheckoutSessionResponse;
 
 export interface PaymentHistoryItem {
   transactionId: string;
@@ -22,6 +40,24 @@ export interface PaymentHistoryItem {
   status: string;
   date: string;
   invoiceUrl?: string;
+  planName?: string;
+}
+
+interface CheckoutSessionResponse {
+  sessionId?: string;
+  checkoutUrl?: string;
+  customerId?: string;
+}
+
+interface PortalSessionResponse {
+  portalUrl?: string;
+}
+
+interface LegacyCheckoutPayload {
+  preceptorId: number;
+  billingCycle: string;
+  successUrl: string;
+  cancelUrl: string;
 }
 
 const unwrapApiData = <T>(response: any): T => {
@@ -41,50 +77,97 @@ const authConfig = () => {
   };
 };
 
-const extractUrl = (data: CheckoutSessionResponse | string): string => {
-  if (typeof data === 'string') {
-    return data;
-  }
-  return data.checkoutUrl || data.url || data.checkout_url || '';
+const SUBSCRIPTION_API_PREFIX = '/api/v1/subscriptions';
+const PLAN_API_PREFIX = '/api/v1/subscription-plans';
+const LEGACY_PAYMENT_API_PREFIX = '/api/v1/payments';
+
+const extractPageItems = <T>(payload: any): T[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.content)) return payload.content;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
 };
 
+const formatHistoryItem = (item: any, index: number): PaymentHistoryItem => ({
+  transactionId: String(item?.subscriptionId ?? item?.transactionId ?? `sub-${index + 1}`),
+  amount: Number(item?.amountInMinorUnits ?? item?.amount ?? 0) / 100,
+  status: String(item?.status ?? 'PENDING').toUpperCase(),
+  date: String(item?.paidDate ?? item?.invoiceDate ?? item?.currentPeriodEnd ?? item?.endDate ?? item?.startDate ?? item?.createdAt ?? item?.date ?? ''),
+  invoiceUrl: item?.invoiceUrl ?? undefined,
+  planName: item?.planName ?? item?.planCode ?? undefined,
+});
+
 export const paymentService = {
-  getPaymentHistory: async (preceptorId: number | string): Promise<PaymentHistoryItem[]> => {
-    const response = await api.get(`/payments/history/${preceptorId}`, authConfig());
+  getSubscriptionPlans: async (): Promise<SubscriptionPlan[]> => {
+    const response = await api.get(PLAN_API_PREFIX, authConfig());
+    return unwrapApiData<SubscriptionPlan[]>(response) || [];
+  },
+
+  getSubscriptionStatus: async (): Promise<SubscriptionStatus | null> => {
+    const response = await api.get(`${SUBSCRIPTION_API_PREFIX}/status`, authConfig());
+    return unwrapApiData<SubscriptionStatus>(response);
+  },
+
+  checkPremiumAccess: async (): Promise<boolean> => {
+    const response = await api.get(`${SUBSCRIPTION_API_PREFIX}/access-check`, authConfig());
+    const payload = unwrapApiData<{ hasAccess?: boolean }>(response);
+    return Boolean(payload?.hasAccess);
+  },
+
+  getPaymentHistory: async (_preceptorId?: number | string): Promise<PaymentHistoryItem[]> => {
+    const response = await api.get(`${SUBSCRIPTION_API_PREFIX}/history`, authConfig());
     const payload = unwrapApiData<any>(response);
-
-    const rows = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.items)
-      ? payload.items
-      : [];
-
-    return rows.map((item: any, index: number) => ({
-      transactionId: String(item?.transactionId ?? item?.id ?? item?.paymentId ?? `txn-${preceptorId}-${index + 1}`),
-      amount: Number(item?.amount ?? item?.totalAmount ?? item?.paymentAmount ?? 0),
-      status: String(item?.status ?? item?.paymentStatus ?? 'PENDING').toUpperCase(),
-      date: String(item?.date ?? item?.createdAt ?? item?.paymentDate ?? ''),
-      invoiceUrl: item?.invoiceUrl ?? item?.invoice?.url ?? undefined,
-    }));
+    return extractPageItems<any>(payload).map(formatHistoryItem);
   },
 
-  createCheckoutSession: async (payload: CheckoutSessionPayload): Promise<string> => {
-    const response = await api.post('/payments/create-checkout-session', payload, authConfig());
-    const data = unwrapApiData<CheckoutSessionResponse | string>(response);
-    return extractUrl(data);
-  },
-
-  createPortalSession: async (payload: PortalSessionPayload): Promise<string> => {
-    try {
-      const response = await api.post('/payments/create-portal-session', payload, authConfig());
-      const data = unwrapApiData<PortalSessionResponse | string>(response);
-      return extractUrl(data);
-    } catch {
-      // Some backends infer user from token and accept empty body.
-      const response = await api.post('/payments/create-portal-session', null, authConfig());
-      const data = unwrapApiData<PortalSessionResponse | string>(response);
-      return extractUrl(data);
+  createCheckoutSession: async (payload: {
+    priceId?: number | null;
+    preceptorId?: number | null;
+    billingInterval?: string | null;
+    successUrl?: string;
+    cancelUrl?: string;
+  }): Promise<string> => {
+    if (payload.priceId != null) {
+      const response = await api.post(`${SUBSCRIPTION_API_PREFIX}/checkout`, { priceId: payload.priceId }, authConfig());
+      const data = unwrapApiData<CheckoutSessionResponse>(response);
+      return data?.checkoutUrl || '';
     }
+
+    if (payload.preceptorId != null && payload.billingInterval) {
+      const legacyPayload: LegacyCheckoutPayload = {
+        preceptorId: payload.preceptorId,
+        billingCycle: String(payload.billingInterval).toUpperCase(),
+        successUrl: payload.successUrl || `${window.location.origin}/preceptor/subscription`,
+        cancelUrl: payload.cancelUrl || `${window.location.origin}/preceptor/subscription`,
+      };
+      const response = await api.post(`${LEGACY_PAYMENT_API_PREFIX}/create-checkout-session`, legacyPayload, authConfig());
+      const data = unwrapApiData<CheckoutSessionResponse>(response);
+      return data?.checkoutUrl || '';
+    }
+
+    throw new Error('No checkout configuration is available right now.');
+  },
+
+  createPortalSession: async (): Promise<string> => {
+    const response = await api.get(`${SUBSCRIPTION_API_PREFIX}/billing-portal`, authConfig());
+    const data = unwrapApiData<PortalSessionResponse>(response);
+    return data?.portalUrl || '';
+  },
+
+  confirmCheckoutSession: async (sessionId: string): Promise<void> => {
+    await api.get(`${SUBSCRIPTION_API_PREFIX}/checkout/confirm`, {
+      ...authConfig(),
+      params: { sessionId },
+    });
+  },
+
+  cancelSubscription: async (): Promise<void> => {
+    await api.post(`${SUBSCRIPTION_API_PREFIX}/cancel`, null, authConfig());
+  },
+
+  updateSubscription: async (priceId: number): Promise<void> => {
+    await api.put(`${SUBSCRIPTION_API_PREFIX}/update`, { priceId }, authConfig());
   },
 };
 

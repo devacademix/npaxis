@@ -9,7 +9,8 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <!-- Define properties for logging configuration -->
-    <property name="LOG_FILE_PATH" value="${LOG_FILE_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/logs}"/>
+    <!-- Default to ./logs directory relative to application working directory for persistence -->
+    <property name="LOG_FILE_PATH" value="${LOG_FILE_PATH:-./logs}"/>
     <property name="APP_NAME" value="npaxis"/>
     <property name="ARCHIVE_DIR" value="${LOG_FILE_PATH}/archive"/>
     <property name="MAX_FILE_SIZE" value="100MB"/>
@@ -33,7 +34,7 @@
 
     <!-- Application Log File - Size and Time Based Rolling -->
     <appender name="APPLICATION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <!-- Current log file path -->
+        <!-- Ensure parent directory exists -->
         <file>${LOG_FILE_PATH}/${APP_NAME}-application.log</file>
 
         <!-- Rolling Policy: Combines size-based and time-based rotation -->
@@ -126,11 +127,14 @@
         <!-- Queue depth to prevent blocking -->
         <queueSize>512</queueSize>
 
-        <!-- Discard TRACE, DEBUG, and INFO events in case of queue being full -->
+        <!-- Never discard events - ensure all logs are written -->
         <discardingThreshold>0</discardingThreshold>
 
-        <!-- Whether to block when queue is full (false = drop messages) -->
+        <!-- Don't include caller data for performance -->
         <includeCallerData>false</includeCallerData>
+
+        <!-- Block if queue is full to ensure no logs are lost -->
+        <blockingQueue>true</blockingQueue>
 
         <appender-ref ref="APPLICATION_FILE"/>
     </appender>

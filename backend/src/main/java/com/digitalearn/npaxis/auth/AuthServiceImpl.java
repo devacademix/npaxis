@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.auth;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.email.EmailService;
 import com.digitalearn.npaxis.email.EmailTemplate;
 import com.digitalearn.npaxis.exceptionhandler.BusinessErrorCodes;
@@ -40,6 +42,16 @@ import java.util.Map;
  * <p>
  * Access token is returned in the response body.
  * Refresh token is stored securely in an HttpOnly cookie.
+ *
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ *
+ * This service tracks key authentication events:
+ * - USER_LOGIN: successful login attempts
+ * - USER_REGISTERED: new user registrations
+ *
+ * Events help monitor user engagement and security patterns.
  */
 @Service
 @Transactional
@@ -61,10 +73,20 @@ public class AuthServiceImpl implements AuthService {
     /**
      * Authenticates user credentials and generates JWT tokens.
      *
+     * ANALYTICS:
+     * - Tracks USER_LOGIN event on successful authentication
+     * - Records login timestamp and user info in metadata
+     *
      * @param authRequest     login credentials
      * @param servletResponse HTTP response to attach refresh cookie
      * @return AuthResponse containing access token and user info
      */
+    @TrackEvent(
+        eventType = EventType.USER_LOGIN,
+        targetIdExpression = "#result.user().getId()",
+        metadataExpression = "{'userType': #result.user().getRole().getRoleName(), " +
+                           "'email': #result.user().getEmail()}"
+    )
     @Override
     public AuthResponse login(AuthRequest authRequest, HttpServletResponse servletResponse)
             throws AuthenticationException {
@@ -104,9 +126,18 @@ public class AuthServiceImpl implements AuthService {
      * <p>
      * After registration, tokens are issued just like login.
      *
+     * ANALYTICS:
+     * - Tracks USER_REGISTERED event on successful registration
+     * - Records user type (STUDENT/PRECEPTOR) and email in metadata
+     *
      * @param request registration request
      * @return AuthResponse with access token
      */
+    @TrackEvent(
+        eventType = EventType.USER_REGISTERED,
+        metadataExpression = "{'userType': #request.getRoleId() == 1 ? 'STUDENT' : 'PRECEPTOR', " +
+                           "'email': #request.getEmail()}"
+    )
     @Override
     @Transactional
     public String register(BaseRegistrationRequest request) {

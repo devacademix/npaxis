@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SettingsForm, { type SettingsState, type SettingsTab } from '../../components/admin/SettingsForm';
 import { authService } from '../../services/auth';
-import settingsService, { type AdminCurrentUser } from '../../services/settings';
+import settingsService, { type AdminCurrentUser, type SystemSetting } from '../../services/settings';
 
 const defaultSettings: SettingsState = {
   general: {
@@ -22,8 +22,8 @@ const defaultSettings: SettingsState = {
     sessionTimeout: '30',
   },
   integrations: {
-    publicApiKey: 'pk_live_3f9a0b1c2d4e',
-    secretApiKey: 'sk_live_8f2d1e6a7c9b',
+    publicApiKey: 'Configured on server',
+    secretApiKey: 'Hidden on server',
     webhookUrl: '',
     paymentsEnabled: true,
     mailServiceEnabled: true,
@@ -42,13 +42,58 @@ const defaultSettings: SettingsState = {
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const mergeSettings = (base: SettingsState, overrides: Partial<SettingsState>): SettingsState => ({
-  general: { ...base.general, ...(overrides.general ?? {}) },
-  security: { ...base.security, ...(overrides.security ?? {}) },
-  integrations: { ...base.integrations, ...(overrides.integrations ?? {}) },
-  notifications: { ...base.notifications, ...(overrides.notifications ?? {}) },
-  systemControls: { ...base.systemControls, ...(overrides.systemControls ?? {}) },
-});
+const SETTING_KEYS = {
+  platformName: 'platformName',
+  supportEmail: 'supportEmail',
+  defaultLanguage: 'defaultLanguage',
+  timezone: 'timezone',
+  webhookUrl: 'webhookUrl',
+  paymentsEnabled: 'paymentsEnabled',
+  mailServiceEnabled: 'mailServiceEnabled',
+  analyticsEnabled: 'analyticsEnabled',
+  emailNotifications: 'emailNotifications',
+  systemAlerts: 'systemAlerts',
+  inquiryAlerts: 'inquiryAlerts',
+  registrationEnabled: 'registrationEnabled',
+  maintenanceMode: 'maintenanceMode',
+};
+
+const mapSettings = (settingsList: SystemSetting[], admin: AdminCurrentUser): SettingsState => {
+  const settingsMap = new Map(settingsList.map((setting) => [setting.settingKey, setting.value]));
+  return {
+    ...defaultSettings,
+    general: {
+      ...defaultSettings.general,
+      platformName: String(settingsMap.get(SETTING_KEYS.platformName) ?? defaultSettings.general.platformName),
+      supportEmail: String(settingsMap.get(SETTING_KEYS.supportEmail) ?? admin.email ?? defaultSettings.general.supportEmail),
+      defaultLanguage: String(settingsMap.get(SETTING_KEYS.defaultLanguage) ?? defaultSettings.general.defaultLanguage),
+      timezone: String(settingsMap.get(SETTING_KEYS.timezone) ?? defaultSettings.general.timezone),
+      adminName: admin.name || '',
+      adminEmail: admin.email || '',
+    },
+    security: {
+      ...defaultSettings.security,
+    },
+    integrations: {
+      ...defaultSettings.integrations,
+      webhookUrl: String(settingsMap.get(SETTING_KEYS.webhookUrl) ?? ''),
+      paymentsEnabled: Boolean(settingsMap.get(SETTING_KEYS.paymentsEnabled) ?? defaultSettings.integrations.paymentsEnabled),
+      mailServiceEnabled: Boolean(settingsMap.get(SETTING_KEYS.mailServiceEnabled) ?? defaultSettings.integrations.mailServiceEnabled),
+      analyticsEnabled: Boolean(settingsMap.get(SETTING_KEYS.analyticsEnabled) ?? defaultSettings.integrations.analyticsEnabled),
+    },
+    notifications: {
+      ...defaultSettings.notifications,
+      emailNotifications: Boolean(settingsMap.get(SETTING_KEYS.emailNotifications) ?? defaultSettings.notifications.emailNotifications),
+      systemAlerts: Boolean(settingsMap.get(SETTING_KEYS.systemAlerts) ?? defaultSettings.notifications.systemAlerts),
+      inquiryAlerts: Boolean(settingsMap.get(SETTING_KEYS.inquiryAlerts) ?? defaultSettings.notifications.inquiryAlerts),
+    },
+    systemControls: {
+      ...defaultSettings.systemControls,
+      registrationEnabled: Boolean(settingsMap.get(SETTING_KEYS.registrationEnabled) ?? defaultSettings.systemControls.registrationEnabled),
+      maintenanceMode: Boolean(settingsMap.get(SETTING_KEYS.maintenanceMode) ?? defaultSettings.systemControls.maintenanceMode),
+    },
+  };
+};
 
 const Settings: React.FC = () => {
   const role = localStorage.getItem('role');
@@ -56,10 +101,7 @@ const Settings: React.FC = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  const [settings, setSettings] = useState<SettingsState>(() => {
-    const cached = settingsService.getTemporarySettings<SettingsState>();
-    return cached ? mergeSettings(defaultSettings, cached) : defaultSettings;
-  });
+  const [settings, setSettings] = useState<SettingsState>(defaultSettings);
   const [adminUser, setAdminUser] = useState<AdminCurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -72,20 +114,12 @@ const Settings: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const currentAdmin = await settingsService.getCurrentAdmin();
+        const [currentAdmin, backendSettings] = await Promise.all([
+          settingsService.getCurrentAdmin(),
+          settingsService.getAllSettings().catch(() => []),
+        ]);
         setAdminUser(currentAdmin);
-        setSettings((prev) => ({
-          ...prev,
-          general: {
-            ...prev.general,
-            adminName: prev.general.adminName || currentAdmin.name || '',
-            adminEmail: prev.general.adminEmail || currentAdmin.email || '',
-            supportEmail:
-              prev.general.supportEmail === defaultSettings.general.supportEmail && currentAdmin.email
-                ? currentAdmin.email
-                : prev.general.supportEmail,
-          },
-        }));
+        setSettings(mapSettings(backendSettings, currentAdmin));
       } catch (err: any) {
         setError(err?.message || 'Failed to load admin settings.');
       } finally {
@@ -120,37 +154,21 @@ const Settings: React.FC = () => {
   };
 
   const validateSettings = (): string | null => {
-    if (!settings.general.platformName.trim()) {
-      return 'Platform name is required.';
-    }
-    if (!emailRegex.test(settings.general.supportEmail.trim())) {
-      return 'Support email is invalid.';
-    }
-    if (!emailRegex.test(settings.general.adminEmail.trim())) {
-      return 'Admin email is invalid.';
-    }
+    if (!settings.general.platformName.trim()) return 'Platform name is required.';
+    if (!emailRegex.test(settings.general.supportEmail.trim())) return 'Support email is invalid.';
+    if (!emailRegex.test(settings.general.adminEmail.trim())) return 'Admin email is invalid.';
     if (settings.integrations.webhookUrl.trim()) {
       try {
-        // URL validation
         new URL(settings.integrations.webhookUrl.trim());
       } catch {
         return 'Webhook URL must be a valid URL.';
       }
     }
-    const hasPasswordInput =
-      settings.security.currentPassword.trim() ||
-      settings.security.newPassword.trim() ||
-      settings.security.confirmPassword.trim();
-    if (hasPasswordInput) {
-      if (!settings.security.currentPassword.trim()) {
-        return 'Current password is required when changing password.';
-      }
-      if (settings.security.newPassword.trim() && settings.security.newPassword.trim().length < 8) {
-        return 'New password must be at least 8 characters long.';
-      }
-      if (settings.security.newPassword.trim() !== settings.security.confirmPassword.trim()) {
-        return 'New password and confirm password do not match.';
-      }
+    if (settings.security.newPassword && settings.security.newPassword.length < 8) {
+      return 'New password must be at least 8 characters long.';
+    }
+    if (settings.security.newPassword !== settings.security.confirmPassword) {
+      return 'New password and confirm password do not match.';
     }
     return null;
   };
@@ -168,32 +186,35 @@ const Settings: React.FC = () => {
     try {
       setIsSaving(true);
 
-      let profileMessage = 'Settings saved locally.';
-
-      const profilePassword = settings.security.newPassword.trim() || settings.security.currentPassword.trim();
-      if (adminUser && profilePassword) {
+      if (adminUser && settings.security.currentPassword.trim()) {
         await settingsService.updateAdminDetails(adminUser.userId, {
           fullName: settings.general.adminName.trim() || adminUser.name,
           username: adminUser.username,
-          password: profilePassword,
+          password: settings.security.newPassword.trim() || settings.security.currentPassword.trim(),
           email: settings.general.adminEmail.trim(),
           roles: [3],
         });
-        profileMessage = 'Admin profile updated and settings saved.';
-      } else if (adminUser) {
-        profileMessage =
-          'Profile not updated (enter current password to apply profile changes). Other settings saved locally.';
       }
 
-      await settingsService.saveTemporarySettings({
-        ...settings,
-        security: {
-          ...settings.security,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        },
-      });
+      const updates: Array<[string, any]> = [
+        [SETTING_KEYS.platformName, settings.general.platformName.trim()],
+        [SETTING_KEYS.supportEmail, settings.general.supportEmail.trim()],
+        [SETTING_KEYS.defaultLanguage, settings.general.defaultLanguage],
+        [SETTING_KEYS.timezone, settings.general.timezone],
+        [SETTING_KEYS.webhookUrl, settings.integrations.webhookUrl.trim()],
+        [SETTING_KEYS.paymentsEnabled, settings.integrations.paymentsEnabled],
+        [SETTING_KEYS.mailServiceEnabled, settings.integrations.mailServiceEnabled],
+        [SETTING_KEYS.analyticsEnabled, settings.integrations.analyticsEnabled],
+        [SETTING_KEYS.emailNotifications, settings.notifications.emailNotifications],
+        [SETTING_KEYS.systemAlerts, settings.notifications.systemAlerts],
+        [SETTING_KEYS.inquiryAlerts, settings.notifications.inquiryAlerts],
+        [SETTING_KEYS.registrationEnabled, settings.systemControls.registrationEnabled],
+        [SETTING_KEYS.maintenanceMode, settings.systemControls.maintenanceMode],
+      ];
+
+      for (const [key, value] of updates) {
+        await settingsService.updateSetting(key, value);
+      }
 
       setSettings((prev) => ({
         ...prev,
@@ -204,7 +225,7 @@ const Settings: React.FC = () => {
           confirmPassword: '',
         },
       }));
-      setSuccess(profileMessage);
+      setSuccess('Admin settings saved successfully.');
     } catch (err: any) {
       setError(err?.message || 'Failed to save settings.');
     } finally {
@@ -216,13 +237,6 @@ const Settings: React.FC = () => {
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(value);
-      } else {
-        const input = document.createElement('input');
-        input.value = value;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
       }
       setSuccess('Copied to clipboard.');
     } catch {
@@ -250,28 +264,15 @@ const Settings: React.FC = () => {
           <p className="mt-2 text-slate-500">Configure platform preferences, security, and integrations.</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-            {adminDisplayName}
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
-          >
+          <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">{adminDisplayName}</div>
+          <button type="button" onClick={handleLogout} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
             Logout
           </button>
         </div>
       </div>
 
-      {error ? (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      ) : null}
-
-      {success ? (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {success}
-        </div>
-      ) : null}
+      {error ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+      {success ? <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div> : null}
 
       {isLoading ? (
         <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">

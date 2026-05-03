@@ -24,6 +24,9 @@ interface RevenueChartProps {
 }
 
 const RevenueChart: React.FC<RevenueChartProps> = ({ title, type, data, valuePrefix = '' }) => {
+  const normalizedPrefix =
+    valuePrefix === '₹' || valuePrefix === 'â‚¹' ? '$' : valuePrefix;
+
   return (
     <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
       <h3 className="mb-4 text-lg font-bold text-slate-900">{title}</h3>
@@ -35,7 +38,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ title, type, data, valuePre
               <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 12 }} />
               <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
               <Tooltip
-                formatter={(value) => `${valuePrefix}${Number(value ?? 0).toLocaleString()}`}
+                formatter={(value) => `${normalizedPrefix}${Number(value ?? 0).toLocaleString('en-US')}`}
                 contentStyle={{ borderRadius: 12, borderColor: '#e2e8f0' }}
               />
               <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={3} dot={{ r: 3 }} />
@@ -46,7 +49,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ title, type, data, valuePre
               <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 12 }} />
               <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
               <Tooltip
-                formatter={(value) => `${valuePrefix}${Number(value ?? 0).toLocaleString()}`}
+                formatter={(value) => `${normalizedPrefix}${Number(value ?? 0).toLocaleString('en-US')}`}
                 contentStyle={{ borderRadius: 12, borderColor: '#e2e8f0' }}
               />
               <Bar dataKey="value" fill="#4f46e5" radius={[8, 8, 0, 0]} />

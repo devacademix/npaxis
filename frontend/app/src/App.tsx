@@ -25,15 +25,18 @@ import PreceptorBilling from './pages/preceptor/Billing';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentBrowse from './pages/student/Browse';
 import StudentSaved from './pages/student/Saved';
-import StudentPlaceholder from './pages/student/Placeholder';
+import StudentProfile from './pages/student/Profile';
 import StudentPreceptorDetail from './pages/student/PreceptorDetail';
 import StudentInquiry from './pages/student/Inquiry';
+import StudentInquiries from './pages/student/Inquiries';
+import PreceptorInquiries from './pages/preceptor/Inquiries';
 import ProtectedRoute from './routes/ProtectedRoute';
 import InfoPage from './pages/common/InfoPage';
 import Landing from './pages/common/Landing';
 import Contact from './pages/common/Contact';
 import PublicBrowse from './pages/common/PublicBrowse';
 import About from './pages/common/About';
+import StripeReturn from './pages/common/StripeReturn';
 
 function App() {
   useEffect(() => {
@@ -189,6 +192,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/preceptor/inquiries"
+          element={
+            <ProtectedRoute allowedRoles={['PRECEPTOR']}>
+              <PreceptorInquiries />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/student"
@@ -218,7 +229,15 @@ function App() {
           path="/student/profile"
           element={
             <ProtectedRoute allowedRoles={['STUDENT']}>
-              <StudentPlaceholder title="Student Profile" description="Update your profile preferences and academic details." />
+              <StudentProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/inquiries"
+          element={
+            <ProtectedRoute allowedRoles={['STUDENT']}>
+              <StudentInquiries />
             </ProtectedRoute>
           }
         />
@@ -247,6 +266,8 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/browse" element={<PublicBrowse />} />
         <Route path="/about" element={<About />} />
+        <Route path="/subscription/success" element={<StripeReturn />} />
+        <Route path="/subscription/cancel" element={<StripeReturn />} />
         <Route path="/*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

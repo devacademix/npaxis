@@ -3,6 +3,8 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import ChartSection, { type InteractionsDataPoint, type ViewsDataPoint } from '../../components/preceptor/ChartSection';
 import StatsCard from '../../components/preceptor/StatsCard';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
+import inquiryService, { type InquiryRecord } from '../../services/inquiry';
+import paymentService from '../../services/payment';
 import { preceptorService, type LoggedInPreceptorUser, type PreceptorStatsResponse } from '../../services/preceptor';
 
 interface DashboardStats {
@@ -46,20 +48,12 @@ const buildInteractionsSeries = (reveals: number, inquiries: number): Interactio
   }));
 };
 
-const buildRecentActivity = (count: number): InquiryActivity[] => {
-  if (count <= 0) return [];
-  // Generating generic placeholder rows matching the actual tracked count, 
-  // since the backend only supports event tracking, not full message storage yet.
-  return Array.from({ length: Math.min(count, 5) }, (_, index) => {
-    const d = new Date();
-    d.setDate(d.getDate() - index);
-    return {
-      id: `inquiry-${index}`,
-      message: 'A student has submitted a clinical inquiry regarding rotation availability.',
-      date: d.toLocaleDateString(),
-    };
-  });
-};
+const buildRecentActivity = (items: InquiryRecord[]): InquiryActivity[] =>
+  items.slice(0, 5).map((item) => ({
+    id: `inquiry-${item.inquiryId}`,
+    message: item.message,
+    date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A',
+  }));
 
 const Dashboard: React.FC = () => {
   const role = localStorage.getItem('role');
@@ -68,41 +62,111 @@ const Dashboard: React.FC = () => {
 
   const [user, setUser] = useState<LoggedInPreceptorUser | null>(null);
   const [stats, setStats] = useState<DashboardStats>({ profileViews: 0, contactReveals: 0, inquiries: 0 });
+  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isPreceptor) return;
 
     const loadDashboard = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+      setIsLoading(true);
+      setError(null);
+      setStatusNote(null);
 
-        const currentUser = await preceptorService.getLoggedInUser();
-        setUser(currentUser);
+      const fallbackUserId = Number(localStorage.getItem('userId') || 0);
+      const fallbackDisplayName = localStorage.getItem('displayName') || 'Preceptor';
+      const fallbackEmail = localStorage.getItem('email') || '';
 
-        try {
-          const statsResponse = await preceptorService.getStats(currentUser.userId);
-          setStats(normalizeStats(statsResponse));
-        } catch {
-          // Fallback to zeros if stats aren't found or API fails, avoiding dummy data
-          setStats({
-            profileViews: 0,
-            contactReveals: 0,
-            inquiries: 0,
-          });
-        }
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load dashboard data.');
+      const userResult = await Promise.allSettled([preceptorService.getLoggedInUser()]);
+      const resolvedUser =
+        userResult[0].status === 'fulfilled'
+          ? userResult[0].value
+          : fallbackUserId
+          ? {
+              userId: fallbackUserId,
+              displayName: fallbackDisplayName,
+              email: fallbackEmail,
+            }
+          : null;
+
+      if (!resolvedUser) {
+        setError('Unable to load your dashboard session. Please login again.');
         setStats({
           profileViews: 0,
           contactReveals: 0,
           inquiries: 0,
         });
-      } finally {
+        setInquiries([]);
         setIsLoading(false);
+        return;
       }
+
+      setUser(resolvedUser);
+
+      const isActivationPending = localStorage.getItem('premiumActivationPending') === 'true';
+
+      const [premiumResult, inquiriesResult] = await Promise.allSettled([
+        paymentService.checkPremiumAccess(),
+        inquiryService.getMyInquiries(),
+      ]);
+
+      const premiumEnabled = premiumResult.status === 'fulfilled' && Boolean(premiumResult.value);
+
+      if (premiumResult.status === 'fulfilled') {
+        setHasPremiumAccess(premiumEnabled);
+        localStorage.setItem('isPremium', String(premiumEnabled));
+      }
+
+      if (isActivationPending && !premiumEnabled) {
+        setStatusNote('Payment received. Premium activation is still in progress, so analytics will appear once sync completes.');
+      } else if (!premiumEnabled) {
+        setStatusNote('Premium analytics are available after subscription activation.');
+      }
+
+      const statsResult = premiumEnabled
+        ? await Promise.allSettled([preceptorService.getStats(resolvedUser.userId)]).then((results) => results[0])
+        : null;
+
+      if (statsResult?.status === 'fulfilled') {
+        setStats(normalizeStats(statsResult.value));
+      } else {
+        setStats({
+          profileViews: 0,
+          contactReveals: 0,
+          inquiries: 0,
+        });
+      }
+
+      if (inquiriesResult.status === 'fulfilled') {
+        setInquiries(inquiriesResult.value);
+      } else {
+        setInquiries([]);
+      }
+
+      const failures: string[] = [];
+      if (userResult[0].status === 'rejected' && !fallbackUserId) {
+        failures.push(userResult[0].reason?.message || 'User session');
+      }
+      if (statsResult?.status === 'rejected') {
+        failures.push(statsResult.reason?.message || 'Analytics');
+      }
+      if (inquiriesResult.status === 'rejected') {
+        failures.push(inquiriesResult.reason?.message || 'Inquiries');
+      }
+
+      const meaningfulFailures = failures.filter((message) => {
+        const normalized = String(message).toLowerCase();
+        return !normalized.includes('unexpected error occurred') && !normalized.includes('not premium');
+      });
+
+      if (meaningfulFailures.length > 0) {
+        setError(Array.from(new Set(meaningfulFailures)).join(' | '));
+      }
+
+      setIsLoading(false);
     };
 
     loadDashboard();
@@ -113,17 +177,18 @@ const Dashboard: React.FC = () => {
     [user?.displayName]
   );
 
-  const isPremium = useMemo(() => {
-    const roleValue = String(role || '').toUpperCase();
-    return roleValue.includes('PREMIUM') || localStorage.getItem('isPremium') === 'true';
-  }, [role]);
+  const isPremium = useMemo(() => hasPremiumAccess || localStorage.getItem('isPremium') === 'true', [hasPremiumAccess]);
+  const isActivationPending = useMemo(
+    () => !isPremium && localStorage.getItem('premiumActivationPending') === 'true',
+    [isPremium]
+  );
 
   const viewsData = useMemo(() => buildViewsSeries(stats.profileViews), [stats.profileViews]);
   const interactionsData = useMemo(
     () => buildInteractionsSeries(stats.contactReveals, stats.inquiries),
     [stats.contactReveals, stats.inquiries]
   );
-  const recentActivity = useMemo(() => buildRecentActivity(stats.inquiries), [stats.inquiries]);
+  const recentActivity = useMemo(() => buildRecentActivity(inquiries), [inquiries]);
 
   if (!isPreceptor) {
     return <Navigate to="/login" replace />;
@@ -139,6 +204,12 @@ const Dashboard: React.FC = () => {
       {error ? (
         <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
+        </div>
+      ) : null}
+
+      {statusNote ? (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+          {statusNote}
         </div>
       ) : null}
 
@@ -169,10 +240,10 @@ const Dashboard: React.FC = () => {
             />
             <StatsCard
               title="Premium Status"
-              value={isPremium ? 'Active' : 'Inactive'}
-              subtitle={isPremium ? 'Premium features enabled' : 'Upgrade for better visibility'}
+              value={isPremium ? 'Active' : isActivationPending ? 'Pending' : 'Inactive'}
+              subtitle={isPremium ? 'Premium features enabled' : isActivationPending ? 'Payment received, activation in progress' : 'Upgrade for better visibility'}
               icon="workspace_premium"
-              badge={{ text: isPremium ? 'Active' : 'Inactive', tone: isPremium ? 'success' : 'neutral' }}
+              badge={{ text: isPremium ? 'Active' : isActivationPending ? 'Pending' : 'Inactive', tone: isPremium ? 'success' : 'neutral' }}
             />
           </>
         )}
@@ -247,6 +318,14 @@ const Dashboard: React.FC = () => {
               className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
             >
               Upload License
+              <span className="material-symbols-outlined text-base">chevron_right</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/preceptor/inquiries')}
+              className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              Review Inquiries
               <span className="material-symbols-outlined text-base">chevron_right</span>
             </button>
             <button
