@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import ResponsiveGrid from '../../components/layout/ResponsiveGrid';
 import StudentLayout from '../../components/layout/StudentLayout';
 import PreceptorCard from '../../components/student/PreceptorCard';
 import StatsCard from '../../components/student/StatsCard';
+import { inquiryService } from '../../services/inquiry';
 import {
   studentService,
   type StudentPreceptor,
@@ -34,7 +36,10 @@ const Dashboard: React.FC = () => {
   const [studentData, setStudentData] = useState<StudentProfile | null>(null);
   const [savedPreceptors, setSavedPreceptors] = useState<StudentPreceptor[]>([]);
   const [recommendedPreceptors, setRecommendedPreceptors] = useState<StudentPreceptor[]>([]);
+  const [totalInquiries, setTotalInquiries] = useState(0);
+  const [recentlyViewedCount, setRecentlyViewedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecommendationsLoading, setIsRecommendationsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
@@ -51,7 +56,7 @@ const Dashboard: React.FC = () => {
         setUser(currentUser);
 
         const nonCriticalErrors: string[] = [];
-        const [profile, saved, recommended] = await Promise.all([
+        const [profile, saved, inquiries] = await Promise.all([
           studentService.getStudentProfile(currentUser.userId).catch((err: any) => {
             nonCriticalErrors.push(err?.message || 'Student profile unavailable.');
             return null;
@@ -60,18 +65,15 @@ const Dashboard: React.FC = () => {
             nonCriticalErrors.push(err?.message || 'Saved preceptors unavailable.');
             return [] as StudentPreceptor[];
           }),
-          studentService.searchPreceptors(10).catch((err: any) => {
-            nonCriticalErrors.push(err?.message || 'Recommended preceptors unavailable.');
-            return [] as StudentPreceptor[];
+          inquiryService.getMyInquiries().catch((err: any) => {
+            nonCriticalErrors.push(err?.message || 'Inquiry data unavailable.');
+            return [];
           }),
         ]);
 
         setStudentData(profile);
         setSavedPreceptors(saved);
-
-        const savedIds = new Set(saved.map((item) => item.userId));
-        const filteredRecommendations = recommended.filter((item) => !savedIds.has(item.userId));
-        setRecommendedPreceptors(filteredRecommendations.length > 0 ? filteredRecommendations : recommended);
+        setTotalInquiries(Array.isArray(inquiries) ? inquiries.length : 0);
 
         if (nonCriticalErrors.length > 0) {
           setInfoMessage('Some dashboard widgets are temporarily unavailable. Core features are still usable.');
@@ -86,11 +88,48 @@ const Dashboard: React.FC = () => {
     loadStudentDashboard();
   }, [isStudent]);
 
+  useEffect(() => {
+    if (!isStudent || !user?.userId) return;
+
+    let isCancelled = false;
+
+    const loadRecommendations = async () => {
+      try {
+        setIsRecommendationsLoading(true);
+        const recommended = await studentService.searchPreceptors(10);
+
+        if (isCancelled) return;
+
+        setRecentlyViewedCount(Array.isArray(recommended) ? recommended.length : 0);
+        const savedIds = new Set(savedPreceptors.map((item) => item.userId));
+        const filteredRecommendations = recommended.filter((item) => !savedIds.has(item.userId));
+        setRecommendedPreceptors(filteredRecommendations.length > 0 ? filteredRecommendations : recommended);
+      } catch {
+        if (isCancelled) return;
+        setRecentlyViewedCount(0);
+        setRecommendedPreceptors([]);
+        setInfoMessage((prev) =>
+          prev ?? 'Some dashboard widgets are temporarily unavailable. Core features are still usable.'
+        );
+      } finally {
+        if (!isCancelled) {
+          setIsRecommendationsLoading(false);
+        }
+      }
+    };
+
+    loadRecommendations();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isStudent, savedPreceptors, user?.userId]);
+
   const displayName = user?.displayName || localStorage.getItem('displayName') || 'Student';
 
   const savedCount = savedPreceptors.length;
-  const inquiriesSent = Number(studentData?.inquiriesSent ?? 0);
-  const recentlyViewed = Number(studentData?.recentlyViewed ?? 0);
+  const inquiriesSent = totalInquiries;
+  const recentlyViewed = recentlyViewedCount;
 
   const recentActivity = useMemo<ActivityItem[]>(() => {
     const activities: ActivityItem[] = [];
@@ -148,7 +187,8 @@ const Dashboard: React.FC = () => {
           </div>
         ) : null}
 
-        <section id="saved-summary" className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section id="saved-summary" className="mb-6">
+          <ResponsiveGrid mobileCols={1} tabletCols={2} desktopCols={3}>
           {isLoading ? (
             Array.from({ length: 3 }, (_, index) => (
               <div key={index} className="h-36 animate-pulse rounded-2xl bg-slate-200/70" />
@@ -178,6 +218,7 @@ const Dashboard: React.FC = () => {
               />
             </>
           )}
+          </ResponsiveGrid>
         </section>
 
         <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -219,7 +260,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isRecommendationsLoading ? (
             <div className="flex gap-4 overflow-x-auto pb-2">
               {Array.from({ length: 4 }, (_, index) => (
                 <div key={index} className="h-72 min-w-[260px] animate-pulse rounded-2xl bg-slate-200/70" />

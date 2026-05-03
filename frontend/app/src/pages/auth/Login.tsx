@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authService } from '../../services/auth';
+import { authService, emitSessionChanged } from '../../services/auth';
 import type { AuthResponse } from '../../types';
 
 const Login: React.FC = () => {
@@ -35,12 +35,13 @@ const Login: React.FC = () => {
       localStorage.setItem('role', response.role);
       localStorage.setItem('userId', String(response.userId));
       localStorage.setItem('displayName', response.displayName);
+      emitSessionChanged();
 
       // Redirect based on role
       switch (response.role) {
         case 'ROLE_ADMIN':
         case 'ADMIN':
-          navigate('/admin');
+          navigate('/admin/dashboard');
           break;
         case 'ROLE_PRECEPTOR':
         case 'PRECEPTOR':
@@ -48,7 +49,7 @@ const Login: React.FC = () => {
           break;
         case 'ROLE_STUDENT':
         case 'STUDENT':
-          navigate('/student');
+          navigate('/student/dashboard');
           break;
         default:
           navigate('/');

@@ -39,6 +39,14 @@ const SPECIALTY_OPTIONS = [
   'Physical Therapy',
 ].map((value) => ({ label: value, value }));
 
+const COUNTRY_CODE_OPTIONS = [
+  { label: 'India (+91)', value: '+91' },
+  { label: 'United States (+1)', value: '+1' },
+  { label: 'United Kingdom (+44)', value: '+44' },
+  { label: 'Canada (+1)', value: '+1' },
+  { label: 'Australia (+61)', value: '+61' },
+];
+
 const Register: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'student' | 'preceptor'>('student');
 
@@ -46,6 +54,7 @@ const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
 
   // Student Specific
@@ -71,6 +80,13 @@ const Register: React.FC = () => {
     setSuccess(null);
 
     try {
+      const normalizedPhone = phoneNumber.replace(/[^\d]/g, '');
+      if (!normalizedPhone) {
+        throw new Error('Phone number is required.');
+      }
+
+      const formattedPhone = `${countryCode} ${normalizedPhone}`;
+
       if (activeTab === 'student') {
         const payload = {
           roleId: 1, // 1: Student
@@ -80,7 +96,7 @@ const Register: React.FC = () => {
           university,
           program,
           graduationYear,
-          phone: phoneNumber
+          phone: formattedPhone
         };
         await authService.register(payload);
       } else {
@@ -96,7 +112,7 @@ const Register: React.FC = () => {
           credentials: credential ? [credential] : [],
           specialties: [specialty],
           location,
-          phone: phoneNumber
+          phone: formattedPhone
         };
         await authService.register(payload);
       }
@@ -194,10 +210,32 @@ const Register: React.FC = () => {
 
                   <div className="space-y-2">
                     <label className="block text-[0.6875rem] font-bold tracking-[0.05em] uppercase text-outline">Phone Number</label>
-                    <div className="relative">
-                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl">call</span>
-                      <input className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline-variant" placeholder="(555) 000-0000" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+                    <div className="grid grid-cols-[140px,1fr] gap-3">
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="w-full rounded-lg bg-surface-container-low px-3 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-primary"
+                        required
+                      >
+                        {COUNTRY_CODE_OPTIONS.map((option) => (
+                          <option key={`${option.label}-${option.value}`} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="relative">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-xl">call</span>
+                        <input
+                          className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline-variant"
+                          placeholder="9876543210"
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
+                    <p className="text-xs text-slate-500">Country code select karna required hai, aur phone number bhi required field hai.</p>
                   </div>
 
                   {activeTab === 'student' ? (

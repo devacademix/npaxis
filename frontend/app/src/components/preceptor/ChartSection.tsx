@@ -44,9 +44,9 @@ const ChartSection: React.FC<ChartSectionProps> = ({ viewsData, interactionsData
       {viewsData.length === 0 ? (
         emptyCard('Profile Views Over Time', 'Track how often students discover your profile.')
       ) : (
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
           <h3 className="text-xl font-bold text-slate-900">Profile Views Over Time</h3>
-          <p className="mt-1 text-sm text-slate-500">Trend of profile visibility by month.</p>
+          <p className="mt-1 text-sm text-slate-500">Live analytics snapshot from the current stats endpoint.</p>
           <div className="mt-5 h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={viewsData}>
@@ -73,9 +73,9 @@ const ChartSection: React.FC<ChartSectionProps> = ({ viewsData, interactionsData
       {interactionsData.length === 0 ? (
         emptyCard('Interactions Per Month', 'Compare contact reveals and inquiries over time.')
       ) : (
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h3 className="text-xl font-bold text-slate-900">Interactions Per Month</h3>
-          <p className="mt-1 text-sm text-slate-500">Contact reveals and inquiry engagement.</p>
+        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
+          <h3 className="text-xl font-bold text-slate-900">Interactions</h3>
+          <p className="mt-1 text-sm text-slate-500">Contact reveal and inquiry totals from your live dashboard data.</p>
           <div className="mt-5 h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={interactionsData}>

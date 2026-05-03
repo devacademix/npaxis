@@ -155,6 +155,9 @@ const StudentProfilePage: React.FC = () => {
                     }}
                   />
                 </label>
+                <p className="mt-2 text-xs text-slate-500">
+                  Recommended: square image `400 x 400 px` or larger. Allowed size: up to `10 MB`.
+                </p>
               </div>
             </section>
 

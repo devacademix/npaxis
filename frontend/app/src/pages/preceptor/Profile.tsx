@@ -1,49 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import ProfileForm, { type PreceptorProfileFormData } from '../../components/preceptor/ProfileForm';
-import { preceptorService, type PreceptorUpdatePayload } from '../../services/preceptor';
+import paymentService, { type SubscriptionStatus } from '../../services/payment';
+import { preceptorService } from '../../services/preceptor';
 import userService from '../../services/user';
+import {
+  mapAnalyticsSnapshot,
+  mapProfileFormToRequestDTO,
+  mapProfileData,
+  mapSubscriptionStatusLabel,
+  type PreceptorAnalyticsSnapshot,
+} from '../../utils/preceptorProfile';
 
 const emptyForm: PreceptorProfileFormData = {
   fullName: '',
   credentials: '',
   specialty: '',
   location: '',
-  setting: '',
+  clinicalSetting: '',
   availableDays: [],
   honorarium: '',
   requirements: '',
   email: '',
   phone: '',
   verificationStatus: 'PENDING',
-  isPremium: false,
+  premiumStatus: 'Inactive',
   isVerified: false,
   licenseNumber: '',
   licenseState: '',
   licenseFileUrl: '',
 };
 
+const emptyAnalytics: PreceptorAnalyticsSnapshot = {
+  profileViews: 0,
+  contactReveals: 0,
+  inquiries: 0,
+};
+
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROFILE_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
-
-const parseCommaSeparatedList = (value: string): string[] =>
-  Array.from(
-    new Set(
-      value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
-    )
-  );
 
 const Profile: React.FC = () => {
   const role = localStorage.getItem('role');
   const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
+  const navigate = useNavigate();
 
   const [userId, setUserId] = useState<number | null>(null);
   const [formData, setFormData] = useState<PreceptorProfileFormData>(emptyForm);
   const [initialFormData, setInitialFormData] = useState<PreceptorProfileFormData>(emptyForm);
+  const [analytics, setAnalytics] = useState<PreceptorAnalyticsSnapshot>(emptyAnalytics);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [savedProfileImageUrl, setSavedProfileImageUrl] = useState('');
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
@@ -55,46 +62,57 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (!isPreceptor) return;
 
+    let isCancelled = false;
+
     const loadProfile = async () => {
       try {
         setIsLoading(true);
         setError(null);
+
         const user = await preceptorService.getLoggedInUser();
+        if (isCancelled) return;
+
         setUserId(user.userId);
 
-        const profile = await preceptorService.getPreceptorById(user.userId);
-        const imageUrl = await userService.fetchProfilePictureObjectUrl(user.userId);
-        setProfileImageUrl(imageUrl || '');
-        setSavedProfileImageUrl(imageUrl || '');
-        const merged: PreceptorProfileFormData = {
-          fullName: profile.displayName || user.displayName || '',
-          credentials: profile.credentials || '',
-          specialty: profile.specialty || '',
-          location: profile.location || '',
-          setting: profile.setting || '',
-          availableDays: (profile.availableDays || []).map((day) => String(day).toUpperCase()),
-          honorarium: profile.honorarium || '',
-          requirements: profile.requirements || '',
-          email: user.email || '',
-          phone: profile.phone || '',
-          verificationStatus: String(profile.verificationStatus || 'PENDING').toUpperCase(),
-          isPremium: Boolean(profile.isPremium),
-          isVerified: Boolean(profile.isVerified),
-          licenseNumber: profile.licenseNumber || '',
-          licenseState: profile.licenseState || '',
-          licenseFileUrl: profile.licenseFileUrl || '',
+        const [profile, subscription, stats] = await Promise.all([
+          preceptorService.getPreceptorById(user.userId).catch(() => null),
+          paymentService.getSubscriptionStatus().catch(() => null),
+          preceptorService.getStats(user.userId).catch(() => null),
+        ]);
+
+        if (isCancelled) return;
+
+        const mappedProfile = mapProfileData(profile, user);
+        const nextForm: PreceptorProfileFormData = {
+          ...mappedProfile,
+          premiumStatus: mapSubscriptionStatusLabel(subscription),
         };
 
-        setFormData(merged);
-        setInitialFormData(merged);
+        setFormData(nextForm);
+        setInitialFormData(nextForm);
+        setSubscriptionStatus(subscription);
+        setAnalytics(mapAnalyticsSnapshot(stats));
+
+        userService.fetchProfilePictureObjectUrl(user.userId).then((imageUrl) => {
+          if (isCancelled) return;
+          setProfileImageUrl(imageUrl || '');
+          setSavedProfileImageUrl(imageUrl || '');
+        });
       } catch (err: any) {
+        if (isCancelled) return;
         setError(err?.message || 'Failed to load preceptor profile.');
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadProfile();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isPreceptor]);
 
   useEffect(() => {
@@ -144,25 +162,12 @@ const Profile: React.FC = () => {
       return;
     }
 
-    const payload: PreceptorUpdatePayload = {
-      name: formData.fullName.trim(),
-      credentials: parseCommaSeparatedList(formData.credentials),
-      specialties: parseCommaSeparatedList(formData.specialty),
-      location: formData.location.trim(),
-      setting: formData.setting.trim(),
-      availableDays: formData.availableDays,
-      honorarium: formData.honorarium.trim(),
-      requirements: formData.requirements.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      licenseNumber: formData.licenseNumber.trim(),
-      licenseState: formData.licenseState.trim(),
-      licenseFileUrl: formData.licenseFileUrl.trim(),
-    };
+    const payload = mapProfileFormToRequestDTO(formData);
 
     try {
       setIsSaving(true);
       const updated = await preceptorService.updatePreceptorProfile(userId, payload);
+
       if (profileImageFile) {
         await userService.uploadProfilePicture(userId, profileImageFile);
         const imageUrl = await userService.fetchProfilePictureObjectUrl(userId);
@@ -170,23 +175,16 @@ const Profile: React.FC = () => {
         setSavedProfileImageUrl(imageUrl || profileImageUrl);
         setProfileImageFile(null);
       }
+
+      const mappedProfile = mapProfileData(updated, {
+        displayName: formData.fullName,
+        email: formData.email,
+      });
       const nextData: PreceptorProfileFormData = {
-        ...formData,
-        fullName: updated.displayName || formData.fullName,
-        credentials: updated.credentials || '',
-        specialty: updated.specialty || '',
-        location: updated.location || '',
-        setting: updated.setting || '',
-        availableDays: (updated.availableDays || formData.availableDays).map((day) => String(day).toUpperCase()),
-        honorarium: updated.honorarium || '',
-        requirements: updated.requirements || '',
-        verificationStatus: String(updated.verificationStatus || formData.verificationStatus).toUpperCase(),
-        isPremium: Boolean(updated.isPremium),
-        isVerified: Boolean(updated.isVerified),
-        licenseNumber: updated.licenseNumber || formData.licenseNumber,
-        licenseState: updated.licenseState || formData.licenseState,
-        licenseFileUrl: updated.licenseFileUrl || formData.licenseFileUrl,
+        ...mappedProfile,
+        premiumStatus: mapSubscriptionStatusLabel(subscriptionStatus),
       };
+
       setFormData(nextData);
       setInitialFormData(nextData);
       setSuccess('Profile updated successfully.');
@@ -210,7 +208,7 @@ const Profile: React.FC = () => {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6">
           <h1 className="text-3xl font-black tracking-tight text-slate-900">Preceptor Profile</h1>
-          <p className="mt-1 text-slate-500">View and update your professional profile information.</p>
+          <p className="mt-1 text-slate-500">Manage your professional details, visibility, and account status.</p>
         </div>
 
         {error ? (
@@ -233,21 +231,42 @@ const Profile: React.FC = () => {
         ) : (
           <div className="space-y-6">
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                <img
-                  src={profileImageUrl}
-                  onError={(event) => {
-                    (event.currentTarget as HTMLImageElement).src = 'https://placehold.co/120x120/e2e8f0/475569?text=Profile';
-                  }}
-                  alt="Profile"
-                  className="h-28 w-28 rounded-full object-cover ring-4 ring-slate-100"
-                />
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <img
+                    src={profileImageUrl}
+                    onError={(event) => {
+                      (event.currentTarget as HTMLImageElement).src = 'https://placehold.co/120x120/e2e8f0/475569?text=Profile';
+                    }}
+                    alt="Profile"
+                    className="h-28 w-28 rounded-full object-cover ring-4 ring-slate-100"
+                  />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-2xl font-black tracking-tight text-slate-900">{formData.fullName || 'Preceptor Profile'}</h2>
+                      {formData.verificationStatus === 'APPROVED' ? (
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700">
+                          Verified
+                        </span>
+                      ) : null}
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                          formData.premiumStatus === 'Active'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        Premium {formData.premiumStatus}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">{formData.specialty || 'Specialty not provided yet'}</p>
+                    <p className="mt-1 text-sm text-slate-500">{formData.email || 'Email not available'}</p>
+                  </div>
+                </div>
+
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Profile Picture</h2>
-                  <p className="mt-1 text-sm text-slate-500">Upload a clear photo to personalize your account.</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <label className="inline-flex cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    Choose Image
+                  <label className="inline-flex cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    Upload Picture
                     <input
                       type="file"
                       accept="image/png,image/jpeg"
@@ -274,33 +293,26 @@ const Profile: React.FC = () => {
                         setError(null);
                         setSuccess(`Image selected: ${nextFile.name}`);
                         setProfileImageFile(nextFile);
-                        if (nextFile) {
-                          setProfileImageUrl(URL.createObjectURL(nextFile));
-                        }
+                        setProfileImageUrl(URL.createObjectURL(nextFile));
                       }}
                     />
-                    </label>
-                    {profileImageFile ? (
-                      <button
-                        type="button"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="inline-flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-60"
-                      >
-                        {isSaving ? 'Updating...' : 'Update Photo'}
-                      </button>
-                    ) : null}
-                  </div>
+                  </label>
                   <p className="mt-2 text-xs text-slate-500">Allowed: PNG, JPG, JPEG. Max size: 10 MB.</p>
-                  {profileImageFile ? (
-                    <p className="mt-1 text-xs font-medium text-blue-700">
-                      Ready to upload: {profileImageFile.name} ({(profileImageFile.size / (1024 * 1024)).toFixed(2)} MB)
-                    </p>
-                  ) : null}
                 </div>
               </div>
             </section>
-            <ProfileForm data={formData} isSaving={isSaving} onChange={handleChange} onSave={handleSave} onCancel={handleCancel} />
+
+            <ProfileForm
+              data={formData}
+              isSaving={isSaving}
+              analytics={analytics}
+              onChange={handleChange}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              onGoDashboard={() => navigate('/preceptor/dashboard')}
+              onUploadLicense={() => navigate('/preceptor/license')}
+              onUpgradePlan={() => navigate('/subscription')}
+            />
           </div>
         )}
       </div>

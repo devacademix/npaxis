@@ -14,9 +14,9 @@ export const normalizeRole = (role: string | null | undefined): AppRole | null =
 export const getStoredRole = (): AppRole | null => normalizeRole(localStorage.getItem('role'));
 
 export const getDefaultPathForRole = (role: AppRole | null): string => {
-  if (role === 'ADMIN') return '/admin';
+  if (role === 'ADMIN') return '/admin/dashboard';
   if (role === 'PRECEPTOR') return '/preceptor/dashboard';
-  if (role === 'STUDENT') return '/student';
+  if (role === 'STUDENT') return '/student/dashboard';
   return '/login';
 };
 

@@ -355,6 +355,7 @@ public class APIConstants {
 
     // APIs for Admin Dashboard & Settings
     public static final String ADMIN_DASHBOARD_API = "/dashboard";
+    public static final String ADMIN_DASHBOARD_REPORT_API = "/dashboard/report";
     public static final String ADMIN_SETTINGS_API = "/settings";
     public static final String ADMIN_SETTINGS_GENERAL_API = "/settings/general";
     public static final String ADMIN_SETTINGS_INTEGRATIONS_API = "/settings/integrations";
