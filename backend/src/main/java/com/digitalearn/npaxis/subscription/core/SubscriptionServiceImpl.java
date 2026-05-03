@@ -46,6 +46,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final SubscriptionEmailService subscriptionEmailService;
     private final EntityManager entityManager;
     private final SubscriptionRetryService retryService;
+    private final SubscriptionEventService eventService;
 
     @Override
     public CreateCheckoutSessionResponse createCheckoutSession(Long userId, Long priceId) {
@@ -98,9 +99,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     @Transactional(readOnly = true)
     public SubscriptionDetailResponse getSubscriptionDetail(Long userId) {
-        log.info("Fetching subscription details for user: {}", userId);
+        log.info("Fetching active subscription details for user: {}", userId);
 
-        PreceptorSubscription subscription = subscriptionRepository.findByPreceptor_UserId(userId)
+        PreceptorSubscription subscription = subscriptionRepository.findByPreceptor_UserIdAndActiveTrue(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("No active subscription found"));
 
         return subscriptionMapper.toDetailResponse(subscription);
@@ -108,20 +109,28 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public void cancelSubscription(Long userId) {
-        log.info("Canceling subscription for user: {}", userId);
+        log.info("Canceling active subscription for user: {}", userId);
 
         try {
-            PreceptorSubscription subscription = subscriptionRepository.findByPreceptor_UserId(userId)
+            PreceptorSubscription subscription = subscriptionRepository.findByPreceptor_UserIdAndActiveTrue(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("No active subscription found"));
 
             stripeClient.cancelSubscription(subscription.getStripeSubscriptionId());
 
             subscription.setCancelAtPeriodEnd(true);
+            subscription.setCancelDate(subscription.getCurrentPeriodEnd());
             subscription.setCanceledAt(LocalDateTime.now());
             subscription.setCanceledReason("User requested cancellation");
+            subscription.setCancelled(true);
+            subscription.setActive(false); // Mark as inactive but retain for history
+            subscription.setEndDate(subscription.getCurrentPeriodEnd()); // Retain access until end of period
+            subscription.setNextBillingDate(null);
             subscriptionRepository.save(subscription);
 
-            log.info("Subscription canceled at period end for user: {}", userId);
+            log.info("Subscription canceled for user: {}, access retained until: {}", userId, subscription.getCurrentPeriodEnd());
+
+            // Log the cancellation event
+            eventService.logSubscriptionCancelled(subscription, "User requested cancellation");
 
             subscriptionEmailService.sendSubscriptionCanceledEmail(subscription);
 
@@ -133,14 +142,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public void updateSubscription(Long userId, UpdateSubscriptionRequest request) {
-        log.info("Updating subscription for user: {} with price: {}", userId, request.priceId());
+        log.info("Updating active subscription for user: {} with new price: {}", userId, request.priceId());
 
         try {
-            PreceptorSubscription subscription = subscriptionRepository.findByPreceptor_UserId(userId)
+            PreceptorSubscription subscription = subscriptionRepository.findByPreceptor_UserIdAndActiveTrue(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("No active subscription found"));
 
             SubscriptionPrice newPrice = priceRepository.findById(request.priceId())
                     .orElseThrow(() -> new ResourceNotFoundException("Price not found"));
+
+            // Store old plan info for event logging
+            Long previousPlanId = subscription.getPlan().getSubscriptionPlanId();
+            String previousPlanCode = subscription.getPlan().getCode();
 
             PreceptorSubscription previousSubscription = PreceptorSubscription.builder()
                     .preceptor(subscription.getPreceptor())
@@ -155,9 +168,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             );
 
             subscription.setPrice(newPrice);
+            subscription.setStartDate(LocalDateTime.now()); // Update start date for the price change
             subscriptionRepository.save(subscription);
 
-            log.info("Subscription updated successfully for user: {}", userId);
+            log.info("Subscription upgraded successfully for user: {}", userId);
+
+            // Log the appropriate event based on plan comparison
+            logPlanChangeEvent(subscription, previousPlanId, previousPlanCode);
 
             subscriptionEmailService.sendSubscriptionUpgradedEmail(subscription, previousSubscription);
 
@@ -167,13 +184,30 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
     }
 
+    /**
+     * Helper method to log the appropriate plan change event
+     */
+    private void logPlanChangeEvent(PreceptorSubscription subscription, Long previousPlanId, String previousPlanCode) {
+        Long newPlanId = subscription.getPlan().getSubscriptionPlanId();
+
+        if (newPlanId.equals(previousPlanId)) {
+            // No plan change, might be price/interval change
+            log.debug("Price updated but plan unchanged for subscription: {}", subscription.getPreceptorSubscriptionId());
+            return;
+        }
+
+        // Determine if upgrade or downgrade (could also be lateral move)
+        // This is simplified - in a production system, you might have plan tiers
+        eventService.logPlanChanged(subscription, previousPlanId, previousPlanCode);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Page<SubscriptionHistoryResponse> getSubscriptionHistory(Long userId, Pageable pageable) {
         log.info("Fetching subscription history for user: {}", userId);
 
         Page<PreceptorSubscription> history = subscriptionRepository
-                .findByPreceptor_UserIdOrderByCreatedAtDesc(userId, pageable);
+                .findAllByPreceptor_UserIdOrderByCreatedAtDesc(userId, pageable);
 
         return history.map(subscriptionMapper::toHistoryResponse);
     }
@@ -186,7 +220,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             Preceptor preceptor = preceptorRepository.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Preceptor not found"));
 
-            subscriptionRepository.findByPreceptor_UserId(userId)
+            subscriptionRepository.findByPreceptor_UserIdAndActiveTrue(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("No active subscription found"));
 
             if (preceptor.getStripeCustomerId() == null) {
@@ -215,7 +249,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public boolean canAccessPremiumFeatures(Long userId) {
         log.debug("Checking premium access for user: {}", userId);
 
-        Optional<PreceptorSubscription> subscription = subscriptionRepository.findByPreceptor_UserId(userId);
+        Optional<PreceptorSubscription> subscription = subscriptionRepository.findByPreceptor_UserIdAndActiveTrue(userId);
 
         if (subscription.isEmpty()) {
             return false;
@@ -224,11 +258,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         PreceptorSubscription sub = subscription.get();
         LocalDateTime now = LocalDateTime.now();
 
+        // Active subscription with good standing
         if (sub.getStatus() == SubscriptionStatus.ACTIVE || sub.getStatus() == SubscriptionStatus.TRIALING) {
             return true;
         }
 
-        if (sub.getStatus() == SubscriptionStatus.CANCELED &&
+        // Allow past_due with grace period through current period end
+        if (sub.getStatus() == SubscriptionStatus.PAST_DUE &&
                 sub.getCurrentPeriodEnd() != null &&
                 sub.getCurrentPeriodEnd().isAfter(now)) {
             return true;
@@ -271,11 +307,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             LocalDateTime periodEnd = toLocalDateTime(firstItem.getCurrentPeriodEnd());
 
             SubscriptionStatus status = mapStripeStatusToLocal(stripeSubscription.getStatus());
-            boolean accessEnabled = status == SubscriptionStatus.ACTIVE
+
+            // Determine if this subscription should be considered "active"
+            // (i.e., can grant access to premium features)
+            boolean shouldBeActive = status == SubscriptionStatus.ACTIVE
                     || status == SubscriptionStatus.TRIALING
                     || (status == SubscriptionStatus.CANCELED
                     && periodEnd != null
                     && periodEnd.isAfter(LocalDateTime.now()));
+
+            boolean accessEnabled = shouldBeActive;
+
+            // Determine if subscription is cancelled
+            boolean isCancelled = status == SubscriptionStatus.CANCELED;
+            LocalDateTime nextBillingDate = isCancelled ? null : periodEnd;
 
             upsertSubscription(
                     preceptor.getUserId(),
@@ -285,14 +330,26 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     stripeSubscription.getCancelAtPeriodEnd(),
                     periodStart,
                     periodEnd,
-                    periodEnd
+                    nextBillingDate,
+                    isCancelled,
+                    shouldBeActive
             );
 
             PreceptorSubscription refreshed = subscriptionRepository
                     .findByStripeSubscriptionId(stripeSubscriptionId)
                     .orElseThrow();
+
             refreshed.setStripeCustomerId(customerId);
             refreshed.setAccessEnabled(accessEnabled);
+            refreshed.setStartDate(periodStart);
+            refreshed.setActive(shouldBeActive);
+
+            // If this is a new subscription and should be active, deactivate old active subscriptions
+            if (shouldBeActive) {
+                subscriptionRepository.deactivateOtherSubscriptions(preceptor.getUserId(), refreshed.getPreceptorSubscriptionId());
+                refreshed.setActive(true); // Ensure this one is marked active
+            }
+
             subscriptionRepository.save(refreshed);
 
             preceptor.setStripeCustomerId(customerId);
@@ -301,7 +358,22 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             preceptorRepository.save(preceptor);
 
             if (isNew) {
+                log.info("New subscription synced from Stripe for preceptor: {}", preceptor.getUserId());
+                // Log the creation event with Stripe event ID if available
+                eventService.logSubscriptionCreated(refreshed, stripeSubscription.getObject());
                 subscriptionEmailService.sendSubscriptionCreatedEmail(refreshed);
+            } else {
+                log.info("Existing subscription updated from Stripe: {}", stripeSubscriptionId);
+                // Log status change if status changed
+                Optional<SubscriptionEvent> latestStatusChangeEvent = eventService.getLatestEventOfType(
+                        refreshed.getPreceptorSubscriptionId(),
+                        SubscriptionEventType.STATUS_CHANGED
+                );
+                // Only log if status actually changed (optimize to avoid duplicate events)
+                if (latestStatusChangeEvent.isEmpty() || !latestStatusChangeEvent.get().getDetails()
+                        .get("new_status").equals(status.toString())) {
+                    eventService.logStatusChanged(refreshed, status, "Synced from Stripe", stripeSubscription.getId());
+                }
             }
 
         } catch (Exception e) {
@@ -310,7 +382,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
     }
 
-// In SubscriptionServiceImpl.java — replace upsertSubscription entirely
 
     private void upsertSubscription(
             Long preceptorId,
@@ -320,7 +391,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             Boolean cancelAtPeriodEnd,
             LocalDateTime currentPeriodStart,
             LocalDateTime currentPeriodEnd,
-            LocalDateTime nextBillingDate
+            LocalDateTime nextBillingDate,
+            boolean cancelled,
+            boolean isActive
     ) {
         // Always run in a fresh transaction so any prior constraint violations
         // in the outer transaction don't poison this operation.
@@ -332,7 +405,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 cancelAtPeriodEnd,
                 currentPeriodStart,
                 currentPeriodEnd,
-                nextBillingDate
+                nextBillingDate,
+                cancelled,
+                isActive
         );
     }
 

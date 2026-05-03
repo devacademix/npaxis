@@ -32,7 +32,9 @@ public class SubscriptionRetryService {
             Boolean cancelAtPeriodEnd,
             LocalDateTime currentPeriodStart,
             LocalDateTime currentPeriodEnd,
-            LocalDateTime nextBillingDate
+            LocalDateTime nextBillingDate,
+            boolean cancelled,
+            boolean isActive
     ) {
         Optional<PreceptorSubscription> existingOpt =
                 subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
@@ -44,6 +46,7 @@ public class SubscriptionRetryService {
         } else {
             subscription = new PreceptorSubscription();
             subscription.setStripeSubscriptionId(stripeSubscriptionId);
+            subscription.setStartDate(currentPeriodStart);
             Preceptor preceptor = entityManager.getReference(Preceptor.class, preceptorId);
             subscription.setPreceptor(preceptor);
         }
@@ -59,6 +62,8 @@ public class SubscriptionRetryService {
         subscription.setCurrentPeriodStart(currentPeriodStart);
         subscription.setCurrentPeriodEnd(currentPeriodEnd);
         subscription.setNextBillingDate(nextBillingDate);
+        subscription.setCancelled(cancelled);
+        subscription.setActive(isActive);
 
         try {
             subscriptionRepository.saveAndFlush(subscription);
@@ -80,6 +85,8 @@ public class SubscriptionRetryService {
             existing.setCurrentPeriodStart(currentPeriodStart);
             existing.setCurrentPeriodEnd(currentPeriodEnd);
             existing.setNextBillingDate(nextBillingDate);
+            existing.setCancelled(cancelled);
+            existing.setActive(isActive);
 
             // Re-attach the price in the fresh session context
             SubscriptionPrice freshPrice = priceRepository

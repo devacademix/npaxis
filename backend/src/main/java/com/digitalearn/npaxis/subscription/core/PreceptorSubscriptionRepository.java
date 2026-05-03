@@ -15,10 +15,36 @@ import java.util.Optional;
 @Repository
 public interface PreceptorSubscriptionRepository extends BaseRepository<PreceptorSubscription, Long> {
 
+    /**
+     * Find the current active subscription for a preceptor
+     * Returns the one and only active subscription (enforced at application level)
+     */
+    Optional<PreceptorSubscription> findByPreceptor_UserIdAndActiveTrue(Long preceptorId);
+
+    /**
+     * Legacy method for backward compatibility
+     * Returns the most recent subscription (active or not) for a preceptor
+     * Will be deprecated in favor of findByPreceptor_UserIdAndActiveTrue()
+     * @deprecated Use findByPreceptor_UserIdAndActiveTrue() instead
+     */
+    @Deprecated(since = "1.0", forRemoval = true)
     Optional<PreceptorSubscription> findByPreceptor_UserId(Long preceptorId);
+
+    /**
+     * Find all subscriptions for a preceptor ordered by creation date (newest first)
+     * Useful for subscription history/timeline views
+     */
+    Page<PreceptorSubscription> findAllByPreceptor_UserIdOrderByCreatedAtDesc(Long preceptorId, Pageable pageable);
+
+    /**
+     * Find all active subscriptions for a preceptor
+     * Should typically return 0 or 1 result (enforced at application level)
+     */
+    List<PreceptorSubscription> findAllByPreceptor_UserIdAndActiveTrue(Long preceptorId);
 
     Optional<PreceptorSubscription> findByStripeSubscriptionId(String stripeSubscriptionId);
 
+    @Deprecated(since = "1.0", forRemoval = true)
     Page<PreceptorSubscription> findByPreceptor_UserIdOrderByCreatedAtDesc(Long preceptorId, Pageable pageable);
 
     List<PreceptorSubscription> findByStatus(SubscriptionStatus status);
@@ -80,5 +106,20 @@ public interface PreceptorSubscriptionRepository extends BaseRepository<Precepto
     long countByStatusAndDeletedFalse(SubscriptionStatus status);
 
     long countByStatusInAndDeletedFalse(List<SubscriptionStatus> statuses);
+
+    /**
+     * Deactivate all subscriptions for a preceptor except the specified one
+     * Used when activating a new subscription to mark prior active ones as inactive
+     *
+     * @param preceptorId the preceptor ID
+     * @param excludeSubscriptionId the subscription ID to keep active (can be null to deactivate all)
+     * @return number of subscriptions updated
+     */
+    @Modifying
+    @Query("UPDATE PreceptorSubscription ps SET ps.active = false, ps.endDate = CURRENT_TIMESTAMP " +
+           "WHERE ps.preceptor.userId = :preceptorId " +
+           "AND ps.active = true " +
+           "AND (:excludeId IS NULL OR ps.preceptorSubscriptionId != :excludeId)")
+    int deactivateOtherSubscriptions(@Param("preceptorId") Long preceptorId, @Param("excludeId") Long excludeSubscriptionId);
 
 }

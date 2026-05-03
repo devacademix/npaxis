@@ -612,6 +612,7 @@ requirements, and expected outputs.
 | `/history`        | GET    | List past and current subscriptions with pagination.                | Pageable params                | `Page<SubscriptionHistoryResponse>` |
 | `/billing-portal` | GET    | Redirect to Stripe customer portal for billing management.          | None                           | Map with `portalUrl` key            |
 | `/access-check`   | GET    | Verify if user can access premium features (includes grace period). | None                           | Map with `hasAccess` boolean key    |
+| `/events`         | GET    | Retrieve audit trail of all subscription lifecycle events.          | Pageable params                | `Page<SubscriptionEventResponse>`   |
 
 ### Data Objects
 
@@ -665,6 +666,19 @@ requirements, and expected outputs.
 | `startDate`      | `LocalDateTime` | Subscription start date. |
 | `endDate`        | `LocalDateTime` | Subscription end date.   |
 | `cancelReason`   | `String`        | Cancellation reason.     |
+
+#### `SubscriptionEventResponse`
+
+| Field          | Type              | Description                                      |
+|:---------------|:------------------|:-------------------------------------------------|
+| `eventId`      | `Long`            | Unique subscription event identifier.            |
+| `subscriptionId` | `Long`          | Subscription ID this event belongs to.           |
+| `eventType`    | `String`          | Type of event (CREATED, CANCELLED, PLAN_UPGRADED, etc.). |
+| `status`       | `String`          | Event processing status (SUCCESS, FAILED).       |
+| `createdAt`    | `LocalDateTime`   | When the event occurred.                         |
+| `details`      | `Map<String, Object>` | JSON metadata with event-specific details.    |
+| `stripeEventId` | `String`         | Stripe webhook event ID (for idempotency).       |
+| `errorMessage` | `String`          | Error message if event processing failed.        |
 
 ---
 

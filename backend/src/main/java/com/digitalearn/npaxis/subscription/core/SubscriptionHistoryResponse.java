@@ -9,7 +9,9 @@ public record SubscriptionHistoryResponse(
         String status,
         LocalDateTime startDate,
         LocalDateTime endDate,
-        String cancelReason
+        String cancelReason,
+        boolean cancelled,
+        LocalDateTime cancelledAt
 ) {
 }
 
