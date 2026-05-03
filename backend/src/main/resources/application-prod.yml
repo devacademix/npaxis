@@ -77,6 +77,12 @@ spring:
       pool:
         size: 5
       thread-name-prefix: npaxis-scheduled-
+  web:
+    error:
+      include-message: always
+      include-stacktrace: on_param
+      include-binding-errors: always
+      include-exception: false
 
 # ============================================
 # Production Security Configuration
@@ -175,11 +181,6 @@ server:
   shutdown: graceful
   servlet:
     context-path: /api/v1
-  error:
-    include-message: always
-    include-binding-errors: always
-    include-stacktrace: on_param
-    include-exception: false
 
 # ============================================
 # Production SpringDoc/Swagger Configuration
