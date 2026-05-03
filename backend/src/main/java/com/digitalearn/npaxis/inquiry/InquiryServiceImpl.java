@@ -1,8 +1,7 @@
 package com.digitalearn.npaxis.inquiry;
 
-import com.digitalearn.npaxis.analytics.AnalyticsEventRequest;
-import com.digitalearn.npaxis.analytics.AnalyticsService;
 import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.email.EmailService;
 import com.digitalearn.npaxis.email.EmailTemplate;
 import com.digitalearn.npaxis.exceptionhandler.BusinessErrorCodes;
@@ -23,6 +22,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
+/**
+ * Implementation of InquiryService.
+ * <p>
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * <p>
+ * This service is instrumented with @TrackEvent annotations to automatically
+ * capture student-to-preceptor inquiry events:
+ * <p>
+ * - INQUIRY_SUBMITTED: when a student submits an inquiry to a preceptor
+ * <p>
+ * Events are tracked asynchronously without blocking business logic.
+ * The targetId is the preceptor ID for context about who received the inquiry.
+ *
+ * @see TrackEvent
+ * @see EventType
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -33,11 +50,25 @@ public class InquiryServiceImpl implements InquiryService {
     private final StudentRepository studentRepository;
     private final InquiryMapper inquiryMapper;
     private final EmailService emailService;
-    private final AnalyticsService analyticsService;
 
 
+    /**
+     * Sends an inquiry from a student to a preceptor.
+     * <p>
+     * ANALYTICS:
+     * - Tracks INQUIRY_SUBMITTED event when inquiry is successfully created
+     * - targetId is the preceptor ID
+     * - Metadata includes inquiry subject for context
+     */
     @Override
     @Transactional
+    @TrackEvent(
+            eventType = EventType.INQUIRY_SUBMITTED,
+            targetIdExpression = "#requestDTO.preceptorId().toString()",
+            metadataExpression = "{'preceptorId': #requestDTO.preceptorId(), " +
+                    "'studentId': #studentId, " +
+                    "'inquiryStatus': #result.status}"
+    )
     public InquiryResponseDTO sendInquiry(Long studentId, InquiryRequestDTO requestDTO) {
         log.info("InquiryServiceImpl --> Sending inquiry from student ID {} to preceptor ID {}", studentId, requestDTO.preceptorId());
 
@@ -60,8 +91,6 @@ public class InquiryServiceImpl implements InquiryService {
         // Send Async Email
         sendInquiryEmail(preceptor, student, inquiry.getMessage());
 
-        // Log Analytics
-        logAnalyticsEvent(preceptor.getUserId());
 
         return inquiryMapper.toResponseDTO(inquiry);
     }
@@ -120,10 +149,5 @@ public class InquiryServiceImpl implements InquiryService {
                         "studentName", student.getUser().getDisplayName(),
                         "message", message
                 ));
-    }
-
-    private void logAnalyticsEvent(Long preceptorId) {
-        AnalyticsEventRequest analyticsRequest = new AnalyticsEventRequest(EventType.INQUIRY, preceptorId);
-        analyticsService.logEvent(analyticsRequest);
     }
 }

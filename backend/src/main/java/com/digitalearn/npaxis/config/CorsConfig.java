@@ -15,11 +15,11 @@ import java.util.List;
 /**
  * Configuration class for CORS (Cross-Origin Resource Sharing) support.
  * This class enables CORS for all endpoints using configurable origins from environment variables.
- *
+ * <p>
  * Configuration can be set via:
  * 1. application.yml: npaxis.cors.allowed-origins
  * 2. Environment variable: NPAXIS_CORS_ALLOWED_ORIGINS
- *
+ * <p>
  * Examples:
  * - Development: http://localhost:3000,http://localhost:5173,http://localhost:5174
  * - Production: https://npaxis.com,https://www.npaxis.com

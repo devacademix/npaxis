@@ -1,11 +1,15 @@
 package com.digitalearn.npaxis.preceptor;
 
+import com.digitalearn.npaxis.analytics.AnalyticsService;
+import com.digitalearn.npaxis.analytics.EventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -18,6 +22,7 @@ import java.util.Set;
 public class SpecialtyServiceImpl implements SpecialtyService {
 
     private final SpecialtyRepository specialtyRepository;
+    private final AnalyticsService analyticsService;
 
     @Override
     public Specialty getOrCreateSpecialty(String name) {
@@ -60,7 +65,20 @@ public class SpecialtyServiceImpl implements SpecialtyService {
         specialty.setName(name);
         specialty.setDescription(description);
         specialty.setPredefined(true);
-        return specialtyRepository.save(specialty);
+        Specialty savedSpecialty = specialtyRepository.save(specialty);
+
+        // Track admin operation
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("specialtyName", name);
+        metadata.put("specialtyId", savedSpecialty.getId());
+        analyticsService.trackBackendEvent(
+                EventType.API_CALLED,
+                null,
+                savedSpecialty.getId().toString(),
+                metadata
+        );
+
+        return savedSpecialty;
     }
 
     @Override

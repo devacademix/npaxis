@@ -1,9 +1,9 @@
 package com.digitalearn.npaxis.storage.config;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -12,10 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
 
 /**
  * Configuration for DigitalOcean Spaces S3-compatible client.
@@ -37,7 +33,7 @@ public class DigitalOceanStorageConfig {
     @Bean
     public AmazonS3 amazonS3(DigitalOceanStorageProperties properties) {
         log.info("Initializing AmazonS3 client for DigitalOcean Spaces: endpoint={}, region={}",
-                 properties.getEndpoint(), properties.getRegion());
+                properties.getEndpoint(), properties.getRegion());
 
         // Create credentials provider with access and secret keys
         BasicAWSCredentials credentials = new BasicAWSCredentials(

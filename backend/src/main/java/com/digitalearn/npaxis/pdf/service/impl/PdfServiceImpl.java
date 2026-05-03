@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.pdf.service.impl;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.pdf.exception.PdfGenerationException;
 import com.digitalearn.npaxis.pdf.service.ByteStorageService;
 import com.digitalearn.npaxis.pdf.service.HtmlToPdfConverter;
@@ -23,6 +25,12 @@ import org.springframework.stereotype.Service;
  * <p>
  * Thread-safe and stateless - safe for concurrent usage.
  * All configurations via dependency injection - no static state.
+ * <p>
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * Tracks PDF generation operations:
+ * - RESOURCE_UPLOADED: PDF document generation
  */
 @Slf4j
 @Service
@@ -34,6 +42,11 @@ public class PdfServiceImpl implements PdfService {
     private final ByteStorageService byteStorageService;
 
     @Override
+    @TrackEvent(
+            eventType = EventType.RESOURCE_UPLOADED,
+            targetIdExpression = "#request.getOutputFileName()",
+            metadataExpression = "{'resourceType': 'pdf_document', 'templateName': #request.getTemplateName(), 'fileSize': #result.length}"
+    )
     public byte[] generatePdf(PdfRequest request) {
         try {
             validateRequest(request);

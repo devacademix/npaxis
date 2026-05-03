@@ -8,42 +8,31 @@
 
 -- Insert standard system roles
 INSERT INTO roles (name, description, created_at, last_modified_at, deleted)
-VALUES
-    (
-        'ADMIN',
+VALUES ('ADMIN',
         'Administrator role with full system access',
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'PRECEPTOR',
+        FALSE),
+       ('PRECEPTOR',
         'Preceptor role for medical educators and instructors',
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'STUDENT',
+        FALSE),
+       ('STUDENT',
         'Student role for learners using the platform',
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'USER',
+        FALSE),
+       ('USER',
         'Basic user role with limited access',
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'SUPER_ADMIN',
+        FALSE),
+       ('SUPER_ADMIN',
         'Super administrator role with complete system access',
         NOW(),
         NOW(),
-        FALSE
-    );
+        FALSE);
 
 -- =====================================================
 -- Verify inserts

@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.preceptor;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.exceptionhandler.BusinessErrorCodes;
 import com.digitalearn.npaxis.exceptions.BusinessException;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
@@ -18,6 +20,21 @@ import java.time.LocalDateTime;
 
 /**
  * Implementation of PreceptorService.
+ * <p>
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * <p>
+ * This service is instrumented with @TrackEvent annotations to automatically
+ * capture analytics for key business operations:
+ * <p>
+ * - PROFILE_VIEWED: when profile details are accessed
+ * - PROFILE_LIST_VIEWED: when search results are retrieved
+ * - CONTACT_REVEALED: when contact info is accessed
+ * - RESOURCE_DOWNLOADED: when license files are downloaded
+ * <p>
+ * Events are tracked asynchronously without blocking business logic.
+ * See ANALYTICS_INTEGRATION_GUIDE for more details.
  */
 @Service
 @RequiredArgsConstructor
@@ -30,6 +47,22 @@ public class PreceptorServiceImpl implements PreceptorService {
     private final CredentialService credentialService;
     private final SpecialtyService specialtyService;
 
+    /**
+     * Searches and filters preceptors.
+     * <p>
+     * ANALYTICS:
+     * - Tracks PROFILE_LIST_VIEWED event
+     * - Captures search query and filter criteria in metadata
+     * - Useful for understanding user discovery patterns
+     */
+    @TrackEvent(
+            eventType = EventType.PROFILE_LIST_VIEWED,
+            metadataExpression = "{'specialty': #filter.specialty, " +
+                    "'location': #filter.location, " +
+                    "'minHonorarium': #filter.minHonorarium, " +
+                    "'maxHonorarium': #filter.maxHonorarium, " +
+                    "'resultCount': #result.getNumberOfElements()}"
+    )
     @Transactional(readOnly = true)
     @Override
     public Page<PreceptorResponseDTO> searchPreceptors(
@@ -58,6 +91,10 @@ public class PreceptorServiceImpl implements PreceptorService {
 
     @Override
     @Transactional(readOnly = true)
+    @TrackEvent(
+            eventType = EventType.PROFILE_VIEWED,
+            targetIdExpression = "#userId.toString()"
+    )
     public PreceptorResponseDTO getActivePreceptorById(Long userId) {
         log.debug("Preceptor Service Impl --> Get active preceptor by ID: {}", userId);
 
@@ -188,6 +225,10 @@ public class PreceptorServiceImpl implements PreceptorService {
 
     @Override
     @Transactional(readOnly = true)
+    @TrackEvent(
+            eventType = EventType.CONTACT_REVEALED,
+            targetIdExpression = "#userId.toString()"
+    )
     public PreceptorContactResponseDTO revealContact(Long userId) {
         log.debug("Preceptor Service Impl --> Reveal contact for preceptor ID: {}", userId);
         Preceptor preceptor = preceptorRepository.findById(userId)
@@ -205,6 +246,11 @@ public class PreceptorServiceImpl implements PreceptorService {
 
     @Override
     @Transactional(readOnly = true)
+    @TrackEvent(
+            eventType = EventType.RESOURCE_DOWNLOADED,
+            targetIdExpression = "#userId.toString()",
+            metadataExpression = "{'resourceType': 'license_file'}"
+    )
     public Resource downloadLicense(Long userId) {
         log.debug("Preceptor Service Impl --> Download license for preceptor ID: {}", userId);
         Preceptor preceptor = preceptorRepository.findById(userId)

@@ -25,5 +25,7 @@ public interface SubscriptionMapper {
     @Mapping(target = "status", expression = "java(entity.getStatus().toString())")
     @Mapping(target = "startDate", source = "currentPeriodStart")
     @Mapping(target = "endDate", source = "currentPeriodEnd")
+    @Mapping(target = "cancelReason", source = "canceledReason")
+    @Mapping(target = "cancelledAt", source = "canceledAt")
     SubscriptionHistoryResponse toHistoryResponse(PreceptorSubscription entity);
 }

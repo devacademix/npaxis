@@ -11,6 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Role Service Implementation
+ * <p>
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * Note: Role management is system admin functionality with low user impact
+ * Manual tracking can be added if needed for audit compliance
+ */
 @RequiredArgsConstructor
 @Slf4j
 @Service

@@ -208,6 +208,19 @@
             <version>1.12.600</version>
         </dependency>
 
+        <!-- Spring AOP for aspect-oriented analytics tracking -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>1.9.21</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
+            <version>1.9.21</version>
+        </dependency>
+
     </dependencies>
 
     <build>

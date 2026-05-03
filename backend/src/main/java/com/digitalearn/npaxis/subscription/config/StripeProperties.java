@@ -34,7 +34,9 @@ public class StripeProperties {
     @Positive
     private int readTimeoutMs = 10_000;
 
+    @NotBlank(message = "Stripe success URL must be configured")
     private String successUrl;
+    @NotBlank(message = "Stripe cancel URL must be configured")
     private String cancelUrl;
     private String customerPortalReturnUrl;
     private String currency;

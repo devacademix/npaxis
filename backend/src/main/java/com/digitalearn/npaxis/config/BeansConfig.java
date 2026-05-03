@@ -4,7 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -18,10 +20,22 @@ import java.util.Random;
 
 /**
  * Configuration class for beans used in the application.
+ * <p>
+ * ============================================
+ * AOP & ASYNC CONFIGURATION
+ * ============================================
  *
  * @author Molu Tyagi
+ * @EnableAspectJAutoProxy: - Enables Spring AOP for annotation-driven analytics tracking
+ * - AnalyticsAspect intercepts @TrackEvent annotated methods
+ * - proxyTargetClass=true: uses CGLIB for concrete class proxying
+ * @EnableAsync: - Enables @Async method processing on separate thread pool
+ * - Used for non-blocking analytics event tracking
+ * - Uses configured thread pool from spring.task.execution in application.yml
  */
 @Configuration
+@EnableAspectJAutoProxy(proxyTargetClass = true)
+@EnableAsync
 @AllArgsConstructor
 @Slf4j
 public class BeansConfig {

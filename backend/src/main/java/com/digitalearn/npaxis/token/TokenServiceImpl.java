@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.token;
 
+import com.digitalearn.npaxis.analytics.AnalyticsService;
+import com.digitalearn.npaxis.analytics.EventType;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +22,7 @@ public class TokenServiceImpl implements TokenService {
     private static final int OTP_EXPIRATION_MINUTES = 5;
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AnalyticsService analyticsService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
@@ -53,6 +58,16 @@ public class TokenServiceImpl implements TokenService {
         }
         // verify OTP (hashed comparison)
         if (!passwordEncoder.matches(otp, token.getHashedOtp())) {
+            // Track failed verification attempt
+            Map<String, Object> failureMetadata = new HashMap<>();
+            failureMetadata.put("email", email);
+            failureMetadata.put("reason", "invalid_otp");
+            analyticsService.trackBackendEvent(
+                    EventType.USER_LOGIN,
+                    null,
+                    email,
+                    failureMetadata
+            );
             return false;
         }
         // mark as verified
@@ -60,6 +75,18 @@ public class TokenServiceImpl implements TokenService {
         token.setVerifiedAt(LocalDateTime.now());
         this.tokenRepository.save(token);
         log.info("OTP verified successfully.");
+
+        // Track successful token verification
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("email", email);
+        metadata.put("verificationStatus", "success");
+        analyticsService.trackBackendEvent(
+                EventType.USER_LOGIN,
+                null,
+                email,
+                metadata
+        );
+
         return true;
     }
 
