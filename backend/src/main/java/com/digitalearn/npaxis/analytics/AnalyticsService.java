@@ -4,19 +4,19 @@ import java.util.Map;
 
 /**
  * Service for analytics event tracking.
- *
+ * <p>
  * This service provides methods for:
  * 1. Logging events via REST API (legacy/manual approach)
  * 2. Tracking backend events via AOP (automatic/annotation-driven approach)
  * 3. Retrieving analytics statistics
- *
+ * <p>
  * All event tracking is asynchronous to avoid blocking business logic.
  * Events are persisted in the database and can be queried for reports.
- *
+ * <p>
  * ============================================
  * IMPLEMENTATION NOTES
  * ============================================
- *
+ * <p>
  * - trackBackendEvent() should handle async processing internally
  * - Events must be persisted even if tracking fails
  * - User association is optional (for anonymous tracking)
@@ -29,7 +29,7 @@ public interface AnalyticsService {
 
     /**
      * Logs an analytics event via request (legacy/manual approach).
-     *
+     * <p>
      * This method is used when manually calling analytics from controllers
      * or services using the request DTO approach.
      *
@@ -40,30 +40,29 @@ public interface AnalyticsService {
 
     /**
      * Tracks a backend event with full context (AOP/annotation-driven approach).
-     *
+     * <p>
      * This is the new preferred method called automatically by @TrackEvent annotations
      * via the AnalyticsAspect. It provides:
-     *
+     * <p>
      * - Automatic user extraction (userId from Spring Security)
      * - Flexible target entity identification
      * - Rich metadata capture with HTTP request context
      * - Asynchronous processing to avoid blocking
-     *
+     * <p>
      * SECURITY NOTE:
      * - userId may be null for anonymous/public endpoints
      * - targetId should represent the primary entity affected
      * - metadata is persisted in JSON, avoid sensitive data
-     *
+     * <p>
      * PERFORMANCE NOTE:
      * - This method uses @Async internally
      * - Returns immediately without waiting for DB persistence
      * - Failures in async tracking are logged but don't break caller
      *
      * @param eventType the type of event from EventType enum
-     * @param userId the ID of the user triggering the event (may be null)
-     * @param targetId the ID of the primary entity affected (optional)
-     * @param metadata additional context as key-value map (optional)
-     *
+     * @param userId    the ID of the user triggering the event (may be null)
+     * @param targetId  the ID of the primary entity affected (optional)
+     * @param metadata  additional context as key-value map (optional)
      * @see TrackEvent
      * @see EventType
      * @see AnalyticsAspect
@@ -76,7 +75,7 @@ public interface AnalyticsService {
 
     /**
      * Retrieves analytics statistics for a specific preceptor.
-     *
+     * <p>
      * Returns aggregated event counts by type (views, contacts, inquiries, etc.)
      *
      * @param preceptorId the ID of the preceptor

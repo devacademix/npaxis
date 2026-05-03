@@ -72,10 +72,10 @@ public class CredentialServiceImpl implements CredentialService {
         metadata.put("credentialName", name);
         metadata.put("credentialId", savedCredential.getId());
         analyticsService.trackBackendEvent(
-            EventType.API_CALLED,
-            null,
-            savedCredential.getId().toString(),
-            metadata
+                EventType.API_CALLED,
+                null,
+                savedCredential.getId().toString(),
+                metadata
         );
 
         return savedCredential;

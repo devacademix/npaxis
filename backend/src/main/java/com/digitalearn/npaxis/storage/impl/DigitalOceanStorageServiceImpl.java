@@ -137,10 +137,10 @@ public class DigitalOceanStorageServiceImpl implements StorageService {
             analyticsMetadata.put("subDirectory", subDirectory);
             analyticsMetadata.put("uploadTimeMs", System.currentTimeMillis());
             analyticsService.trackBackendEvent(
-                EventType.RESOURCE_UPLOADED,
-                null,
-                identifier,
-                analyticsMetadata
+                    EventType.RESOURCE_UPLOADED,
+                    null,
+                    identifier,
+                    analyticsMetadata
             );
 
             return cdnUrl;

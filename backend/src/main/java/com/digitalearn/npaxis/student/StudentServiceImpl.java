@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * Implementation of StudentService.
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
@@ -48,8 +48,8 @@ public class StudentServiceImpl implements StudentService {
     @Transactional(readOnly = true)
     @Override
     @TrackEvent(
-        eventType = EventType.SEARCH_PERFORMED,
-        metadataExpression = "{'resultCount': #result.getNumberOfElements(), 'pageNumber': #pageable.getPageNumber(), 'pageSize': #pageable.getPageSize()}"
+            eventType = EventType.SEARCH_PERFORMED,
+            metadataExpression = "{'resultCount': #result.getNumberOfElements(), 'pageNumber': #pageable.getPageNumber(), 'pageSize': #pageable.getPageSize()}"
     )
     public Page<StudentResponseDTO> searchStudents(
             StudentFilter filter,

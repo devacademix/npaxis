@@ -20,22 +20,18 @@ import java.util.Random;
 
 /**
  * Configuration class for beans used in the application.
- *
+ * <p>
  * ============================================
  * AOP & ASYNC CONFIGURATION
  * ============================================
  *
- * @EnableAspectJAutoProxy:
- * - Enables Spring AOP for annotation-driven analytics tracking
+ * @author Molu Tyagi
+ * @EnableAspectJAutoProxy: - Enables Spring AOP for annotation-driven analytics tracking
  * - AnalyticsAspect intercepts @TrackEvent annotated methods
  * - proxyTargetClass=true: uses CGLIB for concrete class proxying
- *
- * @EnableAsync:
- * - Enables @Async method processing on separate thread pool
+ * @EnableAsync: - Enables @Async method processing on separate thread pool
  * - Used for non-blocking analytics event tracking
  * - Uses configured thread pool from spring.task.execution in application.yml
- *
- * @author Molu Tyagi
  */
 @Configuration
 @EnableAspectJAutoProxy(proxyTargetClass = true)

@@ -669,16 +669,16 @@ requirements, and expected outputs.
 
 #### `SubscriptionEventResponse`
 
-| Field          | Type              | Description                                      |
-|:---------------|:------------------|:-------------------------------------------------|
-| `eventId`      | `Long`            | Unique subscription event identifier.            |
-| `subscriptionId` | `Long`          | Subscription ID this event belongs to.           |
-| `eventType`    | `String`          | Type of event (CREATED, CANCELLED, PLAN_UPGRADED, etc.). |
-| `status`       | `String`          | Event processing status (SUCCESS, FAILED).       |
-| `createdAt`    | `LocalDateTime`   | When the event occurred.                         |
-| `details`      | `Map<String, Object>` | JSON metadata with event-specific details.    |
-| `stripeEventId` | `String`         | Stripe webhook event ID (for idempotency).       |
-| `errorMessage` | `String`          | Error message if event processing failed.        |
+| Field            | Type                  | Description                                              |
+|:-----------------|:----------------------|:---------------------------------------------------------|
+| `eventId`        | `Long`                | Unique subscription event identifier.                    |
+| `subscriptionId` | `Long`                | Subscription ID this event belongs to.                   |
+| `eventType`      | `String`              | Type of event (CREATED, CANCELLED, PLAN_UPGRADED, etc.). |
+| `status`         | `String`              | Event processing status (SUCCESS, FAILED).               |
+| `createdAt`      | `LocalDateTime`       | When the event occurred.                                 |
+| `details`        | `Map<String, Object>` | JSON metadata with event-specific details.               |
+| `stripeEventId`  | `String`              | Stripe webhook event ID (for idempotency).               |
+| `errorMessage`   | `String`              | Error message if event processing failed.                |
 
 ---
 

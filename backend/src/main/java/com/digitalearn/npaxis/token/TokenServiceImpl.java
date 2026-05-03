@@ -63,10 +63,10 @@ public class TokenServiceImpl implements TokenService {
             failureMetadata.put("email", email);
             failureMetadata.put("reason", "invalid_otp");
             analyticsService.trackBackendEvent(
-                EventType.USER_LOGIN,
-                null,
-                email,
-                failureMetadata
+                    EventType.USER_LOGIN,
+                    null,
+                    email,
+                    failureMetadata
             );
             return false;
         }
@@ -81,10 +81,10 @@ public class TokenServiceImpl implements TokenService {
         metadata.put("email", email);
         metadata.put("verificationStatus", "success");
         analyticsService.trackBackendEvent(
-            EventType.USER_LOGIN,
-            null,
-            email,
-            metadata
+                EventType.USER_LOGIN,
+                null,
+                email,
+                metadata
         );
 
         return true;

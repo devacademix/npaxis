@@ -72,10 +72,10 @@ public class SpecialtyServiceImpl implements SpecialtyService {
         metadata.put("specialtyName", name);
         metadata.put("specialtyId", savedSpecialty.getId());
         analyticsService.trackBackendEvent(
-            EventType.API_CALLED,
-            null,
-            savedSpecialty.getId().toString(),
-            metadata
+                EventType.API_CALLED,
+                null,
+                savedSpecialty.getId().toString(),
+                metadata
         );
 
         return savedSpecialty;

@@ -52,10 +52,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                     failureMetadata.put("email", email);
                     failureMetadata.put("reason", "user_not_found");
                     analyticsService.trackBackendEvent(
-                        EventType.USER_LOGIN,
-                        null,
-                        email,
-                        failureMetadata
+                            EventType.USER_LOGIN,
+                            null,
+                            email,
+                            failureMetadata
                     );
 
                     return new UsernameNotFoundException("User not found with email: " + email);
@@ -66,10 +66,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         metadata.put("email", email);
         metadata.put("loadStatus", "success");
         analyticsService.trackBackendEvent(
-            EventType.USER_LOGIN,
-            null,
-            email,
-            metadata
+                EventType.USER_LOGIN,
+                null,
+                email,
+                metadata
         );
 
         return userDetails;

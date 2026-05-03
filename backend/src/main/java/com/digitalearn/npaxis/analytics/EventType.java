@@ -2,14 +2,14 @@ package com.digitalearn.npaxis.analytics;
 
 /**
  * Enum representing different analytics events tracked across the backend.
- *
+ * <p>
  * These events are automatically tracked via AOP-based annotations on controller
  * and service methods. The annotation-driven approach ensures:
  * - Consistency across the codebase
  * - No duplicate tracking
  * - Easy to extend with new event types
  * - Non-intrusive to business logic
- *
+ * <p>
  * BEST PRACTICES:
  * - Use descriptive, action-oriented names (VERB_NOUN pattern)
  * - Add constants only for events tracked via @TrackEvent annotation
@@ -120,7 +120,7 @@ public enum EventType {
 
     // ============================================
     // API & System Events
-     // ============================================
+    // ============================================
 
     /**
      * External API call was made by user

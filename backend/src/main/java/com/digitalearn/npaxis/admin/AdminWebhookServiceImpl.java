@@ -1,9 +1,9 @@
 package com.digitalearn.npaxis.admin;
 
-import com.digitalearn.npaxis.analytics.EventType;
-import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.admin.dto.WebhookEventDetailDTO;
 import com.digitalearn.npaxis.admin.dto.WebhookMetricsDTO;
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.webhook.WebhookEventMapper;
 import com.digitalearn.npaxis.webhook.WebhookEventResponse;
@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Service implementation for admin webhook management
  * Provides endpoints for viewing and managing webhook events
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
@@ -44,8 +44,8 @@ public class AdminWebhookServiceImpl implements AdminWebhookService {
 
     @Override
     @TrackEvent(
-        eventType = EventType.PAGE_VIEWED,
-        metadataExpression = "{'page': 'webhook_event_history', 'pageNumber': #pageable.getPageNumber(), 'pageSize': #pageable.getPageSize(), 'resultCount': #result.getNumberOfElements()}"
+            eventType = EventType.PAGE_VIEWED,
+            metadataExpression = "{'page': 'webhook_event_history', 'pageNumber': #pageable.getPageNumber(), 'pageSize': #pageable.getPageSize(), 'resultCount': #result.getNumberOfElements()}"
     )
     public Page<WebhookEventResponse> getWebhookEventHistory(Pageable pageable) {
         log.info("Admin fetching webhook event history - page: {}, size: {}",
@@ -65,9 +65,9 @@ public class AdminWebhookServiceImpl implements AdminWebhookService {
 
     @Override
     @TrackEvent(
-        eventType = EventType.ITEM_CLICKED,
-        targetIdExpression = "#eventId",
-        metadataExpression = "{'itemType': 'webhook_event', 'eventId': #eventId}"
+            eventType = EventType.ITEM_CLICKED,
+            targetIdExpression = "#eventId",
+            metadataExpression = "{'itemType': 'webhook_event', 'eventId': #eventId}"
     )
     public WebhookEventDetailDTO getWebhookEventDetail(String eventId) {
         log.info("Admin fetching webhook event detail - eventId: {}", eventId);

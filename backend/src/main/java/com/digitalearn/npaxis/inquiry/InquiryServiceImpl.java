@@ -24,16 +24,16 @@ import java.util.Map;
 
 /**
  * Implementation of InquiryService.
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
- *
+ * <p>
  * This service is instrumented with @TrackEvent annotations to automatically
  * capture student-to-preceptor inquiry events:
- *
+ * <p>
  * - INQUIRY_SUBMITTED: when a student submits an inquiry to a preceptor
- *
+ * <p>
  * Events are tracked asynchronously without blocking business logic.
  * The targetId is the preceptor ID for context about who received the inquiry.
  *
@@ -54,7 +54,7 @@ public class InquiryServiceImpl implements InquiryService {
 
     /**
      * Sends an inquiry from a student to a preceptor.
-     *
+     * <p>
      * ANALYTICS:
      * - Tracks INQUIRY_SUBMITTED event when inquiry is successfully created
      * - targetId is the preceptor ID
@@ -63,11 +63,11 @@ public class InquiryServiceImpl implements InquiryService {
     @Override
     @Transactional
     @TrackEvent(
-        eventType = EventType.INQUIRY_SUBMITTED,
-        targetIdExpression = "#requestDTO.preceptorId().toString()",
-        metadataExpression = "{'preceptorId': #requestDTO.preceptorId(), " +
-                           "'studentId': #studentId, " +
-                           "'inquiryStatus': #result.status}"
+            eventType = EventType.INQUIRY_SUBMITTED,
+            targetIdExpression = "#requestDTO.preceptorId().toString()",
+            metadataExpression = "{'preceptorId': #requestDTO.preceptorId(), " +
+                    "'studentId': #studentId, " +
+                    "'inquiryStatus': #result.status}"
     )
     public InquiryResponseDTO sendInquiry(Long studentId, InquiryRequestDTO requestDTO) {
         log.info("InquiryServiceImpl --> Sending inquiry from student ID {} to preceptor ID {}", studentId, requestDTO.preceptorId());

@@ -31,10 +31,10 @@ public class PlanServiceImpl implements PlanService {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("planCount", activePlans.size());
         analyticsService.trackBackendEvent(
-            EventType.SUBSCRIPTION_PAGE_VIEWED,
-            null,
-            "subscription-plans",
-            metadata
+                EventType.SUBSCRIPTION_PAGE_VIEWED,
+                null,
+                "subscription-plans",
+                metadata
         );
 
         return activePlans;
