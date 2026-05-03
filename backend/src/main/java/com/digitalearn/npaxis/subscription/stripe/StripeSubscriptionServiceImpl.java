@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.subscription.stripe;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.subscription.config.StripeProperties;
 import com.digitalearn.npaxis.subscription.exceptions.StripeIntegrationException;
 import com.digitalearn.npaxis.subscription.price.SubscriptionPrice;
@@ -15,6 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Implementation of StripeSubscriptionService.
  * Handles all Stripe Subscription API operations with proper error handling and transactional boundaries.
+ *
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * Tracks Stripe API operations:
+ * - API_CALLED: stripe subscription API calls
  */
 @Slf4j
 @Service
@@ -27,6 +35,11 @@ public class StripeSubscriptionServiceImpl implements StripeSubscriptionService 
 
     @Override
     @Transactional
+    @TrackEvent(
+        eventType = EventType.API_CALLED,
+        targetIdExpression = "#userId.toString()",
+        metadataExpression = "{'apiEndpoint': 'stripe.checkout.session.create', 'priceId': #priceId.toString(), 'status': 'success'}"
+    )
     public String createCheckoutSession(Long userId, Long priceId) {
         log.info("Creating checkout session for userId: {}, priceId: {}", userId, priceId);
 
@@ -87,6 +100,12 @@ public class StripeSubscriptionServiceImpl implements StripeSubscriptionService 
     }
 
     @Override
+    @Transactional
+    @TrackEvent(
+        eventType = EventType.API_CALLED,
+        targetIdExpression = "#stripeCustomerId",
+        metadataExpression = "{'apiEndpoint': 'stripe.billingportal.session.create', 'status': 'success'}"
+    )
     public String createCustomerPortalSession(String stripeCustomerId) {
         log.info("Creating customer portal session for customer: {}", stripeCustomerId);
 

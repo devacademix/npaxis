@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.student;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorMapper;
@@ -17,6 +19,12 @@ import java.util.List;
 
 /**
  * Implementation of StudentService.
+ *
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * This service tracks student activity:
+ * - SEARCH_PERFORMED: student searches for other students
  */
 @Service
 @RequiredArgsConstructor
@@ -39,6 +47,10 @@ public class StudentServiceImpl implements StudentService {
 
     @Transactional(readOnly = true)
     @Override
+    @TrackEvent(
+        eventType = EventType.SEARCH_PERFORMED,
+        metadataExpression = "{'resultCount': #result.getNumberOfElements(), 'pageNumber': #pageable.getPageNumber(), 'pageSize': #pageable.getPageSize()}"
+    )
     public Page<StudentResponseDTO> searchStudents(
             StudentFilter filter,
             Pageable pageable

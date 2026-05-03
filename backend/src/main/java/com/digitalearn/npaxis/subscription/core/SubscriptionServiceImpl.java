@@ -1,5 +1,7 @@
 package com.digitalearn.npaxis.subscription.core;
 
+import com.digitalearn.npaxis.analytics.EventType;
+import com.digitalearn.npaxis.analytics.TrackEvent;
 import com.digitalearn.npaxis.exceptions.ResourceNotFoundException;
 import com.digitalearn.npaxis.exceptions.SubscriptionException;
 import com.digitalearn.npaxis.preceptor.Preceptor;
@@ -28,8 +30,26 @@ import java.time.ZoneId;
 import java.util.Optional;
 
 /**
- * Service implementation for managing preceptor subscriptions
- * Handles checkout, cancellation, updates, and premium access validation
+ * Service implementation for managing preceptor subscriptions.
+ *
+ * Handles checkout, cancellation, updates, and premium access validation.
+ *
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ *
+ * This service is instrumented with @TrackEvent annotations to automatically
+ * capture subscription lifecycle events:
+ *
+ * - SUBSCRIPTION_PAGE_VIEWED: when preceptor views checkout page
+ * - SUBSCRIPTION_CANCELED: when a preceptor cancels their subscription
+ * - SUBSCRIPTION_UPGRADED/SUBSCRIPTION_DOWNGRADED: when plan is changed via updateSubscription()
+ *
+ * Events are tracked asynchronously without blocking subscription operations.
+ * Metadata includes plan details and amounts for business analysis.
+ *
+ * @see TrackEvent
+ * @see EventType
  */
 @Service
 @RequiredArgsConstructor
@@ -49,6 +69,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final SubscriptionEventService eventService;
 
     @Override
+    @TrackEvent(
+        eventType = EventType.SUBSCRIPTION_PAGE_VIEWED,
+        targetIdExpression = "#userId.toString()",
+        metadataExpression = "{'priceId': #priceId.toString()}"
+    )
     public CreateCheckoutSessionResponse createCheckoutSession(Long userId, Long priceId) {
         log.info("Creating checkout session for user: {}, price: {}", userId, priceId);
 
@@ -107,7 +132,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return subscriptionMapper.toDetailResponse(subscription);
     }
 
+    /**
+     * Cancels an active subscription.
+     *
+     * ANALYTICS:
+     * - Tracks SUBSCRIPTION_CANCELED event when cancellation is successful
+     * - Metadata includes plan code and cancellation date
+     */
     @Override
+    @TrackEvent(
+        eventType = EventType.SUBSCRIPTION_CANCELED,
+        metadataExpression = "{'planCode': #subscription.getPlan().getCode(), " +
+                           "'cancelDate': #subscription.getCancelDate(), " +
+                           "'accessRetainedUntil': #subscription.getEndDate()}"
+    )
     public void cancelSubscription(Long userId) {
         log.info("Canceling active subscription for user: {}", userId);
 
@@ -140,7 +178,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
     }
 
+    /**
+     * Updates a subscription to a different plan/price.
+     *
+     * ANALYTICS:
+     * - Tracks SUBSCRIPTION_UPGRADED event when plan is successfully changed
+     * - Metadata includes price information for analysis
+     */
     @Override
+    @TrackEvent(
+        eventType = EventType.SUBSCRIPTION_UPGRADED,
+        metadataExpression = "{'priceId': #request.priceId()}"
+    )
     public void updateSubscription(Long userId, UpdateSubscriptionRequest request) {
         log.info("Updating active subscription for user: {} with new price: {}", userId, request.priceId());
 
@@ -171,7 +220,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             subscription.setStartDate(LocalDateTime.now()); // Update start date for the price change
             subscriptionRepository.save(subscription);
 
-            log.info("Subscription upgraded successfully for user: {}", userId);
+            log.info("Subscription plan changed successfully for user: {}, from {} to {}", userId, previousPlanCode, subscription.getPlan().getCode());
 
             // Log the appropriate event based on plan comparison
             logPlanChangeEvent(subscription, previousPlanId, previousPlanCode);

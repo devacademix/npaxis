@@ -1,6 +1,8 @@
 package com.digitalearn.npaxis.webhook;
 
 
+import com.digitalearn.npaxis.analytics.AnalyticsService;
+import com.digitalearn.npaxis.analytics.EventType;
 import com.digitalearn.npaxis.preceptor.Preceptor;
 import com.digitalearn.npaxis.preceptor.PreceptorRepository;
 import com.digitalearn.npaxis.subscription.billing.invoice.BillingInvoiceRepository;
@@ -25,13 +27,23 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * Service implementation for processing Stripe webhook events
  * Handles subscription lifecycle, invoices, and payment events
  * Saves all transactions and updates preceptor premium status
+ *
+ * ============================================
+ * ANALYTICS TRACKING
+ * ============================================
+ * This service tracks all critical payment events:
+ * - PAYMENT_SUCCEEDED: invoice/payment successful
+ * - PAYMENT_FAILED: invoice/payment failed
+ * - SUBSCRIPTION_* events: subscription lifecycle
  */
 @Service
 @RequiredArgsConstructor
@@ -57,6 +69,7 @@ public class WebhookServiceImpl implements WebhookService {
     private final BillingInvoiceRepository billingInvoiceRepository;
     private final BillingTransactionRepository billingTransactionRepository;
     private final SubscriptionEmailService subscriptionEmailService;
+    private final AnalyticsService analyticsService;
 
     @Override
     public void process(Event event, String payload) {
@@ -398,6 +411,19 @@ public class WebhookServiceImpl implements WebhookService {
                     // Save transaction
                     saveBillingTransaction(p, invoice, TransactionStatus.SUCCEEDED);
 
+                    // Track analytics event BEFORE email operations
+                    Map<String, Object> metadata = new HashMap<>();
+                    metadata.put("invoiceId", invoice.getId());
+                    metadata.put("amount", invoice.getAmountPaid());
+                    metadata.put("currency", invoice.getCurrency() != null ? invoice.getCurrency() : "usd");
+                    metadata.put("paymentStatus", "succeeded");
+                    analyticsService.trackBackendEvent(
+                        EventType.PAYMENT_SUCCEEDED,
+                        p.getUserId(),
+                        p.getUserId().toString(),
+                        metadata
+                    );
+
                     // Extract invoice data for PDF generation and storage
                     String invoiceNumber = invoice.getNumber() != null ? invoice.getNumber() : invoice.getId();
                     String hostedInvoiceUrl = invoice.getHostedInvoiceUrl() != null ? invoice.getHostedInvoiceUrl() : "";
@@ -444,7 +470,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     /**
-     * Handle invoice.payment_failed event - Save failed transaction
+     * Handle invoice.payment_failed event - Save failed transaction and track analytics
      */
     private void handleInvoicePaymentFailed(Event event, WebhookProcessingEvent webhookEvent) {
         log.info("Processing invoice payment failed event");
@@ -464,6 +490,20 @@ public class WebhookServiceImpl implements WebhookService {
 
                 // Save failed transaction
                 saveBillingTransaction(p, invoice, TransactionStatus.FAILED);
+
+                // Track analytics event
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("invoiceId", invoice.getId());
+                metadata.put("amount", invoice.getAmountDue());
+                metadata.put("currency", invoice.getCurrency() != null ? invoice.getCurrency() : "usd");
+                metadata.put("paymentStatus", "failed");
+                metadata.put("failureReason", invoice.getLastPaymentError() != null ? invoice.getLastPaymentError().getMessage() : "unknown");
+                analyticsService.trackBackendEvent(
+                    EventType.PAYMENT_FAILED,
+                    p.getUserId(),
+                    p.getUserId().toString(),
+                    metadata
+                );
 
                 // Update invoice record as open (still needs payment)
                 updateOrCreateBillingInvoice(p, invoice, InvoiceStatus.OPEN);
