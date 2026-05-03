@@ -1,344 +1,279 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import ChartSection, { type InteractionsDataPoint, type ViewsDataPoint } from '../../components/preceptor/ChartSection';
-import StatsCard from '../../components/preceptor/StatsCard';
+import ResponsiveGrid from '../../components/layout/ResponsiveGrid';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
-import inquiryService, { type InquiryRecord } from '../../services/inquiry';
-import paymentService from '../../services/payment';
-import { preceptorService, type LoggedInPreceptorUser, type PreceptorStatsResponse } from '../../services/preceptor';
-
-interface DashboardStats {
-  profileViews: number;
-  contactReveals: number;
-  inquiries: number;
-}
-
-interface InquiryActivity {
-  id: string;
-  message: string;
-  date: string;
-}
+import DashboardCard from '../../components/preceptor/DashboardCard';
+import ChartSection, { type InteractionsDataPoint, type ViewsDataPoint } from '../../components/preceptor/ChartSection';
+import { useSession } from '../../context/SessionContext';
+import useDashboardData from '../../hooks/useDashboardData';
+import { maskName } from '../../utils/maskName';
 
 const formatter = new Intl.NumberFormat('en-IN');
 
-const normalizeStats = (stats: PreceptorStatsResponse | null | undefined): DashboardStats => ({
-  profileViews: Number(stats?.profileViews ?? 0),
-  contactReveals: Number(stats?.contactReveals ?? 0),
-  inquiries: Number(stats?.inquiries ?? 0),
-});
-
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-
-const buildViewsSeries = (totalViews: number): ViewsDataPoint[] => {
-  const weights = [0.08, 0.12, 0.16, 0.18, 0.21, 0.25];
-  return MONTH_LABELS.map((label, index) => ({
-    label,
-    views: totalViews <= 0 ? 0 : Math.max(1, Math.round(totalViews * weights[index])),
-  }));
+const formatDate = (value?: string) => {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  });
 };
-
-const buildInteractionsSeries = (reveals: number, inquiries: number): InteractionsDataPoint[] => {
-  const revealWeights = [0.1, 0.12, 0.15, 0.18, 0.2, 0.25];
-  const inquiryWeights = [0.14, 0.13, 0.15, 0.16, 0.18, 0.24];
-
-  return MONTH_LABELS.map((label, index) => ({
-    label,
-    contactReveals: reveals <= 0 ? 0 : Math.max(0, Math.round(reveals * revealWeights[index])),
-    inquiries: inquiries <= 0 ? 0 : Math.max(0, Math.round(inquiries * inquiryWeights[index])),
-  }));
-};
-
-const buildRecentActivity = (items: InquiryRecord[]): InquiryActivity[] =>
-  items.slice(0, 5).map((item) => ({
-    id: `inquiry-${item.inquiryId}`,
-    message: item.message,
-    date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A',
-  }));
 
 const Dashboard: React.FC = () => {
-  const role = localStorage.getItem('role');
-  const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
+  const { role, isLoading: isSessionLoading } = useSession();
   const navigate = useNavigate();
+  const { user, stats, recentInquiries, subscription, isLoading, isSubscriptionLoading, error } = useDashboardData();
 
-  const [user, setUser] = useState<LoggedInPreceptorUser | null>(null);
-  const [stats, setStats] = useState<DashboardStats>({ profileViews: 0, contactReveals: 0, inquiries: 0 });
-  const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
-  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusNote, setStatusNote] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isPreceptor) return;
-
-    const loadDashboard = async () => {
-      setIsLoading(true);
-      setError(null);
-      setStatusNote(null);
-
-      const fallbackUserId = Number(localStorage.getItem('userId') || 0);
-      const fallbackDisplayName = localStorage.getItem('displayName') || 'Preceptor';
-      const fallbackEmail = localStorage.getItem('email') || '';
-
-      const userResult = await Promise.allSettled([preceptorService.getLoggedInUser()]);
-      const resolvedUser =
-        userResult[0].status === 'fulfilled'
-          ? userResult[0].value
-          : fallbackUserId
-          ? {
-              userId: fallbackUserId,
-              displayName: fallbackDisplayName,
-              email: fallbackEmail,
-            }
-          : null;
-
-      if (!resolvedUser) {
-        setError('Unable to load your dashboard session. Please login again.');
-        setStats({
-          profileViews: 0,
-          contactReveals: 0,
-          inquiries: 0,
-        });
-        setInquiries([]);
-        setIsLoading(false);
-        return;
-      }
-
-      setUser(resolvedUser);
-
-      const isActivationPending = localStorage.getItem('premiumActivationPending') === 'true';
-
-      const [premiumResult, inquiriesResult] = await Promise.allSettled([
-        paymentService.checkPremiumAccess(),
-        inquiryService.getMyInquiries(),
-      ]);
-
-      const premiumEnabled = premiumResult.status === 'fulfilled' && Boolean(premiumResult.value);
-
-      if (premiumResult.status === 'fulfilled') {
-        setHasPremiumAccess(premiumEnabled);
-        localStorage.setItem('isPremium', String(premiumEnabled));
-      }
-
-      if (isActivationPending && !premiumEnabled) {
-        setStatusNote('Payment received. Premium activation is still in progress, so analytics will appear once sync completes.');
-      } else if (!premiumEnabled) {
-        setStatusNote('Premium analytics are available after subscription activation.');
-      }
-
-      const statsResult = premiumEnabled
-        ? await Promise.allSettled([preceptorService.getStats(resolvedUser.userId)]).then((results) => results[0])
-        : null;
-
-      if (statsResult?.status === 'fulfilled') {
-        setStats(normalizeStats(statsResult.value));
-      } else {
-        setStats({
-          profileViews: 0,
-          contactReveals: 0,
-          inquiries: 0,
-        });
-      }
-
-      if (inquiriesResult.status === 'fulfilled') {
-        setInquiries(inquiriesResult.value);
-      } else {
-        setInquiries([]);
-      }
-
-      const failures: string[] = [];
-      if (userResult[0].status === 'rejected' && !fallbackUserId) {
-        failures.push(userResult[0].reason?.message || 'User session');
-      }
-      if (statsResult?.status === 'rejected') {
-        failures.push(statsResult.reason?.message || 'Analytics');
-      }
-      if (inquiriesResult.status === 'rejected') {
-        failures.push(inquiriesResult.reason?.message || 'Inquiries');
-      }
-
-      const meaningfulFailures = failures.filter((message) => {
-        const normalized = String(message).toLowerCase();
-        return !normalized.includes('unexpected error occurred') && !normalized.includes('not premium');
-      });
-
-      if (meaningfulFailures.length > 0) {
-        setError(Array.from(new Set(meaningfulFailures)).join(' | '));
-      }
-
-      setIsLoading(false);
-    };
-
-    loadDashboard();
-  }, [isPreceptor]);
-
-  const name = useMemo(
-    () => user?.displayName || localStorage.getItem('displayName') || 'Preceptor',
-    [user?.displayName]
+  const viewsData = useMemo<ViewsDataPoint[]>(
+    () => [{ label: 'Current', views: stats.profileViews }],
+    [stats.profileViews]
   );
 
-  const isPremium = useMemo(() => hasPremiumAccess || localStorage.getItem('isPremium') === 'true', [hasPremiumAccess]);
-  const isActivationPending = useMemo(
-    () => !isPremium && localStorage.getItem('premiumActivationPending') === 'true',
-    [isPremium]
+  const interactionsData = useMemo<InteractionsDataPoint[]>(
+    () => [
+      {
+        label: 'Current',
+        contactReveals: stats.contactReveals,
+        inquiries: stats.totalInquiries,
+      },
+    ],
+    [stats.contactReveals, stats.totalInquiries]
   );
 
-  const viewsData = useMemo(() => buildViewsSeries(stats.profileViews), [stats.profileViews]);
-  const interactionsData = useMemo(
-    () => buildInteractionsSeries(stats.contactReveals, stats.inquiries),
-    [stats.contactReveals, stats.inquiries]
-  );
-  const recentActivity = useMemo(() => buildRecentActivity(inquiries), [inquiries]);
+  const displayName = user?.displayName || localStorage.getItem('displayName') || 'Preceptor';
 
-  if (!isPreceptor) {
+  if (!isSessionLoading && role !== 'PRECEPTOR') {
     return <Navigate to="/login" replace />;
   }
 
   return (
     <PreceptorLayout pageTitle="Dashboard">
-      <section className="mb-6">
-        <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">Welcome back, {name}</h1>
-        <p className="mt-2 text-slate-500">Here is how your profile is performing across inquiries and engagement.</p>
-      </section>
-
-      {error ? (
-        <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-          {error}
-        </div>
-      ) : null}
-
-      {statusNote ? (
-        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-          {statusNote}
-        </div>
-      ) : null}
-
-      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {isLoading ? (
-          Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="h-40 animate-pulse rounded-2xl bg-slate-200/70" />
-          ))
-        ) : (
-          <>
-            <StatsCard
-              title="Profile Views"
-              value={formatter.format(stats.profileViews)}
-              subtitle="Total profile visibility"
-              icon="visibility"
-            />
-            <StatsCard
-              title="Contact Reveals"
-              value={formatter.format(stats.contactReveals)}
-              subtitle="Students unlocked contact details"
-              icon="contact_page"
-            />
-            <StatsCard
-              title="Total Inquiries"
-              value={formatter.format(stats.inquiries)}
-              subtitle="Inquiry requests received"
-              icon="mark_email_unread"
-            />
-            <StatsCard
-              title="Premium Status"
-              value={isPremium ? 'Active' : isActivationPending ? 'Pending' : 'Inactive'}
-              subtitle={isPremium ? 'Premium features enabled' : isActivationPending ? 'Payment received, activation in progress' : 'Upgrade for better visibility'}
-              icon="workspace_premium"
-              badge={{ text: isPremium ? 'Active' : isActivationPending ? 'Pending' : 'Inactive', tone: isPremium ? 'success' : 'neutral' }}
-            />
-          </>
-        )}
-      </section>
-
-      <section className="mb-6">
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <div className="h-[360px] animate-pulse rounded-2xl bg-slate-200/70" />
-            <div className="h-[360px] animate-pulse rounded-2xl bg-slate-200/70" />
+      <div className="space-y-6">
+        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+          <div className="bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_45%),linear-gradient(135deg,#0f172a_0%,#1e3a8a_55%,#2563eb_100%)] px-5 py-6 text-white sm:px-7 sm:py-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-blue-100">Preceptor Control Center</p>
+                <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Welcome back, {displayName}</h1>
+                <p className="mt-3 text-sm text-blue-100 sm:text-base">
+                  Track profile performance, monitor student interest, and manage subscription access from one dashboard.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/preceptor/inquiries')}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-900 hover:bg-slate-100"
+                >
+                  <span className="material-symbols-outlined text-base">mark_email_unread</span>
+                  View Inquiries
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(subscription.actionPath)}
+                  disabled={isSubscriptionLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20"
+                >
+                  <span className="material-symbols-outlined text-base">workspace_premium</span>
+                  {isSubscriptionLoading ? 'Checking Plan...' : subscription.actionLabel}
+                </button>
+              </div>
+            </div>
           </div>
-        ) : (
-          <ChartSection viewsData={viewsData} interactionsData={interactionsData} />
-        )}
-      </section>
+        </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <article className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 xl:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Recent Inquiries</h2>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Latest Activity</span>
+        {error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            {error}
           </div>
+        ) : null}
 
+        <ResponsiveGrid mobileCols={1} tabletCols={2} desktopCols={4}>
           {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }, (_, index) => (
-                <div key={index} className="h-14 animate-pulse rounded-xl bg-slate-200/70" />
-              ))}
-            </div>
-          ) : recentActivity.length > 0 ? (
-            <div className="overflow-hidden rounded-xl border border-slate-200">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Message</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {recentActivity.map((item) => (
-                    <tr key={item.id} className="transition-colors hover:bg-slate-50">
-                      <td className="px-4 py-3 text-sm font-semibold text-slate-700">{item.date}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{item.message}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="h-40 animate-pulse rounded-3xl bg-slate-200/70" />
+            ))
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm font-medium text-slate-500">
-              No inquiries yet. Your new inquiries will appear here.
-            </div>
+            <>
+              <DashboardCard
+                label="Profile Views"
+                value={formatter.format(stats.profileViews)}
+                icon="visibility"
+                helper="Total profile visibility"
+              />
+              <DashboardCard
+                label="Contact Reveals"
+                value={formatter.format(stats.contactReveals)}
+                icon="contact_page"
+                helper="Students unlocked contact details"
+              />
+              <DashboardCard
+                label="Total Inquiries"
+                value={formatter.format(stats.totalInquiries)}
+                icon="mark_email_unread"
+                helper="Inquiry requests received"
+              />
+              <DashboardCard
+                label="Conversion Rate"
+                value={`${stats.conversionRate.toFixed(1)}%`}
+                icon="trending_up"
+                helper="Contact reveals from total profile views"
+              />
+            </>
           )}
-        </article>
+        </ResponsiveGrid>
 
-        <article className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-xl font-bold text-slate-900">Quick Actions</h2>
-          <p className="mt-1 text-sm text-slate-500">Manage profile, verification, and monetization.</p>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_360px]">
+          <section className="space-y-6">
+            {isLoading ? (
+              <div className="grid gap-6 xl:grid-cols-2">
+                <div className="h-[360px] animate-pulse rounded-3xl bg-slate-200/70" />
+                <div className="h-[360px] animate-pulse rounded-3xl bg-slate-200/70" />
+              </div>
+            ) : (
+              <ChartSection viewsData={viewsData} interactionsData={interactionsData} />
+            )}
 
-          <div className="mt-5 space-y-3">
-            <button
-              type="button"
-              onClick={() => navigate('/preceptor/profile')}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              Edit Profile
-              <span className="material-symbols-outlined text-base">chevron_right</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/preceptor/license-verification')}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              Upload License
-              <span className="material-symbols-outlined text-base">chevron_right</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/preceptor/inquiries')}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              Review Inquiries
-              <span className="material-symbols-outlined text-base">chevron_right</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/preceptor/subscription')}
-              className="flex w-full items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
-            >
-              Upgrade to Premium
-              <span className="material-symbols-outlined text-base">chevron_right</span>
-            </button>
-          </div>
-        </article>
-      </section>
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Recent Inquiries</h2>
+                  <p className="mt-1 text-sm text-slate-500">Latest student outreach from your inquiry feed.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/preceptor/inquiries')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:w-auto"
+                >
+                  <span className="material-symbols-outlined text-base">visibility</span>
+                  View All
+                </button>
+              </div>
+
+              {isLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div key={index} className="h-20 animate-pulse rounded-2xl bg-slate-200/70" />
+                  ))}
+                </div>
+              ) : recentInquiries.length > 0 ? (
+                <div className="space-y-3">
+                  {recentInquiries.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900">{maskName(item.studentName)}</p>
+                          <p className="mt-1 text-sm text-slate-700">{item.subject}</p>
+                          <p className="mt-2 text-xs font-medium text-slate-500">{formatDate(item.createdAt)}</p>
+                        </div>
+                        <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-700">
+                          {item.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-12 text-center text-sm font-medium text-slate-500">
+                  No inquiries yet. Your latest student inquiries will appear here.
+                </div>
+              )}
+            </article>
+          </section>
+
+          <aside className="space-y-6">
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              {isSubscriptionLoading ? (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="h-3 w-24 animate-pulse rounded-full bg-slate-200/80" />
+                      <div className="mt-3 h-8 w-40 animate-pulse rounded-full bg-slate-200/80" />
+                    </div>
+                    <div className="h-7 w-20 animate-pulse rounded-full bg-slate-200/80" />
+                  </div>
+                  <div className="h-4 w-full animate-pulse rounded-full bg-slate-200/80" />
+                  <div className="h-12 w-full animate-pulse rounded-full bg-slate-200/80" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Subscription</p>
+                      <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">{subscription.planName}</h2>
+                    </div>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                        subscription.isActive
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      {subscription.status}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-sm text-slate-500">{subscription.description}</p>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate(subscription.actionPath)}
+                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
+                  >
+                    <span className="material-symbols-outlined text-base">arrow_forward</span>
+                    {subscription.actionLabel}
+                  </button>
+                </>
+              )}
+            </article>
+
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <h2 className="text-xl font-bold text-slate-900">Quick Actions</h2>
+              <p className="mt-1 text-sm text-slate-500">Manage profile, verification, subscription, and billing.</p>
+
+              <div className="mt-5 grid gap-3">
+                {[
+                  {
+                    label: 'Edit Profile',
+                    icon: 'person',
+                    path: '/preceptor/profile',
+                  },
+                  {
+                    label: 'Upload License',
+                    icon: 'workspace_premium',
+                    path: '/preceptor/license',
+                  },
+                  {
+                    label: 'Upgrade Plan',
+                    icon: 'rocket_launch',
+                    path: '/subscription',
+                  },
+                  {
+                    label: 'View Billing',
+                    icon: 'payments',
+                    path: '/billing',
+                  },
+                ].map((action) => (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => navigate(action.path)}
+                    className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <span className="inline-flex items-center gap-3">
+                      <span className="material-symbols-outlined text-base text-slate-500">{action.icon}</span>
+                      {action.label}
+                    </span>
+                    <span className="material-symbols-outlined text-base text-slate-400">chevron_right</span>
+                  </button>
+                ))}
+              </div>
+            </article>
+          </aside>
+        </div>
+      </div>
     </PreceptorLayout>
   );
 };

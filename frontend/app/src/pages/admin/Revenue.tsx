@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import RevenueCard from '../../components/admin/RevenueCard';
@@ -8,6 +8,7 @@ import {
   adminService,
   type PaymentHistoryItem,
   type PreceptorAnalytics,
+  type PreceptorRevenueItem,
   type RevenueStatsApi,
 } from '../../services/admin';
 
@@ -25,13 +26,6 @@ const defaultSummary: RevenueSummary = {
   activePremiumUsers: 0,
 };
 
-const dateRangeMap: Record<string, number> = {
-  all: 0,
-  '7d': 7,
-  '30d': 30,
-  '90d': 90,
-};
-
 const Revenue: React.FC = () => {
   const role = localStorage.getItem('role');
   const isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
@@ -43,7 +37,11 @@ const Revenue: React.FC = () => {
   const [dateRange, setDateRange] = useState('30d');
 
   const [summary, setSummary] = useState<RevenueSummary>(defaultSummary);
-  const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
+  const [preceptorRevenue, setPreceptorRevenue] = useState<PreceptorRevenueItem[]>([]);
+  const [revenuePage, setRevenuePage] = useState(0);
+  const [revenuePageSize] = useState(10);
+  const [revenueTotalPages, setRevenueTotalPages] = useState(0);
+  const [revenueTotalElements, setRevenueTotalElements] = useState(0);
   const [revenueTrend, setRevenueTrend] = useState<RevenueChartPoint[]>([]);
   const [transactionTrend, setTransactionTrend] = useState<RevenueChartPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,14 +63,6 @@ const Revenue: React.FC = () => {
       month: 'short',
       year: 'numeric',
     });
-  };
-
-  const normalizeStatus = (status: string) => {
-    const value = (status || '').toLowerCase();
-    if (value.includes('paid')) return 'Paid';
-    if (value.includes('pending')) return 'Pending';
-    if (value.includes('fail')) return 'Failed';
-    return status || 'Pending';
   };
 
   const buildTrendsFromPayments = (paymentList: PaymentHistoryItem[]) => {
@@ -160,6 +150,7 @@ const Revenue: React.FC = () => {
     const requests: Promise<any>[] = [
       adminService.getRevenueStats(),
       adminService.getPaymentHistory(appliedPreceptorId),
+      adminService.getRevenueByPreceptor({ page: revenuePage, size: revenuePageSize }),
     ];
 
     if (appliedPreceptorId.trim()) {
@@ -167,11 +158,16 @@ const Revenue: React.FC = () => {
     }
 
     const results = await Promise.allSettled(requests);
-    const [statsResult, paymentsResult, analyticsResult] = results;
+    const [statsResult, paymentsResult, revenueByPreceptorResult, analyticsResult] = results;
 
     const failedCalls: string[] = [];
     let stats: RevenueStatsApi = {};
     let paymentList: PaymentHistoryItem[] = [];
+    let revenueByPreceptor: { items: PreceptorRevenueItem[]; totalPages: number; totalElements: number } = {
+      items: [],
+      totalPages: 0,
+      totalElements: 0,
+    };
     let analytics: PreceptorAnalytics = {};
 
     if (statsResult.status === 'fulfilled') {
@@ -186,6 +182,12 @@ const Revenue: React.FC = () => {
       failedCalls.push(paymentsResult.reason?.message || 'Payment history');
     }
 
+    if (revenueByPreceptorResult.status === 'fulfilled') {
+      revenueByPreceptor = revenueByPreceptorResult.value;
+    } else {
+      failedCalls.push(revenueByPreceptorResult.reason?.message || 'Revenue by preceptor');
+    }
+
     if (analyticsResult?.status === 'fulfilled') {
       analytics = analyticsResult.value;
     } else if (analyticsResult?.status === 'rejected') {
@@ -198,7 +200,9 @@ const Revenue: React.FC = () => {
     const transactionsFromAnalytics = mapAnalyticsTrend(analytics, 'transactionTrend');
 
     setSummary(summaryData);
-    setPayments(paymentList);
+    setPreceptorRevenue(revenueByPreceptor.items);
+    setRevenueTotalPages(revenueByPreceptor.totalPages);
+    setRevenueTotalElements(revenueByPreceptor.totalElements);
     setRevenueTrend(revenueFromAnalytics.length ? revenueFromAnalytics : derivedTrends.revenueData);
     setTransactionTrend(transactionsFromAnalytics.length ? transactionsFromAnalytics : derivedTrends.transactionData);
 
@@ -227,24 +231,7 @@ const Revenue: React.FC = () => {
   useEffect(() => {
     if (!isAdmin) return;
     loadRevenueData();
-  }, [appliedPreceptorId, isAdmin]);
-
-  const filteredPayments = useMemo(() => {
-    return payments.filter((payment) => {
-      const normalized = normalizeStatus(payment.status).toLowerCase();
-      if (statusFilter !== 'all' && normalized !== statusFilter) return false;
-
-      const days = dateRangeMap[dateRange] ?? 0;
-      if (days <= 0) return true;
-
-      const date = new Date(payment.date);
-      if (Number.isNaN(date.getTime())) return false;
-
-      const threshold = new Date();
-      threshold.setDate(threshold.getDate() - days);
-      return date >= threshold;
-    });
-  }, [payments, statusFilter, dateRange]);
+  }, [appliedPreceptorId, isAdmin, revenuePage, revenuePageSize]);
 
   const handleLogout = async () => {
     try {
@@ -254,30 +241,11 @@ const Revenue: React.FC = () => {
     }
   };
 
-  const handleInvoiceAction = (invoiceUrl?: string, download?: boolean) => {
-    if (!invoiceUrl) {
-      setInlineMessage('Invoice is not available for this transaction.');
-      return;
-    }
-
-    if (download) {
-      const anchor = document.createElement('a');
-      anchor.href = invoiceUrl;
-      anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer';
-      anchor.download = 'invoice';
-      anchor.click();
-      return;
-    }
-
-    window.open(invoiceUrl, '_blank', 'noopener,noreferrer');
-  };
-
   if (!isAdmin) {
     return <Navigate to="/login" replace />;
   }
 
-  const showEmptyPayments = !isLoading && filteredPayments.length === 0;
+  const showEmptyPreceptorRevenue = !isLoading && preceptorRevenue.length === 0;
 
   return (
     <AdminLayout>
@@ -423,10 +391,10 @@ const Revenue: React.FC = () => {
 
       <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900">Payment History</h3>
+          <h3 className="text-lg font-bold text-slate-900">Revenue By Preceptor</h3>
           {!isLoading ? (
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {filteredPayments.length} record(s)
+              {revenueTotalElements} record(s)
             </span>
           ) : null}
         </div>
@@ -434,68 +402,64 @@ const Revenue: React.FC = () => {
         {isLoading ? (
           <div className="flex items-center gap-3 py-10 text-sm text-slate-500">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
-            Loading payment history...
+            Loading preceptor revenue...
           </div>
-        ) : showEmptyPayments ? (
+        ) : showEmptyPreceptorRevenue ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
-            <p className="text-base font-semibold text-slate-700">No transactions found</p>
-            <p className="mt-2 text-sm text-slate-500">Try adjusting date range/status filters or preceptor ID.</p>
+            <p className="text-base font-semibold text-slate-700">No preceptor revenue found</p>
+            <p className="mt-2 text-sm text-slate-500">The revenue-by-preceptor report is currently empty.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left">
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] text-left">
               <thead className="border-b border-slate-200">
                 <tr>
                   <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Preceptor Name</th>
-                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Amount</th>
-                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Status</th>
-                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Date</th>
-                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Action</th>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Subscription Tier</th>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Successful Revenue</th>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Failed Revenue</th>
+                  <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Last Transaction Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredPayments.map((payment) => {
-                  const status = normalizeStatus(payment.status);
-                  const statusClass =
-                    status === 'Paid'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : status === 'Failed'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-amber-100 text-amber-700';
-
+                {preceptorRevenue.map((item) => {
                   return (
-                    <tr key={payment.id} className="transition-colors hover:bg-slate-50">
-                      <td className="px-3 py-3 text-sm font-semibold text-slate-800">{payment.preceptorName}</td>
-                      <td className="px-3 py-3 text-sm font-bold text-slate-900">{formatCurrency(payment.amount)}</td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusClass}`}>
-                          {status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-sm text-slate-600">{formatDate(payment.date)}</td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleInvoiceAction(payment.invoiceUrl, false)}
-                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                          >
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleInvoiceAction(payment.invoiceUrl, true)}
-                            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-                          >
-                            Download Invoice
-                          </button>
-                        </div>
-                      </td>
+                    <tr key={`${item.userId}-${item.displayName}`} className="transition-colors hover:bg-slate-50">
+                      <td className="px-3 py-3 text-sm font-semibold text-slate-800">{item.displayName}</td>
+                      <td className="px-3 py-3 text-sm text-slate-600">{item.subscriptionTier}</td>
+                      <td className="px-3 py-3 text-sm font-bold text-emerald-700">{formatCurrency(item.successfulRevenue)}</td>
+                      <td className="px-3 py-3 text-sm font-bold text-rose-700">{formatCurrency(item.failedRevenue)}</td>
+                      <td className="px-3 py-3 text-sm text-slate-600">{item.lastTransactionDate ? formatDate(item.lastTransactionDate) : 'N/A'}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-500">
+                Page {revenuePage + 1} of {Math.max(revenueTotalPages, 1)}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={revenuePage <= 0}
+                  onClick={() => setRevenuePage((current) => Math.max(current - 1, 0))}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-slate-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={revenuePage + 1 >= Math.max(revenueTotalPages, 1)}
+                  onClick={() => setRevenuePage((current) => current + 1)}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-slate-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

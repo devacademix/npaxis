@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { preceptorService, type PreceptorSearchItem } from '../../services/preceptor';
+import { maskName } from '../../utils/maskName';
 
 const PublicBrowse: React.FC = () => {
   const navigate = useNavigate();
@@ -146,7 +147,7 @@ const PublicBrowse: React.FC = () => {
                   </div>
                 </div>
 
-                <h3 className="text-xl font-black text-slate-900 truncate">{doc.displayName}</h3>
+                <h3 className="text-xl font-black text-slate-900 truncate">{maskName(doc.displayName)}</h3>
                 <p className="text-xs font-bold text-cyan-600 uppercase tracking-wide mt-1">{doc.specialty || 'General Practice'} • {doc.credentials}</p>
                 
                 <div className="mt-6 space-y-3">

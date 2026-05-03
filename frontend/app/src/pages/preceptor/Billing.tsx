@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import PaymentTable from '../../components/preceptor/PaymentTable';
-import paymentService, { type PaymentHistoryItem, type SubscriptionStatus } from '../../services/payment';
-import { preceptorService, type PreceptorProfile } from '../../services/preceptor';
+import useSubscriptionStatus from '../../hooks/useSubscriptionStatus';
+import paymentService, { type PaymentHistoryItem, type SubscriptionEventItem, type SubscriptionPlan } from '../../services/payment';
 
 const formatDate = (value?: string) => {
   if (!value) return 'Not available';
@@ -17,60 +17,63 @@ const Billing: React.FC = () => {
   const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
   const navigate = useNavigate();
 
-  const [userId, setUserId] = useState<number | null>(null);
-  const [profile, setProfile] = useState<PreceptorProfile | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [payments, setPayments] = useState<PaymentHistoryItem[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [events, setEvents] = useState<SubscriptionEventItem[]>([]);
+  const [hasPremiumAccess, setHasPremiumAccess] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
-  const [isActivationPending, setIsActivationPending] = useState(false);
-  const [availablePriceId, setAvailablePriceId] = useState<number | null>(null);
-  const [availableBillingInterval, setAvailableBillingInterval] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const {
+    subscription,
+    isActive,
+    isLoading: isStatusLoading,
+    error: statusError,
+    refreshStatus,
+    clearStatusError,
+  } = useSubscriptionStatus();
+
   useEffect(() => {
     if (!isPreceptor) return;
+
+    let isCancelled = false;
 
     const loadBilling = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const user = await preceptorService.getLoggedInUser();
-        setUserId(user.userId);
 
-        const [history, preceptor, plans, subscriptionStatus, accessEnabled] = await Promise.all([
-          paymentService.getPaymentHistory(user.userId).catch(() => []),
-          preceptorService.getPreceptorById(user.userId),
+        const [history, planList, eventList, premiumAccess] = await Promise.all([
+          paymentService.getPaymentHistory().catch(() => []),
           paymentService.getSubscriptionPlans().catch(() => []),
-          paymentService.getSubscriptionStatus().catch(() => null),
-          paymentService.checkPremiumAccess().catch(() => false),
+          paymentService.getSubscriptionEvents().catch(() => []),
+          paymentService.checkPremiumAccess().catch(() => null),
         ]);
 
+        if (isCancelled) return;
+
         setPayments(history);
-        setProfile(preceptor);
-        setSubscription(subscriptionStatus);
-        const hasPremiumAccess = Boolean(preceptor?.isPremium || subscriptionStatus?.accessEnabled || accessEnabled);
-        localStorage.setItem('isPremium', String(hasPremiumAccess));
-        if (hasPremiumAccess) {
-          localStorage.removeItem('premiumActivationPending');
-          setIsActivationPending(false);
-        } else {
-          setIsActivationPending(localStorage.getItem('premiumActivationPending') === 'true');
-        }
-        const activePlan = plans.find((plan) => plan.active && plan.prices?.length > 0);
-        const activePrice = activePlan?.prices?.find((price) => price.active) || activePlan?.prices?.[0];
-        setAvailablePriceId(activePrice?.subscriptionPriceId ?? null);
-        setAvailableBillingInterval(activePrice?.billingInterval ?? null);
+        setPlans(planList);
+        setEvents(Array.isArray(eventList) ? eventList : []);
+        setHasPremiumAccess(typeof premiumAccess === 'boolean' ? premiumAccess : null);
       } catch (err: any) {
+        if (isCancelled) return;
         setError(err?.message || 'Failed to load billing data.');
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadBilling();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isPreceptor]);
 
   useEffect(() => {
@@ -79,29 +82,30 @@ const Billing: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [success]);
 
-  const isPremium = useMemo(() => Boolean(profile?.isPremium || subscription?.accessEnabled), [profile?.isPremium, subscription?.accessEnabled]);
-  const canUpgrade = Boolean(availablePriceId != null || (userId != null && availableBillingInterval));
-  const planName = subscription?.planName || (isPremium ? 'Premium' : isActivationPending ? 'Premium' : 'Free');
-  const planStatus = subscription?.status || (isPremium ? 'Active' : isActivationPending ? 'Activation Pending' : 'Inactive');
+  const availablePriceId = useMemo(() => {
+    const activePlan = plans.find((plan) => plan.active && plan.prices?.length > 0);
+    const activePrice = activePlan?.prices?.find((price) => price.active) || activePlan?.prices?.[0];
+    return activePrice?.subscriptionPriceId ?? null;
+  }, [plans]);
+
+  const canUpgrade = Boolean(availablePriceId != null);
+  const planName = subscription?.planName || (isActive ? 'Active plan' : 'No active plan');
+  const planStatus = isActive ? 'Active' : 'Inactive';
   const nextBillingDate = formatDate(
-    subscription?.currentPeriodEnd ??
-      (profile as any)?.subscriptionRenewalDate ??
-      payments.find((payment) => Boolean(payment.date))?.date
+    subscription?.currentPeriodEnd ?? payments.find((payment) => Boolean(payment.date))?.date
   );
+  const diagnosticError = error || statusError;
+  const recentEvents = events.slice(0, 5);
 
   if (!isPreceptor) {
     return <Navigate to="/login" replace />;
   }
 
   const openBillingPortal = async () => {
-    if (!userId) {
-      setError('Unable to identify your account. Please login again.');
-      return;
-    }
-
     try {
       setIsPortalLoading(true);
       setError(null);
+      clearStatusError();
       const portalUrl = await paymentService.createPortalSession();
       if (!portalUrl) {
         throw new Error('Billing portal URL was not returned.');
@@ -116,25 +120,15 @@ const Billing: React.FC = () => {
   };
 
   const upgradePlan = async () => {
-    if (!userId) {
-      setError('Unable to identify your account. Please login again.');
-      return;
-    }
-
     try {
       setIsUpgradeLoading(true);
       setError(null);
+      clearStatusError();
       if (!availablePriceId) {
         throw new Error('No active subscription plan is available right now.');
       }
-      localStorage.setItem('premiumActivationPending', 'true');
-      setIsActivationPending(true);
       const checkoutUrl = await paymentService.createCheckoutSession({
         priceId: availablePriceId,
-        preceptorId: userId,
-        billingInterval: availableBillingInterval,
-        successUrl: `${window.location.origin}/preceptor/billing`,
-        cancelUrl: `${window.location.origin}/preceptor/billing`,
       });
       if (!checkoutUrl) {
         throw new Error('Checkout URL not returned.');
@@ -145,6 +139,16 @@ const Billing: React.FC = () => {
       setError(err?.message || 'Unable to start checkout.');
     } finally {
       setIsUpgradeLoading(false);
+    }
+  };
+
+  const handleRetryStatus = async () => {
+    try {
+      setError(null);
+      clearStatusError();
+      await refreshStatus(true);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to refresh subscription status.');
     }
   };
 
@@ -164,9 +168,18 @@ const Billing: React.FC = () => {
           <p className="mt-1 text-slate-500">Manage your subscription and view transaction history.</p>
         </section>
 
-        {error ? (
+        {diagnosticError ? (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {error}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{diagnosticError}</span>
+              <button
+                type="button"
+                onClick={handleRetryStatus}
+                className="inline-flex items-center justify-center rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+              >
+                Retry Status
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -177,10 +190,10 @@ const Billing: React.FC = () => {
         ) : null}
 
         <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          {isLoading ? (
+          {isLoading || (isStatusLoading && subscription === undefined) ? (
             <div className="h-20 animate-pulse rounded-xl bg-slate-200/70" />
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Plan Name</p>
                 <p className="mt-1 text-xl font-black text-slate-900">{planName}</p>
@@ -189,7 +202,7 @@ const Billing: React.FC = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</p>
                 <span
                   className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                    isPremium ? 'bg-emerald-100 text-emerald-700' : isActivationPending ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
+                    isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
                   }`}
                 >
                   {planStatus}
@@ -199,6 +212,12 @@ const Billing: React.FC = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Next Billing Date</p>
                 <p className="mt-1 text-sm font-semibold text-slate-800">{nextBillingDate}</p>
               </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Premium Access</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800">
+                  {hasPremiumAccess == null ? 'Unknown' : hasPremiumAccess ? 'Granted' : 'Not Granted'}
+                </p>
+              </div>
             </div>
           )}
         </section>
@@ -206,6 +225,47 @@ const Billing: React.FC = () => {
         <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <h2 className="mb-4 text-xl font-bold text-slate-900">Payment History</h2>
           <PaymentTable payments={payments} isLoading={isLoading} onViewInvoice={onViewInvoice} />
+        </section>
+
+        <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Subscription Event Audit</h2>
+              <p className="mt-1 text-sm text-slate-500">Live events from the backend subscription audit trail.</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">
+              {events.length} event{events.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="mt-4 h-24 animate-pulse rounded-xl bg-slate-200/70" />
+          ) : recentEvents.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-sm text-slate-500">
+              No subscription events available yet.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {recentEvents.map((event) => (
+                <div key={event.eventId} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{event.eventType}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {formatDate(event.createdAt)} {event.stripeEventId ? `• ${event.stripeEventId}` : ''}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                      {event.status}
+                    </span>
+                  </div>
+                  {event.errorMessage ? (
+                    <p className="mt-2 text-xs text-rose-600">{event.errorMessage}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -235,7 +295,7 @@ const Billing: React.FC = () => {
             <button
               type="button"
               onClick={upgradePlan}
-              disabled={isPremium || isUpgradeLoading || !canUpgrade}
+              disabled={isActive || isUpgradeLoading || !canUpgrade}
               className="inline-flex items-center gap-2 rounded-full bg-blue-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isUpgradeLoading ? (
@@ -243,7 +303,7 @@ const Billing: React.FC = () => {
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                   Redirecting...
                 </>
-              ) : isPremium ? (
+              ) : isActive ? (
                 'Active Plan'
               ) : !canUpgrade ? (
                 'Upgrade Unavailable'
@@ -255,7 +315,8 @@ const Billing: React.FC = () => {
               )}
             </button>
           </div>
-          {!isPremium ? (
+
+          {!isActive ? (
             <>
               <button
                 type="button"

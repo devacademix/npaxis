@@ -4,11 +4,33 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import UserFilters from '../../components/admin/UserFilters';
 import UserTable, { type UserTableRow } from '../../components/admin/UserTable';
 import { authService } from '../../services/auth';
-import { userService, type UserRecord } from '../../services/user';
-import { adminService } from '../../services/admin';
+import { type UserRecord, userService } from '../../services/user';
+import { adminService, type AdminUser } from '../../services/admin';
 
 const PAGE_SIZE = 8;
 const normalizeRoleValue = (roleValue: string) => roleValue.toUpperCase().replace('ROLE_', '');
+const normalizeEnabledState = (user: Partial<UserRecord> & Partial<UserTableRow>) =>
+  Boolean(user.isEnabled ?? user.enabled ?? user.accountEnabled ?? true);
+const buildUserSearchParams = (searchValue: string) => {
+  const keyword = searchValue.trim();
+  if (!keyword) return {};
+  if (keyword.includes('@')) {
+    return { email: keyword };
+  }
+  return { displayName: keyword };
+};
+const mapUserRecordToTableRow = (user: UserRecord | AdminUser): UserTableRow => {
+  const normalizedEnabled = normalizeEnabledState(user);
+  return {
+    userId: user.userId,
+    displayName: user.displayName,
+    email: user.email,
+    role: user.role,
+    isEnabled: normalizedEnabled,
+    enabled: normalizedEnabled,
+    isDeleted: Boolean(user.isDeleted ?? user.deleted ?? false),
+  };
+};
 
 const Users: React.FC = () => {
   const role = localStorage.getItem('role');
@@ -17,6 +39,7 @@ const Users: React.FC = () => {
 
   const [users, setUsers] = useState<UserTableRow[]>([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,6 +49,8 @@ const Users: React.FC = () => {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [viewUser, setViewUser] = useState<UserTableRow | null>(null);
+  const [isViewUserLoading, setIsViewUserLoading] = useState(false);
+  const [viewUserError, setViewUserError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserTableRow | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -36,31 +61,40 @@ const Users: React.FC = () => {
     setToast({ type, message });
   };
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const loadUsers = useCallback(async () => {
     if (!isAdmin) return;
     try {
       setIsLoading(true);
       setError(null);
-      const response = await userService.getAllUsers();
-      const normalized = (Array.isArray(response) ? response : []).map((user: UserRecord) => {
-        const normalizedEnabled = Boolean(user.isEnabled ?? user.enabled ?? user.accountEnabled ?? true);
-        return {
-          userId: user.userId,
-          displayName: user.displayName,
-          email: user.email,
-          role: user.role,
-          isEnabled: normalizedEnabled,
-          enabled: normalizedEnabled,
-          isDeleted: Boolean(user.isDeleted ?? user.deleted ?? false),
-        };
-      });
+      const searchParams = buildUserSearchParams(debouncedSearch);
+      let response: Array<UserRecord | AdminUser> = [];
+
+      if (statusFilter === 'DELETED') {
+        response = await userService.getDeletedUsers();
+      } else if (debouncedSearch.length > 0) {
+        response = await adminService.searchUsers(searchParams);
+      } else if (statusFilter === 'ACTIVE') {
+        response = await userService.getAllActiveUsers();
+      } else {
+        response = await adminService.getAllUsers();
+      }
+
+      const normalized = (Array.isArray(response) ? response : []).map(mapUserRecordToTableRow);
       setUsers(normalized);
     } catch (err: any) {
       setError(err?.message || 'Failed to load users.');
     } finally {
       setIsLoading(false);
     }
-  }, [isAdmin]);
+  }, [debouncedSearch, isAdmin, statusFilter]);
 
   useEffect(() => {
     loadUsers();
@@ -68,7 +102,7 @@ const Users: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, roleFilter, statusFilter]);
+  }, [debouncedSearch, roleFilter, statusFilter]);
 
   useEffect(() => {
     if (!toast) return;
@@ -77,23 +111,16 @@ const Users: React.FC = () => {
   }, [toast]);
 
   const filteredUsers = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
     return users.filter((user) => {
-      const matchesSearch =
-        !keyword ||
-        user.displayName.toLowerCase().includes(keyword) ||
-        user.email.toLowerCase().includes(keyword);
-
       const matchesRole =
         roleFilter === 'ALL' || normalizeRoleValue(user.role) === normalizeRoleValue(roleFilter);
 
-    const derivedStatus = user.isDeleted || !user.enabled ? 'DISABLED' : 'ACTIVE';
+      const derivedStatus = user.isDeleted ? 'DELETED' : !user.enabled ? 'DISABLED' : 'ACTIVE';
       const matchesStatus = statusFilter === 'ALL' || derivedStatus === statusFilter;
 
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesRole && matchesStatus;
     });
-  }, [users, search, roleFilter, statusFilter]);
+  }, [users, roleFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const paginatedUsers = useMemo(() => {
@@ -123,6 +150,25 @@ const Users: React.FC = () => {
     setUsers((prev) => prev.filter((item) => item.userId !== userId));
   };
 
+  const handleViewUser = async (user: UserTableRow) => {
+    setViewUser(user);
+    setViewUserError(null);
+    setIsViewUserLoading(true);
+
+    try {
+      const detail = user.isDeleted
+        ? await userService.getDeletedUserById(user.userId)
+        : await adminService.getAdminUserDetail(user.userId);
+      if (detail) {
+        setViewUser(mapUserRecordToTableRow(detail));
+      }
+    } catch (err: any) {
+      setViewUserError(err?.message || 'Failed to load user details.');
+    } finally {
+      setIsViewUserLoading(false);
+    }
+  };
+
   const handleToggleStatus = async (user: UserTableRow, targetState: boolean) => {
     const currentUserId = Number(localStorage.getItem('userId'));
     if (currentUserId === user.userId && targetState === false) {
@@ -134,11 +180,12 @@ const Users: React.FC = () => {
       setIsActionLoading(true);
       setActionLoadingId(user.userId);
       const response = await adminService.toggleAdminAccount(user.userId, targetState);
-      console.log('TOGGLE RESPONSE:', response);
       const payload = (response ?? {}) as Record<string, unknown>;
-      const serverEnabled = Boolean(
-        payload.enabled ?? payload.active ?? payload.isActive ?? targetState
-      );
+      const serverEnabled = normalizeEnabledState({
+        isEnabled: payload.isEnabled as boolean | undefined,
+        enabled: payload.enabled as boolean | undefined,
+        accountEnabled: payload.accountEnabled as boolean | undefined,
+      });
       updateUserState(user.userId, { isEnabled: serverEnabled, enabled: serverEnabled });
       showToast('success', `User ${serverEnabled ? 'enabled' : 'disabled'} successfully.`);
       await loadUsers();
@@ -280,7 +327,7 @@ const Users: React.FC = () => {
       <UserTable
         users={paginatedUsers}
         isLoading={isLoading}
-        onViewUser={setViewUser}
+        onViewUser={handleViewUser}
         onToggleStatus={handleToggleStatus}
         onOpenDeleteModal={setDeleteTarget}
         onRestoreUser={handleRestore}
@@ -333,20 +380,30 @@ const Users: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="mb-5 text-xl font-bold text-slate-900">User Details</h3>
-            <div className="space-y-3 text-sm">
-              <p><span className="font-semibold text-slate-600">User ID:</span> {viewUser.userId}</p>
-              <p><span className="font-semibold text-slate-600">Name:</span> {viewUser.displayName}</p>
-              <p><span className="font-semibold text-slate-600">Email:</span> {viewUser.email}</p>
-              <p><span className="font-semibold text-slate-600">Role:</span> {viewUser.role}</p>
-              <p>
-                <span className="font-semibold text-slate-600">Status:</span>{' '}
-                {viewUser.isDeleted || !viewUser.enabled ? 'Disabled' : 'Active'}
-              </p>
-            </div>
+            {isViewUserLoading ? (
+              <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                Loading user details...
+              </div>
+            ) : (
+              <div className="space-y-3 text-sm">
+                {viewUserError ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {viewUserError}
+                  </div>
+                ) : null}
+                <p><span className="font-semibold text-slate-600">Name:</span> {viewUser.displayName}</p>
+                <p><span className="font-semibold text-slate-600">Email:</span> {viewUser.email}</p>
+                <p><span className="font-semibold text-slate-600">Role:</span> {viewUser.role}</p>
+              </div>
+            )}
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
-                onClick={() => setViewUser(null)}
+                onClick={() => {
+                  setViewUser(null);
+                  setViewUserError(null);
+                }}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 Close

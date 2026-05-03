@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Admin Dashboard Report</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #1e293b;
+            background: #ffffff;
+            font-size: 12px;
+        }
+
+        .page {
+            padding: 32px 36px;
+        }
+
+        .header {
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            margin: 0 0 6px;
+            font-size: 26px;
+            color: #0f172a;
+        }
+
+        .header p {
+            margin: 2px 0;
+            color: #475569;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section h2 {
+            margin: 0 0 12px;
+            font-size: 16px;
+            color: #0f172a;
+        }
+
+        .metrics {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 12px;
+            margin: 0 -12px;
+        }
+
+        .metric-card {
+            width: 50%;
+            border: 1px solid #dbeafe;
+            background: #f8fbff;
+            border-radius: 10px;
+            padding: 14px;
+            vertical-align: top;
+        }
+
+        .metric-label {
+            display: block;
+            color: #475569;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .data-table th {
+            background: #eff6ff;
+            color: #1e3a8a;
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #bfdbfe;
+        }
+
+        .data-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .footer {
+            margin-top: 32px;
+            padding-top: 12px;
+            border-top: 1px solid #cbd5e1;
+            color: #64748b;
+            font-size: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="header">
+        <h1>NPaxis Admin Dashboard Report</h1>
+        <p th:text="${reportSubtitle}">Operational snapshot</p>
+        <p>
+            Generated at:
+            <span th:text="${#temporals.format(generatedAt, 'dd MMM yyyy hh:mm a')}">03 May 2026 11:00 AM</span>
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Dashboard Overview</h2>
+        <table class="metrics">
+            <tr>
+                <td class="metric-card">
+                    <span class="metric-label">Total Users</span>
+                    <span class="metric-value" th:text="${totalUsers}">0</span>
+                </td>
+                <td class="metric-card">
+                    <span class="metric-label">Total Students</span>
+                    <span class="metric-value" th:text="${totalStudents}">0</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="metric-card">
+                    <span class="metric-label">Active Preceptors</span>
+                    <span class="metric-value" th:text="${totalPreceptors}">0</span>
+                </td>
+                <td class="metric-card">
+                    <span class="metric-label">Premium Users</span>
+                    <span class="metric-value" th:text="${premiumUsersCount}">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Revenue Summary</h2>
+        <table class="metrics">
+            <tr>
+                <td class="metric-card">
+                    <span class="metric-label">Total Revenue</span>
+                    <span class="metric-value" th:text="${'$' + #numbers.formatDecimal(totalRevenue, 1, 2)}">$0.00</span>
+                </td>
+                <td class="metric-card">
+                    <span class="metric-label">Monthly Revenue</span>
+                    <span class="metric-value" th:text="${'$' + #numbers.formatDecimal(monthlyRevenue, 1, 2)}">$0.00</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="metric-card">
+                    <span class="metric-label">Year To Date Revenue</span>
+                    <span class="metric-value" th:text="${'$' + #numbers.formatDecimal(yearToDateRevenue, 1, 2)}">$0.00</span>
+                </td>
+                <td class="metric-card">
+                    <span class="metric-label">Active Subscriptions</span>
+                    <span class="metric-value" th:text="${activeSubscriptionsCount}">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Platform Activity</h2>
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>New Users This Month</td>
+                <td th:text="${newUsersThisMonth}">0</td>
+            </tr>
+            <tr>
+                <td>Total Profile Views</td>
+                <td th:text="${totalProfileViews}">0</td>
+            </tr>
+            <tr>
+                <td>Total Contact Reveals</td>
+                <td th:text="${totalContactReveals}">0</td>
+            </tr>
+            <tr>
+                <td>Total Inquiries</td>
+                <td th:text="${totalInquiries}">0</td>
+            </tr>
+            <tr>
+                <td>Canceled Subscriptions</td>
+                <td th:text="${canceledSubscriptionsCount}">0</td>
+            </tr>
+            <tr>
+                <td>Churn Rate</td>
+                <td th:text="${#numbers.formatDecimal(churnRate, 1, 2) + '%'}">0.00%</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section" th:if="${topPreceptors != null and !#lists.isEmpty(topPreceptors)}">
+        <h2>Top Preceptors By Inquiries</h2>
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>Preceptor ID</th>
+                <th>Name</th>
+                <th>Inquiries</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="preceptor : ${topPreceptors}">
+                <td th:text="${preceptor.preceptorId}">1</td>
+                <td th:text="${preceptor.name}">Jane Doe</td>
+                <td th:text="${preceptor.inquiries}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>NPaxis admin report generated automatically from live dashboard data.</p>
+    </div>
+</div>
+</body>
+</html>

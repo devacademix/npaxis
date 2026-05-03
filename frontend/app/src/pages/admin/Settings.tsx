@@ -3,14 +3,15 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SettingsForm, { type SettingsState, type SettingsTab } from '../../components/admin/SettingsForm';
 import { authService } from '../../services/auth';
-import settingsService, { type AdminCurrentUser, type SystemSetting } from '../../services/settings';
+import { adminService, type SystemSetting } from '../../services/admin';
+import settingsService, { type AdminCurrentUser } from '../../services/settings';
 
 const defaultSettings: SettingsState = {
   general: {
-    platformName: 'NPaxis',
-    supportEmail: 'support@npaxis.com',
-    defaultLanguage: 'English',
-    timezone: 'Asia/Kolkata',
+    platformName: '',
+    supportEmail: '',
+    defaultLanguage: '',
+    timezone: '',
     adminName: '',
     adminEmail: '',
   },
@@ -19,80 +20,81 @@ const defaultSettings: SettingsState = {
     newPassword: '',
     confirmPassword: '',
     twoFactorEnabled: false,
-    sessionTimeout: '30',
+    sessionTimeout: '',
   },
   integrations: {
-    publicApiKey: 'Configured on server',
-    secretApiKey: 'Hidden on server',
+    publicApiKey: '',
+    secretApiKey: '',
     webhookUrl: '',
-    paymentsEnabled: true,
-    mailServiceEnabled: true,
+    paymentsEnabled: false,
+    mailServiceEnabled: false,
     analyticsEnabled: false,
   },
   notifications: {
-    emailNotifications: true,
-    systemAlerts: true,
-    inquiryAlerts: true,
+    emailNotifications: false,
+    systemAlerts: false,
+    inquiryAlerts: false,
   },
   systemControls: {
-    registrationEnabled: true,
+    registrationEnabled: false,
     maintenanceMode: false,
   },
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const SETTING_KEYS = {
-  platformName: 'platformName',
-  supportEmail: 'supportEmail',
-  defaultLanguage: 'defaultLanguage',
-  timezone: 'timezone',
-  webhookUrl: 'webhookUrl',
-  paymentsEnabled: 'paymentsEnabled',
-  mailServiceEnabled: 'mailServiceEnabled',
-  analyticsEnabled: 'analyticsEnabled',
-  emailNotifications: 'emailNotifications',
-  systemAlerts: 'systemAlerts',
-  inquiryAlerts: 'inquiryAlerts',
-  registrationEnabled: 'registrationEnabled',
-  maintenanceMode: 'maintenanceMode',
-};
+const GENERAL_SETTING_KEYS = {
+  platformName: 'platform.name',
+  supportEmail: 'support.email',
+  defaultLanguage: 'platform.defaultLanguage',
+  timezone: 'platform.timezone',
+  adminName: 'admin.name',
+  adminEmail: 'admin.email',
+} as const;
 
-const mapSettings = (settingsList: SystemSetting[], admin: AdminCurrentUser): SettingsState => {
+type GeneralField = keyof SettingsState['general'];
+
+const GENERAL_FIELDS: GeneralField[] = [
+  'platformName',
+  'supportEmail',
+  'defaultLanguage',
+  'timezone',
+  'adminName',
+  'adminEmail',
+];
+
+const normalizeSettingValue = (value: unknown) => (value == null ? '' : String(value).trim());
+
+export const mapSettingsToUI = (settingsList: SystemSetting[]): SettingsState => {
   const settingsMap = new Map(settingsList.map((setting) => [setting.settingKey, setting.value]));
+
   return {
     ...defaultSettings,
     general: {
-      ...defaultSettings.general,
-      platformName: String(settingsMap.get(SETTING_KEYS.platformName) ?? defaultSettings.general.platformName),
-      supportEmail: String(settingsMap.get(SETTING_KEYS.supportEmail) ?? admin.email ?? defaultSettings.general.supportEmail),
-      defaultLanguage: String(settingsMap.get(SETTING_KEYS.defaultLanguage) ?? defaultSettings.general.defaultLanguage),
-      timezone: String(settingsMap.get(SETTING_KEYS.timezone) ?? defaultSettings.general.timezone),
-      adminName: admin.name || '',
-      adminEmail: admin.email || '',
-    },
-    security: {
-      ...defaultSettings.security,
-    },
-    integrations: {
-      ...defaultSettings.integrations,
-      webhookUrl: String(settingsMap.get(SETTING_KEYS.webhookUrl) ?? ''),
-      paymentsEnabled: Boolean(settingsMap.get(SETTING_KEYS.paymentsEnabled) ?? defaultSettings.integrations.paymentsEnabled),
-      mailServiceEnabled: Boolean(settingsMap.get(SETTING_KEYS.mailServiceEnabled) ?? defaultSettings.integrations.mailServiceEnabled),
-      analyticsEnabled: Boolean(settingsMap.get(SETTING_KEYS.analyticsEnabled) ?? defaultSettings.integrations.analyticsEnabled),
-    },
-    notifications: {
-      ...defaultSettings.notifications,
-      emailNotifications: Boolean(settingsMap.get(SETTING_KEYS.emailNotifications) ?? defaultSettings.notifications.emailNotifications),
-      systemAlerts: Boolean(settingsMap.get(SETTING_KEYS.systemAlerts) ?? defaultSettings.notifications.systemAlerts),
-      inquiryAlerts: Boolean(settingsMap.get(SETTING_KEYS.inquiryAlerts) ?? defaultSettings.notifications.inquiryAlerts),
-    },
-    systemControls: {
-      ...defaultSettings.systemControls,
-      registrationEnabled: Boolean(settingsMap.get(SETTING_KEYS.registrationEnabled) ?? defaultSettings.systemControls.registrationEnabled),
-      maintenanceMode: Boolean(settingsMap.get(SETTING_KEYS.maintenanceMode) ?? defaultSettings.systemControls.maintenanceMode),
+      platformName: normalizeSettingValue(settingsMap.get(GENERAL_SETTING_KEYS.platformName)),
+      supportEmail: normalizeSettingValue(settingsMap.get(GENERAL_SETTING_KEYS.supportEmail)),
+      defaultLanguage: normalizeSettingValue(settingsMap.get(GENERAL_SETTING_KEYS.defaultLanguage)),
+      timezone: normalizeSettingValue(settingsMap.get(GENERAL_SETTING_KEYS.timezone)),
+      adminName: normalizeSettingValue(settingsMap.get(GENERAL_SETTING_KEYS.adminName)),
+      adminEmail: normalizeSettingValue(settingsMap.get(GENERAL_SETTING_KEYS.adminEmail)),
     },
   };
+};
+
+export const mapUIToSettingsPayload = (
+  currentSettings: SettingsState,
+  savedSettings: SettingsState
+): Array<{ key: string; value: string }> => {
+  return GENERAL_FIELDS.flatMap((field) => {
+    const currentValue = normalizeSettingValue(currentSettings.general[field]);
+    const savedValue = normalizeSettingValue(savedSettings.general[field]);
+
+    if (currentValue === savedValue) {
+      return [];
+    }
+
+    return [{ key: GENERAL_SETTING_KEYS[field], value: currentValue }];
+  });
 };
 
 const Settings: React.FC = () => {
@@ -102,31 +104,41 @@ const Settings: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<SettingsState>(defaultSettings);
-  const [adminUser, setAdminUser] = useState<AdminCurrentUser | null>(null);
+  const [savedSettings, setSavedSettings] = useState<SettingsState>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<AdminCurrentUser | null>(null);
+  const [verifiedSettingKeys, setVerifiedSettingKeys] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isAdmin) return;
-    const loadAdmin = async () => {
+
+    const loadSettings = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const [currentAdmin, backendSettings] = await Promise.all([
-          settingsService.getCurrentAdmin(),
-          settingsService.getAllSettings().catch(() => []),
+        const [backendSettings, adminIdentity] = await Promise.all([
+          adminService.getSettings(),
+          settingsService.getCurrentAdmin().catch(() => null),
         ]);
-        setAdminUser(currentAdmin);
-        setSettings(mapSettings(backendSettings, currentAdmin));
+        const mappedSettings = mapSettingsToUI(backendSettings);
+        if (adminIdentity) {
+          mappedSettings.general.adminName = mappedSettings.general.adminName || adminIdentity.name || '';
+          mappedSettings.general.adminEmail = mappedSettings.general.adminEmail || adminIdentity.email || '';
+          setCurrentAdmin(adminIdentity);
+        }
+        setSettings(mappedSettings);
+        setSavedSettings(mappedSettings);
       } catch (err: any) {
         setError(err?.message || 'Failed to load admin settings.');
       } finally {
         setIsLoading(false);
       }
     };
-    loadAdmin();
+
+    loadSettings();
   }, [isAdmin]);
 
   useEffect(() => {
@@ -134,6 +146,10 @@ const Settings: React.FC = () => {
     const timer = window.setTimeout(() => setSuccess(null), 3000);
     return () => window.clearTimeout(timer);
   }, [success]);
+
+  const hasChanges = useMemo(() => {
+    return mapUIToSettingsPayload(settings, savedSettings).length > 0;
+  }, [savedSettings, settings]);
 
   const adminDisplayName = useMemo(() => {
     return settings.general.adminName || localStorage.getItem('displayName') || 'System Admin';
@@ -155,20 +171,11 @@ const Settings: React.FC = () => {
 
   const validateSettings = (): string | null => {
     if (!settings.general.platformName.trim()) return 'Platform name is required.';
-    if (!emailRegex.test(settings.general.supportEmail.trim())) return 'Support email is invalid.';
-    if (!emailRegex.test(settings.general.adminEmail.trim())) return 'Admin email is invalid.';
-    if (settings.integrations.webhookUrl.trim()) {
-      try {
-        new URL(settings.integrations.webhookUrl.trim());
-      } catch {
-        return 'Webhook URL must be a valid URL.';
-      }
+    if (settings.general.supportEmail.trim() && !emailRegex.test(settings.general.supportEmail.trim())) {
+      return 'Support email is invalid.';
     }
-    if (settings.security.newPassword && settings.security.newPassword.length < 8) {
-      return 'New password must be at least 8 characters long.';
-    }
-    if (settings.security.newPassword !== settings.security.confirmPassword) {
-      return 'New password and confirm password do not match.';
+    if (settings.general.adminEmail.trim() && !emailRegex.test(settings.general.adminEmail.trim())) {
+      return 'Admin email is invalid.';
     }
     return null;
   };
@@ -183,64 +190,58 @@ const Settings: React.FC = () => {
       return;
     }
 
+    const changedSettings = mapUIToSettingsPayload(settings, savedSettings);
+    if (changedSettings.length === 0) {
+      return;
+    }
+
     try {
       setIsSaving(true);
+      setVerifiedSettingKeys([]);
 
-      if (adminUser && settings.security.currentPassword.trim()) {
-        await settingsService.updateAdminDetails(adminUser.userId, {
-          fullName: settings.general.adminName.trim() || adminUser.name,
-          username: adminUser.username,
-          password: settings.security.newPassword.trim() || settings.security.currentPassword.trim(),
-          email: settings.general.adminEmail.trim(),
+      await Promise.all(
+        changedSettings.map(({ key, value }) => adminService.updateSetting(key, { value }))
+      );
+
+      const verifiedKeys = await Promise.all(
+        changedSettings.map(async ({ key }) => {
+          const verified = await settingsService.getSettingByKey(key);
+          return verified.settingKey;
+        })
+      );
+
+      const adminNameChanged =
+        normalizeSettingValue(settings.general.adminName) !== normalizeSettingValue(savedSettings.general.adminName);
+      const adminEmailChanged =
+        normalizeSettingValue(settings.general.adminEmail) !== normalizeSettingValue(savedSettings.general.adminEmail);
+
+      if (currentAdmin && (adminNameChanged || adminEmailChanged)) {
+        await settingsService.updateAdminDetails(currentAdmin.userId, {
+          fullName: settings.general.adminName.trim() || currentAdmin.name,
+          username: currentAdmin.username,
+          password: '',
+          email: settings.general.adminEmail.trim() || currentAdmin.email,
           roles: [3],
         });
+
+        setCurrentAdmin((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: settings.general.adminName.trim() || prev.name,
+                email: settings.general.adminEmail.trim() || prev.email,
+              }
+            : prev
+        );
       }
 
-      const updates: Array<[string, any]> = [
-        [SETTING_KEYS.platformName, settings.general.platformName.trim()],
-        [SETTING_KEYS.supportEmail, settings.general.supportEmail.trim()],
-        [SETTING_KEYS.defaultLanguage, settings.general.defaultLanguage],
-        [SETTING_KEYS.timezone, settings.general.timezone],
-        [SETTING_KEYS.webhookUrl, settings.integrations.webhookUrl.trim()],
-        [SETTING_KEYS.paymentsEnabled, settings.integrations.paymentsEnabled],
-        [SETTING_KEYS.mailServiceEnabled, settings.integrations.mailServiceEnabled],
-        [SETTING_KEYS.analyticsEnabled, settings.integrations.analyticsEnabled],
-        [SETTING_KEYS.emailNotifications, settings.notifications.emailNotifications],
-        [SETTING_KEYS.systemAlerts, settings.notifications.systemAlerts],
-        [SETTING_KEYS.inquiryAlerts, settings.notifications.inquiryAlerts],
-        [SETTING_KEYS.registrationEnabled, settings.systemControls.registrationEnabled],
-        [SETTING_KEYS.maintenanceMode, settings.systemControls.maintenanceMode],
-      ];
-
-      for (const [key, value] of updates) {
-        await settingsService.updateSetting(key, value);
-      }
-
-      setSettings((prev) => ({
-        ...prev,
-        security: {
-          ...prev.security,
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        },
-      }));
-      setSuccess('Admin settings saved successfully.');
+      setSavedSettings(settings);
+      setVerifiedSettingKeys(verifiedKeys);
+      setSuccess('Settings saved successfully.');
     } catch (err: any) {
       setError(err?.message || 'Failed to save settings.');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleCopyKey = async (value: string) => {
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-      }
-      setSuccess('Copied to clipboard.');
-    } catch {
-      setError('Failed to copy API key.');
     }
   };
 
@@ -261,7 +262,7 @@ const Settings: React.FC = () => {
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">Admin Settings</h1>
-          <p className="mt-2 text-slate-500">Configure platform preferences, security, and integrations.</p>
+          <p className="mt-2 text-slate-500">Configure platform preferences through the live system settings API.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">{adminDisplayName}</div>
@@ -273,6 +274,11 @@ const Settings: React.FC = () => {
 
       {error ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
       {success ? <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div> : null}
+      {verifiedSettingKeys.length > 0 ? (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          Verified keys from backend: {verifiedSettingKeys.join(', ')}
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -283,16 +289,31 @@ const Settings: React.FC = () => {
         </div>
       ) : (
         <>
+          {currentAdmin ? (
+            <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Live Admin Identity</p>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Name</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{currentAdmin.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Email</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{currentAdmin.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Username</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{currentAdmin.username || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <SettingsForm
             activeTab={activeTab}
             onTabChange={setActiveTab}
             settings={settings}
             onGeneralChange={(field, value) => updateSection('general', field, value)}
-            onSecurityChange={(field, value) => updateSection('security', field, value as never)}
-            onIntegrationChange={(field, value) => updateSection('integrations', field, value as never)}
-            onNotificationToggle={(field, value) => updateSection('notifications', field, value)}
-            onSystemControlToggle={(field, value) => updateSection('systemControls', field, value)}
-            onCopyKey={handleCopyKey}
             disabled={isSaving}
           />
 
@@ -300,8 +321,8 @@ const Settings: React.FC = () => {
             <button
               type="button"
               onClick={handleSave}
-              disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#003d9b] to-[#0052cc] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all hover:opacity-90 disabled:opacity-60"
+              disabled={isSaving || !hasChanges}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#003d9b] to-[#0052cc] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? (
                 <>
