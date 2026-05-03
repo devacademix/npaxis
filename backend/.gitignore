@@ -61,4 +61,4 @@ secrets-*.properties
 # =========================
 HELP.md
 /uploads/
-/logs/
+/logs/**

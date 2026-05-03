@@ -150,17 +150,20 @@
             <tr>
                 <td class="metric-card">
                     <span class="metric-label">Total Revenue</span>
-                    <span class="metric-value" th:text="${'$' + #numbers.formatDecimal(totalRevenue, 1, 2)}">$0.00</span>
+                    <span class="metric-value"
+                          th:text="${'$' + #numbers.formatDecimal(totalRevenue, 1, 2)}">$0.00</span>
                 </td>
                 <td class="metric-card">
                     <span class="metric-label">Monthly Revenue</span>
-                    <span class="metric-value" th:text="${'$' + #numbers.formatDecimal(monthlyRevenue, 1, 2)}">$0.00</span>
+                    <span class="metric-value"
+                          th:text="${'$' + #numbers.formatDecimal(monthlyRevenue, 1, 2)}">$0.00</span>
                 </td>
             </tr>
             <tr>
                 <td class="metric-card">
                     <span class="metric-label">Year To Date Revenue</span>
-                    <span class="metric-value" th:text="${'$' + #numbers.formatDecimal(yearToDateRevenue, 1, 2)}">$0.00</span>
+                    <span class="metric-value"
+                          th:text="${'$' + #numbers.formatDecimal(yearToDateRevenue, 1, 2)}">$0.00</span>
                 </td>
                 <td class="metric-card">
                     <span class="metric-label">Active Subscriptions</span>
