@@ -31,20 +31,20 @@ import java.util.Optional;
 
 /**
  * Service implementation for managing preceptor subscriptions.
- *
+ * <p>
  * Handles checkout, cancellation, updates, and premium access validation.
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
- *
+ * <p>
  * This service is instrumented with @TrackEvent annotations to automatically
  * capture subscription lifecycle events:
- *
+ * <p>
  * - SUBSCRIPTION_PAGE_VIEWED: when preceptor views checkout page
  * - SUBSCRIPTION_CANCELED: when a preceptor cancels their subscription
  * - SUBSCRIPTION_UPGRADED/SUBSCRIPTION_DOWNGRADED: when plan is changed via updateSubscription()
- *
+ * <p>
  * Events are tracked asynchronously without blocking subscription operations.
  * Metadata includes plan details and amounts for business analysis.
  *
@@ -70,9 +70,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @TrackEvent(
-        eventType = EventType.SUBSCRIPTION_PAGE_VIEWED,
-        targetIdExpression = "#userId.toString()",
-        metadataExpression = "{'priceId': #priceId.toString()}"
+            eventType = EventType.SUBSCRIPTION_PAGE_VIEWED,
+            targetIdExpression = "#userId.toString()",
+            metadataExpression = "{'priceId': #priceId.toString()}"
     )
     public CreateCheckoutSessionResponse createCheckoutSession(Long userId, Long priceId) {
         log.info("Creating checkout session for user: {}, price: {}", userId, priceId);
@@ -134,17 +134,17 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     /**
      * Cancels an active subscription.
-     *
+     * <p>
      * ANALYTICS:
      * - Tracks SUBSCRIPTION_CANCELED event when cancellation is successful
      * - Metadata includes plan code and cancellation date
      */
     @Override
     @TrackEvent(
-        eventType = EventType.SUBSCRIPTION_CANCELED,
-        metadataExpression = "{'planCode': #subscription.getPlan().getCode(), " +
-                           "'cancelDate': #subscription.getCancelDate(), " +
-                           "'accessRetainedUntil': #subscription.getEndDate()}"
+            eventType = EventType.SUBSCRIPTION_CANCELED,
+            metadataExpression = "{'planCode': #subscription.getPlan().getCode(), " +
+                    "'cancelDate': #subscription.getCancelDate(), " +
+                    "'accessRetainedUntil': #subscription.getEndDate()}"
     )
     public void cancelSubscription(Long userId) {
         log.info("Canceling active subscription for user: {}", userId);
@@ -180,15 +180,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     /**
      * Updates a subscription to a different plan/price.
-     *
+     * <p>
      * ANALYTICS:
      * - Tracks SUBSCRIPTION_UPGRADED event when plan is successfully changed
      * - Metadata includes price information for analysis
      */
     @Override
     @TrackEvent(
-        eventType = EventType.SUBSCRIPTION_UPGRADED,
-        metadataExpression = "{'priceId': #request.priceId()}"
+            eventType = EventType.SUBSCRIPTION_UPGRADED,
+            metadataExpression = "{'priceId': #request.priceId()}"
     )
     public void updateSubscription(Long userId, UpdateSubscriptionRequest request) {
         log.info("Updating active subscription for user: {} with new price: {}", userId, request.priceId());

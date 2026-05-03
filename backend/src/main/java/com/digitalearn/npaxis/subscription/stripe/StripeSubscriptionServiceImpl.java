@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Implementation of StripeSubscriptionService.
  * Handles all Stripe Subscription API operations with proper error handling and transactional boundaries.
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
@@ -36,9 +36,9 @@ public class StripeSubscriptionServiceImpl implements StripeSubscriptionService 
     @Override
     @Transactional
     @TrackEvent(
-        eventType = EventType.API_CALLED,
-        targetIdExpression = "#userId.toString()",
-        metadataExpression = "{'apiEndpoint': 'stripe.checkout.session.create', 'priceId': #priceId.toString(), 'status': 'success'}"
+            eventType = EventType.API_CALLED,
+            targetIdExpression = "#userId.toString()",
+            metadataExpression = "{'apiEndpoint': 'stripe.checkout.session.create', 'priceId': #priceId.toString(), 'status': 'success'}"
     )
     public String createCheckoutSession(Long userId, Long priceId) {
         log.info("Creating checkout session for userId: {}, priceId: {}", userId, priceId);
@@ -102,9 +102,9 @@ public class StripeSubscriptionServiceImpl implements StripeSubscriptionService 
     @Override
     @Transactional
     @TrackEvent(
-        eventType = EventType.API_CALLED,
-        targetIdExpression = "#stripeCustomerId",
-        metadataExpression = "{'apiEndpoint': 'stripe.billingportal.session.create', 'status': 'success'}"
+            eventType = EventType.API_CALLED,
+            targetIdExpression = "#stripeCustomerId",
+            metadataExpression = "{'apiEndpoint': 'stripe.billingportal.session.create', 'status': 'success'}"
     )
     public String createCustomerPortalSession(String stripeCustomerId) {
         log.info("Creating customer portal session for customer: {}", stripeCustomerId);

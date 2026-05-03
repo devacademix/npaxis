@@ -16,32 +16,34 @@
 
 -- Add start_date column (when subscription lifecycle began)
 ALTER TABLE preceptor_subscriptions
-ADD COLUMN IF NOT EXISTS start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- Add end_date column (when subscription lifecycle ended, nullable for active subscriptions)
 ALTER TABLE preceptor_subscriptions
-ADD COLUMN IF NOT EXISTS end_date TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS end_date TIMESTAMP;
 
 -- Add cancelled_at column (when user explicitly cancelled, distinct from end_date)
 ALTER TABLE preceptor_subscriptions
-ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;
 
 -- Add cancel_date column (when subscription will end at period end for graceful cancellation)
 ALTER TABLE preceptor_subscriptions
-ADD COLUMN IF NOT EXISTS cancel_date TIMESTAMP;
+    ADD COLUMN IF NOT EXISTS cancel_date TIMESTAMP;
 
 -- Add is_active boolean flag (application-enforced one-active-per-user)
 -- This allows us to track active vs historical subscriptions
 ALTER TABLE preceptor_subscriptions
-ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- =====================================================
 -- Step 2: Remove UNIQUE constraints on preceptor_id
 -- =====================================================
 -- Get the constraint name and drop it
-DO $$
+DO
+$$
 BEGIN
-    IF EXISTS (
+    IF
+EXISTS (
         SELECT constraint_name
         FROM information_schema.table_constraints
         WHERE table_name = 'preceptor_subscriptions'
@@ -54,7 +56,7 @@ BEGIN
                  WHERE table_name = 'preceptor_subscriptions'
                  AND constraint_type = 'UNIQUE'
                  AND constraint_name LIKE '%preceptor_id%' LIMIT 1);
-    END IF;
+END IF;
 END $$;
 
 -- =====================================================
@@ -90,13 +92,13 @@ CREATE INDEX IF NOT EXISTS idx_preceptor_subscription_status_active
 UPDATE preceptor_subscriptions
 SET is_active = TRUE
 WHERE status IN ('ACTIVE', 'TRIALING')
-AND is_active IS NOT TRUE;
+  AND is_active IS NOT TRUE;
 
 -- Set is_active = FALSE for CANCELED, PAST_DUE, UNPAID, INCOMPLETE subscriptions
 UPDATE preceptor_subscriptions
 SET is_active = FALSE
 WHERE status NOT IN ('ACTIVE', 'TRIALING')
-AND is_active IS NOT FALSE;
+  AND is_active IS NOT FALSE;
 
 -- =====================================================
 -- Step 5: Backfill lifecycle dates for existing records
@@ -110,7 +112,7 @@ WHERE start_date IS NULL;
 UPDATE preceptor_subscriptions
 SET end_date = COALESCE(canceled_at, current_period_end)
 WHERE end_date IS NULL
-AND status IN ('CANCELED', 'PAST_DUE', 'UNPAID');
+  AND status IN ('CANCELED', 'PAST_DUE', 'UNPAID');
 
 -- =====================================================
 -- Step 6: Verify data integrity
@@ -128,14 +130,35 @@ AND status IN ('CANCELED', 'PAST_DUE', 'UNPAID');
 -- =====================================================
 CREATE TABLE IF NOT EXISTS subscription_events
 (
-    subscription_event_id BIGSERIAL PRIMARY KEY,
-    preceptor_subscription_id BIGINT NOT NULL REFERENCES preceptor_subscriptions (preceptor_subscription_id) ON DELETE CASCADE,
-    preceptor_id BIGINT NOT NULL REFERENCES preceptors (user_id) ON DELETE CASCADE,
-    event_type VARCHAR(50) NOT NULL, -- CREATED, ACTIVATED, DEACTIVATED, CANCELLED, UPDATED, EXPIRED
-    stripe_event_id VARCHAR(255),
+    subscription_event_id
+    BIGSERIAL
+    PRIMARY
+    KEY,
+    preceptor_subscription_id
+    BIGINT
+    NOT
+    NULL
+    REFERENCES
+    preceptor_subscriptions
+(
+    preceptor_subscription_id
+) ON DELETE CASCADE,
+    preceptor_id BIGINT NOT NULL REFERENCES preceptors
+(
+    user_id
+)
+  ON DELETE CASCADE,
+    event_type VARCHAR
+(
+    50
+) NOT NULL, -- CREATED, ACTIVATED, DEACTIVATED, CANCELLED, UPDATED, EXPIRED
+    stripe_event_id VARCHAR
+(
+    255
+),
     details JSONB,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+    );
 
 -- Create indexes for subscription_events queries
 CREATE INDEX IF NOT EXISTS idx_subscription_events_subscription

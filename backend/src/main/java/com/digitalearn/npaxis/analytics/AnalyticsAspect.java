@@ -1,6 +1,7 @@
 package com.digitalearn.npaxis.analytics;
 
 import com.digitalearn.npaxis.user.User;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -13,99 +14,97 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * AOP Aspect for automatic analytics event tracking.
- *
+ * <p>
  * This aspect intercepts methods annotated with @TrackEvent and automatically:
  * 1. Executes the method
  * 2. Extracts userId, targetId, and metadata
  * 3. Calls analyticsService to track the event asynchronously
  * 4. Never blocks or breaks the request flow, even if tracking fails
- *
+ * <p>
  * ============================================
  * FLOW DIAGRAM
  * ============================================
- *
+ * <p>
  * Request comes in
- *     ↓
+ * ↓
  * Aspect intercepts @TrackEvent method
- *     ↓
+ * ↓
  * Method executes (joinPoint.proceed())
- *     ↓
+ * ↓
  * Success! Extract userId, targetId, metadata
- *     ↓
+ * ↓
  * Create AnalyticsEventRequest
- *     ↓
+ * ↓
  * Call analyticsService.trackBackendEvent() (ASYNC)
- *     ↓
+ * ↓
  * Event saved to DB (non-blocking)
- *     ↓
+ * ↓
  * Return response to client
- *
+ * <p>
  * If any tracking fails (exception), it's caught and logged but doesn't
  * break the response flow.
- *
+ * <p>
  * ============================================
  * KEY DESIGN PRINCIPLES
  * ============================================
- *
+ * <p>
  * 1. NON-INTRUSIVE
- *    - Never blocks request processing
- *    - Exceptions in tracking don't propagate to business logic
- *    - Wrapped in comprehensive try-catch blocks
- *
+ * - Never blocks request processing
+ * - Exceptions in tracking don't propagate to business logic
+ * - Wrapped in comprehensive try-catch blocks
+ * <p>
  * 2. LAZY EVALUATION
- *    - userId extracted only if needed
- *    - targetId and metadata evaluated via SpEL only when specified
- *    - Reduces overhead for simple events
- *
+ * - userId extracted only if needed
+ * - targetId and metadata evaluated via SpEL only when specified
+ * - Reduces overhead for simple events
+ * <p>
  * 3. SECURITY-AWARE
- *    - Validates authentication before using user info
- *    - Handles anonymous/unauthenticated users gracefully
- *    - Doesn't break public endpoints
- *
+ * - Validates authentication before using user info
+ * - Handles anonymous/unauthenticated users gracefully
+ * - Doesn't break public endpoints
+ * <p>
  * 4. PERFORMANCE-OPTIMIZED
- *    - Aspect is lightweight
- *    - SpEL expressions evaluated efficiently
- *    - Async tracking keeps main thread free
- *
+ * - Aspect is lightweight
+ * - SpEL expressions evaluated efficiently
+ * - Async tracking keeps main thread free
+ * <p>
  * 5. REQUEST-AWARE
- *    - Captures HTTP request metadata (IP, user agent)
- *    - Useful for detailed analytics
- *    - Optional and doesn't break if request context not available
- *
+ * - Captures HTTP request metadata (IP, user agent)
+ * - Useful for detailed analytics
+ * - Optional and doesn't break if request context not available
+ * <p>
  * ============================================
  * COMMON SCENARIOS
  * ============================================
- *
+ * <p>
  * Scenario 1: Unauthenticated user
  * - Event is tracked with userId = null
  * - Useful for tracking public endpoint usage
- *
+ * <p>
  * Scenario 2: Exception in tracked method
  * - Method exception propagates normally
  * - Event is NOT tracked (only tracked on success)
  * - Can be changed if needed by modifying the aspect
- *
+ * <p>
  * Scenario 3: Invalid SpEL expression
  * - Exception caught, logged with full context
  * - Event still tracked with targetId/metadata = null
  * - Request continues normally
- *
+ * <p>
  * Scenario 4: Analytics service down
  * - Exception caught and logged
  * - Main request completes normally
  * - No data loss (async task will retry on next startup... potentially)
- *
+ * <p>
  * ============================================
  * TESTING NOTES
  * ============================================
- *
+ * <p>
  * - Mock AnalyticsService to verify tracking calls
  * - Verify correct eventType, userId, targetId, metadata extracted
  * - Test exception handling (ensure aspect catches and logs)
@@ -128,14 +127,14 @@ public class AnalyticsAspect {
 
     /**
      * Intercepts all methods annotated with @TrackEvent.
-     *
+     * <p>
      * IMPORTANT: Uses the @Around advice to ensure:
      * - Method executes first (proceed())
      * - Only on successful execution, tracking is triggered
      * - Exceptions in the method propagate normally
      * - Exceptions in tracking are caught and don't break the flow
      *
-     * @param joinPoint the method invocation join point
+     * @param joinPoint  the method invocation join point
      * @param trackEvent the @TrackEvent annotation metadata
      * @return the original method's return value
      * @throws Throwable any exception thrown by the method (not from tracking)
@@ -184,7 +183,7 @@ public class AnalyticsAspect {
 
     /**
      * Extracts the currently authenticated user's ID from Spring Security.
-     *
+     * <p>
      * Returns Optional.empty() for:
      * - Unauthenticated users (null authentication)
      * - Anonymous users
@@ -220,11 +219,11 @@ public class AnalyticsAspect {
 
     /**
      * Extracts targetId from method arguments using Spring Expression Language.
-     *
+     * <p>
      * If targetIdExpression is empty/blank, returns null.
      * If expression fails to evaluate, logs the error and returns null.
      *
-     * @param joinPoint the method invocation
+     * @param joinPoint  the method invocation
      * @param trackEvent the annotation metadata containing SpEL expression
      * @return the evaluated targetId or null
      */
@@ -251,13 +250,13 @@ public class AnalyticsAspect {
 
     /**
      * Extracts metadata from method arguments and return value using SpEL.
-     *
+     * <p>
      * If metadataExpression is empty/blank, returns empty map.
      * If expression fails or returns non-Map, returns empty map and logs warning.
      *
-     * @param joinPoint the method invocation
+     * @param joinPoint  the method invocation
      * @param trackEvent the annotation metadata containing SpEL expression
-     * @param result the return value of the method
+     * @param result     the return value of the method
      * @return evaluated metadata map, or empty map if not available
      */
     private Map<String, Object> extractMetadata(
@@ -282,7 +281,7 @@ public class AnalyticsAspect {
                 return metadataMap;
             } else if (metadata != null) {
                 log.warn("Metadata expression did not return a Map. " +
-                         "Expression: '{}', Returned type: {}, Returned value: {}",
+                                "Expression: '{}', Returned type: {}, Returned value: {}",
                         expression,
                         metadata.getClass().getSimpleName(),
                         metadata);
@@ -301,19 +300,19 @@ public class AnalyticsAspect {
 
     /**
      * Evaluates a Spring Expression Language (SpEL) expression.
-     *
+     * <p>
      * Available variables in expressions:
      * - #paramName for each method parameter
      * - #result for the return value (if provided)
-     *
+     * <p>
      * Examples:
      * - "#preceptorId" evaluates the preceptorId parameter
      * - "#result.getId()" calls getId() on the return value
      * - "#pageable.getPageSize()" accesses method on Pageable parameter
      *
      * @param expression the SpEL expression
-     * @param joinPoint the method invocation (provides parameter names and values)
-     * @param result optional return value (for #result variable)
+     * @param joinPoint  the method invocation (provides parameter names and values)
+     * @param result     optional return value (for #result variable)
      * @return the evaluated expression result
      */
     private Object evaluateSpELExpression(
@@ -358,7 +357,7 @@ public class AnalyticsAspect {
 
     /**
      * Extracts method parameter names using Java reflection (via AspectJ).
-     *
+     * <p>
      * This is essential for SpEL expression evaluation to map parameter names
      * to their actual values.
      *
@@ -379,14 +378,14 @@ public class AnalyticsAspect {
 
     /**
      * Enriches metadata with HTTP request information.
-     *
+     * <p>
      * This adds context about the HTTP request that triggered the event:
      * - ipAddress: client IP address
      * - userAgent: client browser/user-agent string
      * - endpoint: the requested endpoint path
-     *
+     * <p>
      * This information is useful for security and traffic analysis.
-     *
+     * <p>
      * NOTE: Gracefully handles cases where HTTP context is not available
      * (e.g., non-HTTP requests, scheduled tasks)
      *
@@ -436,7 +435,7 @@ public class AnalyticsAspect {
 
     /**
      * Extracts the client's IP address from the HTTP request.
-     *
+     * <p>
      * Checks multiple headers to handle proxies:
      * 1. X-Forwarded-For (proxy header)
      * 2. Proxy-Client-IP
@@ -470,13 +469,13 @@ public class AnalyticsAspect {
 
     /**
      * Creates and tracks an analytics event through the service.
-     *
+     * <p>
      * The service internally handles async processing via @Async annotation.
      *
      * @param eventType the type of event
-     * @param userId the ID of the user triggering the event (may be null for anonymous)
-     * @param targetId the ID of the primary entity affected (optional)
-     * @param metadata additional context about the event (optional)
+     * @param userId    the ID of the user triggering the event (may be null for anonymous)
+     * @param targetId  the ID of the primary entity affected (optional)
+     * @param metadata  additional context about the event (optional)
      */
     private void trackAnalyticsEvent(
             EventType eventType,

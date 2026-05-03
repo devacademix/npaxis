@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
  * <p>
  * Thread-safe and stateless - safe for concurrent usage.
  * All configurations via dependency injection - no static state.
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
@@ -43,9 +43,9 @@ public class PdfServiceImpl implements PdfService {
 
     @Override
     @TrackEvent(
-        eventType = EventType.RESOURCE_UPLOADED,
-        targetIdExpression = "#request.getOutputFileName()",
-        metadataExpression = "{'resourceType': 'pdf_document', 'templateName': #request.getTemplateName(), 'fileSize': #result.length}"
+            eventType = EventType.RESOURCE_UPLOADED,
+            targetIdExpression = "#request.getOutputFileName()",
+            metadataExpression = "{'resourceType': 'pdf_document', 'templateName': #request.getTemplateName(), 'fileSize': #result.length}"
     )
     public byte[] generatePdf(PdfRequest request) {
         try {

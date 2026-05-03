@@ -33,9 +33,9 @@ public class StripePaymentServiceImpl implements PaymentGatewayService {
 
     @Override
     @TrackEvent(
-        eventType = EventType.SUBSCRIPTION_PAGE_VIEWED,
-        targetIdExpression = "#request.preceptorId().toString()",
-        metadataExpression = "{'billingCycle': #request.billingCycle().name(), 'isExistingCustomer': #preceptor.getStripeCustomerId() != null}"
+            eventType = EventType.SUBSCRIPTION_PAGE_VIEWED,
+            targetIdExpression = "#request.preceptorId().toString()",
+            metadataExpression = "{'billingCycle': #request.billingCycle().name(), 'isExistingCustomer': #preceptor.getStripeCustomerId() != null}"
     )
     public CheckoutSessionResponse createCheckoutSession(CheckoutSessionRequest request) {
 

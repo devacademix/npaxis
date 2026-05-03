@@ -1,12 +1,11 @@
 package com.digitalearn.npaxis.analytics;
 
+import com.digitalearn.npaxis.user.User;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import com.digitalearn.npaxis.user.User;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,16 +13,16 @@ import java.util.Optional;
 
 /**
  * Utility class for analytics-related operations.
- *
+ * <p>
  * Provides helper methods for:
  * - Extracting current user information
  * - Building metadata maps
  * - Manual event tracking (when needed)
- *
+ * <p>
  * USAGE:
  * - Use for manual tracking when @TrackEvent annotation is insufficient
  * - Use in services for complex tracking conditions
- *
+ * <p>
  * BEST PRACTICES:
  * - Prefer @TrackEvent annotation over manual tracking
  * - Use these utilities only for edge cases and complex scenarios
@@ -96,9 +95,9 @@ public class AnalyticsUtils {
 
     /**
      * Creates a metadata map with standard key-value pairs.
-     *
+     * <p>
      * This is useful for building metadata when using @TrackEvent or manual tracking.
-     *
+     * <p>
      * EXAMPLE:
      * <pre>
      * Map<String, Object> metadata = AnalyticsUtils.createMetadata()
@@ -114,10 +113,67 @@ public class AnalyticsUtils {
     }
 
     /**
+     * Creates a standard metadata entry for search events.
+     *
+     * @param query       the search query
+     * @param filters     applied filters (as string)
+     * @param resultCount number of results
+     * @return metadata map
+     */
+    public static Map<String, Object> createSearchMetadata(
+            String query,
+            String filters,
+            int resultCount) {
+
+        return createMetadata()
+                .add("query", query)
+                .addIfNotNull("filters", filters)
+                .add("resultCount", resultCount)
+                .build();
+    }
+
+    /**
+     * Creates a standard metadata entry for contact events.
+     *
+     * @param contactType the type of contact (phone, email, etc.)
+     * @param duration    duration of interaction in milliseconds
+     * @return metadata map
+     */
+    public static Map<String, Object> createContactMetadata(
+            String contactType,
+            long duration) {
+
+        return createMetadata()
+                .add("contactType", contactType)
+                .add("duration_ms", duration)
+                .build();
+    }
+
+    /**
+     * Creates a standard metadata entry for subscription events.
+     *
+     * @param plan          the subscription plan name
+     * @param amount        the amount in minor units (cents)
+     * @param billingPeriod the billing period (monthly, yearly, etc.)
+     * @return metadata map
+     */
+    public static Map<String, Object> createSubscriptionMetadata(
+            String plan,
+            long amount,
+            String billingPeriod) {
+
+        return createMetadata()
+                .add("plan", plan)
+                .add("amount_minor_units", amount)
+                .add("billing_period", billingPeriod)
+                .build();
+    }
+
+    /**
      * Builder class for constructing metadata maps fluently.
-     *
+     * <p>
      * This makes it easier to build metadata in complex scenarios.
-     *
+     * <p>
      * EXAMPLE:
      * <pre>
      * AnalyticsUtils.createMetadata()
@@ -133,7 +189,7 @@ public class AnalyticsUtils {
         /**
          * Adds a key-value pair to the metadata.
          *
-         * @param key the key
+         * @param key   the key
          * @param value the value (can be null)
          * @return this builder for chaining
          */
@@ -147,7 +203,7 @@ public class AnalyticsUtils {
         /**
          * Adds a key-value pair only if the value is non-null.
          *
-         * @param key the key
+         * @param key   the key
          * @param value the value (skipped if null)
          * @return this builder for chaining
          */
@@ -179,63 +235,6 @@ public class AnalyticsUtils {
         public Map<String, Object> build() {
             return new HashMap<>(metadata);
         }
-    }
-
-    /**
-     * Creates a standard metadata entry for search events.
-     *
-     * @param query the search query
-     * @param filters applied filters (as string)
-     * @param resultCount number of results
-     * @return metadata map
-     */
-    public static Map<String, Object> createSearchMetadata(
-            String query,
-            String filters,
-            int resultCount) {
-
-        return createMetadata()
-                .add("query", query)
-                .addIfNotNull("filters", filters)
-                .add("resultCount", resultCount)
-                .build();
-    }
-
-    /**
-     * Creates a standard metadata entry for contact events.
-     *
-     * @param contactType the type of contact (phone, email, etc.)
-     * @param duration duration of interaction in milliseconds
-     * @return metadata map
-     */
-    public static Map<String, Object> createContactMetadata(
-            String contactType,
-            long duration) {
-
-        return createMetadata()
-                .add("contactType", contactType)
-                .add("duration_ms", duration)
-                .build();
-    }
-
-    /**
-     * Creates a standard metadata entry for subscription events.
-     *
-     * @param plan the subscription plan name
-     * @param amount the amount in minor units (cents)
-     * @param billingPeriod the billing period (monthly, yearly, etc.)
-     * @return metadata map
-     */
-    public static Map<String, Object> createSubscriptionMetadata(
-            String plan,
-            long amount,
-            String billingPeriod) {
-
-        return createMetadata()
-                .add("plan", plan)
-                .add("amount_minor_units", amount)
-                .add("billing_period", billingPeriod)
-                .build();
     }
 
 }

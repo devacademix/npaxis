@@ -36,7 +36,7 @@ import java.util.Optional;
  * Service implementation for processing Stripe webhook events
  * Handles subscription lifecycle, invoices, and payment events
  * Saves all transactions and updates preceptor premium status
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
@@ -418,10 +418,10 @@ public class WebhookServiceImpl implements WebhookService {
                     metadata.put("currency", invoice.getCurrency() != null ? invoice.getCurrency() : "usd");
                     metadata.put("paymentStatus", "succeeded");
                     analyticsService.trackBackendEvent(
-                        EventType.PAYMENT_SUCCEEDED,
-                        p.getUserId(),
-                        p.getUserId().toString(),
-                        metadata
+                            EventType.PAYMENT_SUCCEEDED,
+                            p.getUserId(),
+                            p.getUserId().toString(),
+                            metadata
                     );
 
                     // Extract invoice data for PDF generation and storage
@@ -497,12 +497,12 @@ public class WebhookServiceImpl implements WebhookService {
                 metadata.put("amount", invoice.getAmountDue());
                 metadata.put("currency", invoice.getCurrency() != null ? invoice.getCurrency() : "usd");
                 metadata.put("paymentStatus", "failed");
-                metadata.put("failureReason", invoice.getLastPaymentError() != null ? invoice.getLastPaymentError().getMessage() : "unknown");
+                metadata.put("failureReason", "Payment failed - check Stripe dashboard for details");
                 analyticsService.trackBackendEvent(
-                    EventType.PAYMENT_FAILED,
-                    p.getUserId(),
-                    p.getUserId().toString(),
-                    metadata
+                        EventType.PAYMENT_FAILED,
+                        p.getUserId(),
+                        p.getUserId().toString(),
+                        metadata
                 );
 
                 // Update invoice record as open (still needs payment)

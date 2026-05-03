@@ -17,17 +17,17 @@ import java.util.Map;
 
 /**
  * Implementation of analytics service.
- *
+ * <p>
  * Responsibilities:
  * - Persist analytics events to database
  * - Retrieve analytics statistics
  * - Handle both legacy (logEvent) and new (trackBackendEvent) tracking approaches
- *
+ * <p>
  * ASYNC PROCESSING:
  * - trackBackendEvent uses @Async to avoid blocking request threads
  * - Events are persisted in a separate thread pool
  * - Thread pool configured in application.yml (spring.task.execution)
- *
+ * <p>
  * DESIGN NOTES:
  * - logEvent: legacy manual tracking via REST controller
  * - trackBackendEvent: new annotation-driven tracking via AOP
@@ -70,26 +70,26 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     /**
      * Tracks a backend event with full context (AOP/annotation-driven).
-     *
+     * <p>
      * This method uses @Async to ensure non-blocking performance.
      * Event persistence happens asynchronously in a separate thread.
-     *
+     * <p>
      * FLOW:
      * 1. Validate and log the tracking request
      * 2. Lookup user entity if userId provided
      * 3. Lookup preceptor if targetId appears to be a preceptor ID
      * 4. Create and persist AnalyticsEvent
      * 5. Log success/failure
-     *
+     * <p>
      * ERROR HANDLING:
      * - User lookup failures are logged but don't prevent event creation
      * - Preceptor lookup failures are logged but don't prevent event creation
      * - DB persistence failures are logged; events may be queued for retry
      *
      * @param eventType the type of event
-     * @param userId the ID of user triggering event (may be null for anonymous)
-     * @param targetId the ID of primary entity affected (optional)
-     * @param metadata additional context as key-value map
+     * @param userId    the ID of user triggering event (may be null for anonymous)
+     * @param targetId  the ID of primary entity affected (optional)
+     * @param metadata  additional context as key-value map
      */
     @Override
     @Async
@@ -167,7 +167,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     /**
      * Retrieves aggregated statistics for a preceptor.
-     *
+     * <p>
      * Counts events by type and returns summary statistics.
      *
      * @param preceptorId the ID of the preceptor

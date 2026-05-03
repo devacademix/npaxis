@@ -25,6 +25,7 @@ public interface PreceptorSubscriptionRepository extends BaseRepository<Precepto
      * Legacy method for backward compatibility
      * Returns the most recent subscription (active or not) for a preceptor
      * Will be deprecated in favor of findByPreceptor_UserIdAndActiveTrue()
+     *
      * @deprecated Use findByPreceptor_UserIdAndActiveTrue() instead
      */
     @Deprecated(since = "1.0", forRemoval = true)
@@ -111,15 +112,15 @@ public interface PreceptorSubscriptionRepository extends BaseRepository<Precepto
      * Deactivate all subscriptions for a preceptor except the specified one
      * Used when activating a new subscription to mark prior active ones as inactive
      *
-     * @param preceptorId the preceptor ID
+     * @param preceptorId           the preceptor ID
      * @param excludeSubscriptionId the subscription ID to keep active (can be null to deactivate all)
      * @return number of subscriptions updated
      */
     @Modifying
     @Query("UPDATE PreceptorSubscription ps SET ps.active = false, ps.endDate = CURRENT_TIMESTAMP " +
-           "WHERE ps.preceptor.userId = :preceptorId " +
-           "AND ps.active = true " +
-           "AND (:excludeId IS NULL OR ps.preceptorSubscriptionId != :excludeId)")
+            "WHERE ps.preceptor.userId = :preceptorId " +
+            "AND ps.active = true " +
+            "AND (:excludeId IS NULL OR ps.preceptorSubscriptionId != :excludeId)")
     int deactivateOtherSubscriptions(@Param("preceptorId") Long preceptorId, @Param("excludeId") Long excludeSubscriptionId);
 
 }

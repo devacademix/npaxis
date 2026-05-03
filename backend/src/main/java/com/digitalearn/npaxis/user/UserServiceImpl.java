@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * User Service Implementation
- *
+ * <p>
  * ============================================
  * ANALYTICS TRACKING
  * ============================================
@@ -185,9 +185,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     @TrackEvent(
-        eventType = EventType.RESOURCE_UPLOADED,
-        targetIdExpression = "#userId.toString()",
-        metadataExpression = "{'resourceType': 'profile_picture', 'fileName': #file.getOriginalFilename(), 'fileSize': #file.getSize()}"
+            eventType = EventType.RESOURCE_UPLOADED,
+            targetIdExpression = "#userId.toString()",
+            metadataExpression = "{'resourceType': 'profile_picture', 'fileName': #file.getOriginalFilename(), 'fileSize': #file.getSize()}"
     )
     public UserResponseDTO uploadProfilePicture(Long userId, MultipartFile file) {
         log.debug("User Service Impl --> Upload profile picture for user ID: {}", userId);
