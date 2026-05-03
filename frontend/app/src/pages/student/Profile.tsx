@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
 import StudentLayout from '../../components/layout/StudentLayout';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
+import { useSession } from '../../context/SessionContext';
 import { studentService, type StudentProfile, type StudentUser } from '../../services/student';
 import userService from '../../services/user';
 
 const StudentProfilePage: React.FC = () => {
-  const role = localStorage.getItem('role');
-  const isStudent = role === 'STUDENT' || role === 'ROLE_STUDENT' || (role ?? '').includes('STUDENT');
+  const { currentUser, role, isLoading: isSessionLoading } = useSession();
+  const isStudent = role === 'STUDENT';
+  const queryClient = useQueryClient();
 
-  const [user, setUser] = useState<StudentUser | null>(null);
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -20,39 +24,54 @@ const StudentProfilePage: React.FC = () => {
   });
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isStudent) return;
-    const loadProfile = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const currentUser = await studentService.getLoggedInUser();
-        const currentProfile = await studentService.getStudentProfile(currentUser.userId);
-        setUser(currentUser);
-        setProfile(currentProfile);
-        const imageUrl = await userService.fetchProfilePictureObjectUrl(currentUser.userId);
-        setPreviewUrl(imageUrl || '');
-        setFormData({
-          displayName: currentProfile.displayName || currentUser.displayName || '',
-          email: currentProfile.email || currentUser.email || '',
-          university: currentProfile.university || '',
-          program: currentProfile.program || '',
-          graduationYear: currentProfile.graduationYear || '',
-          phone: currentProfile.phone || '',
-        });
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load profile.');
-      } finally {
-        setIsLoading(false);
+  const userQuery = useQuery<StudentUser>({
+    queryKey: ['student-profile', 'user', currentUser?.userId ?? 'session'],
+    queryFn: async () => {
+      if (currentUser) {
+        return {
+          userId: currentUser.userId,
+          displayName: currentUser.displayName,
+          email: currentUser.email,
+        };
       }
-    };
-    loadProfile();
-  }, [isStudent]);
+      return studentService.getLoggedInUser();
+    },
+    enabled: !isSessionLoading && isStudent,
+    staleTime: 60_000,
+  });
+
+  const profileQuery = useQuery<{ profile: StudentProfile; imageUrl: string }>({
+    queryKey: ['student-profile', 'details', userQuery.data?.userId ?? 'unknown'],
+    queryFn: async () => {
+      if (!userQuery.data?.userId) {
+        throw new Error('Unable to identify the logged-in student.');
+      }
+      const [profile, imageUrl] = await Promise.all([
+        studentService.getStudentProfile(userQuery.data.userId),
+        userService.fetchProfilePictureObjectUrl(userQuery.data.userId).catch(() => ''),
+      ]);
+      return { profile, imageUrl: imageUrl || '' };
+    },
+    enabled: !isSessionLoading && isStudent && Boolean(userQuery.data?.userId),
+    placeholderData: (previousData) => previousData,
+  });
+
+  useEffect(() => {
+    if (!userQuery.data || !profileQuery.data) return;
+    const currentProfile = profileQuery.data.profile;
+    setPreviewUrl(profileQuery.data.imageUrl || '');
+    setFormData({
+      displayName: currentProfile.displayName || userQuery.data.displayName || '',
+      email: currentProfile.email || userQuery.data.email || '',
+      university: currentProfile.university || '',
+      program: currentProfile.program || '',
+      graduationYear: currentProfile.graduationYear || '',
+      phone: currentProfile.phone || '',
+    });
+  }, [profileQuery.data, userQuery.data]);
 
   useEffect(() => {
     return () => {
@@ -62,18 +81,17 @@ const StudentProfilePage: React.FC = () => {
     };
   }, [previewUrl]);
 
-  if (!isStudent) {
+  if (!isSessionLoading && !isStudent) {
     return <Navigate to="/login" replace />;
   }
 
-  const handleSave = async () => {
-    if (!user) return;
-    try {
-      setIsSaving(true);
-      setError(null);
-      setSuccess(null);
+  const saveMutation = useMutation({
+    mutationKey: ['student-profile', 'save'],
+    mutationFn: async () => {
+      if (!userQuery.data) {
+        throw new Error('Unable to identify the logged-in student.');
+      }
 
-      let updated = profile;
       const studentPayload = {
         university: formData.university.trim(),
         program: formData.program.trim(),
@@ -81,32 +99,34 @@ const StudentProfilePage: React.FC = () => {
         phone: formData.phone.trim(),
       };
 
-      updated = await studentService.updateStudentDetails(user.userId, studentPayload);
+      const updated = await studentService.updateStudentDetails(userQuery.data.userId, studentPayload);
       if (file) {
-        await userService.uploadProfilePicture(user.userId, file);
+        await userService.uploadProfilePicture(userQuery.data.userId, file);
       }
-
-      setProfile((prev) => ({
-        ...(prev ?? updated ?? {
-          userId: user.userId,
-          displayName: formData.displayName.trim(),
-          email: formData.email.trim(),
-        }),
-        ...(updated ?? {}),
-        displayName: formData.displayName.trim() || prev?.displayName || user.displayName,
-        email: formData.email.trim() || prev?.email || user.email,
-      }));
-
+      const imageUrl = file ? await userService.fetchProfilePictureObjectUrl(userQuery.data.userId) : previewUrl;
+      return { updated, imageUrl: imageUrl || '' };
+    },
+    onSuccess: async ({ imageUrl }) => {
       setSuccess(file ? 'Profile and picture updated successfully.' : 'Profile updated successfully.');
-      if (file) {
-        const imageUrl = await userService.fetchProfilePictureObjectUrl(user.userId);
-        setPreviewUrl(imageUrl || previewUrl);
-        setFile(null);
-      }
+      setFile(null);
+      setPreviewUrl(imageUrl || previewUrl);
+      await queryClient.invalidateQueries({ queryKey: ['student-profile'] });
+    },
+  });
+
+  const user = userQuery.data ?? null;
+  const profile = profileQuery.data?.profile ?? null;
+  const isLoading = isSessionLoading || (userQuery.isLoading && !userQuery.data) || (profileQuery.isLoading && !profileQuery.data);
+  const isSaving = saveMutation.isPending;
+  const pageError = error || userQuery.error?.message || profileQuery.error?.message || saveMutation.error?.message || null;
+
+  const handleSave = async () => {
+    try {
+      setError(null);
+      setSuccess(null);
+      await saveMutation.mutateAsync();
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile.');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -118,15 +138,15 @@ const StudentProfilePage: React.FC = () => {
           <p className="mt-1 text-sm text-slate-500">Update your personal details and upload your profile photo.</p>
         </div>
 
-        {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+        {pageError ? <ErrorState message={pageError} onRetry={() => void profileQuery.refetch()} /> : null}
         {success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div> : null}
 
         {isLoading ? (
           <div className="space-y-4">
-            <div className="h-32 animate-pulse rounded-2xl bg-slate-200/70" />
-            <div className="h-96 animate-pulse rounded-2xl bg-slate-200/70" />
+            <SkeletonBlock className="h-32" />
+            <SkeletonBlock className="h-96" />
           </div>
-        ) : (
+        ) : user && profile ? (
           <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <div className="flex flex-col items-center text-center">
@@ -199,6 +219,8 @@ const StudentProfilePage: React.FC = () => {
               </div>
             </section>
           </div>
+        ) : (
+          <EmptyState text="We could not load your profile right now." actionLabel="Retry" onAction={() => void profileQuery.refetch()} />
         )}
       </div>
     </StudentLayout>

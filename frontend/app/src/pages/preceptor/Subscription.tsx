@@ -1,8 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import PricingCard from '../../components/preceptor/PricingCard';
 import SubscriptionCard from '../../components/preceptor/SubscriptionCard';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
+import { useSession } from '../../context/SessionContext';
 import useSubscriptionAudit from '../../hooks/useSubscriptionAudit';
 import useSubscriptionStatus from '../../hooks/useSubscriptionStatus';
 import paymentService, { type SubscriptionPlan } from '../../services/payment';
@@ -31,15 +36,11 @@ const formatPriceSuffix = (value?: string) => {
 };
 
 const Subscription: React.FC = () => {
-  const role = localStorage.getItem('role');
-  const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
+  const { role, isLoading: isSessionLoading } = useSession();
+  const isPreceptor = role === 'PRECEPTOR';
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [isPlansLoading, setIsPlansLoading] = useState(true);
-  const [isUpgrading, setIsUpgrading] = useState(false);
-  const [isCanceling, setIsCanceling] = useState(false);
   const [isPollingStatus, setIsPollingStatus] = useState(false);
   const [selectedBillingInterval, setSelectedBillingInterval] = useState('');
   const [pageError, setPageError] = useState<string | null>(null);
@@ -68,34 +69,32 @@ const Subscription: React.FC = () => {
     clearStatusError,
   } = useSubscriptionStatus();
 
-  useEffect(() => {
-    if (!isPreceptor) return;
+  const plansQuery = useQuery<SubscriptionPlan[]>({
+    queryKey: ['subscription', 'plans'],
+    queryFn: async () => {
+      const loadedPlans = await runAudit();
+      return Array.isArray(loadedPlans) ? loadedPlans : [];
+    },
+    enabled: !isSessionLoading && isPreceptor,
+    staleTime: 60_000,
+    placeholderData: (previousData) => previousData,
+  });
 
-    let isCancelled = false;
-
-    const loadPlans = async () => {
-      try {
-        setIsPlansLoading(true);
-        setPageError(null);
-        const loadedPlans = await runAudit();
-        if (isCancelled) return;
-        setPlans(Array.isArray(loadedPlans) ? loadedPlans : []);
-      } catch (err: any) {
-        if (isCancelled) return;
-        setPageError(err?.message || 'Failed to load subscription plans.');
-      } finally {
-        if (!isCancelled) {
-          setIsPlansLoading(false);
-        }
+  const upgradeMutation = useMutation({
+    mutationKey: ['subscription', 'checkout'],
+    mutationFn: async (priceId: number) => {
+      const checkoutUrl = await paymentService.createCheckoutSession({ priceId });
+      if (!checkoutUrl) {
+        throw new Error('Missing checkoutUrl');
       }
-    };
+      return checkoutUrl;
+    },
+  });
 
-    loadPlans();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isPreceptor, runAudit]);
+  const cancelMutation = useMutation({
+    mutationKey: ['subscription', 'cancel'],
+    mutationFn: () => paymentService.cancelSubscription(),
+  });
 
   useEffect(() => {
     if (!notice) return;
@@ -182,6 +181,7 @@ const Subscription: React.FC = () => {
     hasHandledStripeReturn,
   ]);
 
+  const plans = plansQuery.data ?? [];
   const premiumPlan = useMemo(
     () => plans.find((plan) => plan.active && Array.isArray(plan.prices) && plan.prices.length > 0) || null,
     [plans]
@@ -228,7 +228,8 @@ const Subscription: React.FC = () => {
   const canUpgrade = Boolean(selectedPrice?.subscriptionPriceId != null);
   const isProcessingReturn = audit.returnedFromStripe && isPollingStatus && !isActive;
   const statusResolved = subscription !== undefined;
-  const diagnosticError = pageError || statusError || audit.error || null;
+  const diagnosticError =
+    pageError || statusError || audit.error || upgradeMutation.error?.message || cancelMutation.error?.message || null;
   const isCheckingStatus = !statusResolved;
 
   const planTitle = isCheckingStatus
@@ -262,7 +263,11 @@ const Subscription: React.FC = () => {
       }).format((selectedPrice.amountInMinorUnits || 0) / 100)} / ${formatPriceSuffix(selectedPrice.billingInterval)}`
     : 'Currently unavailable';
 
-  if (!isPreceptor) {
+  const isPlansLoading = isSessionLoading || (plansQuery.isLoading && !plansQuery.data);
+  const isUpgrading = upgradeMutation.isPending;
+  const isCanceling = cancelMutation.isPending;
+
+  if (!isSessionLoading && !isPreceptor) {
     return <Navigate to="/login" replace />;
   }
 
@@ -270,22 +275,13 @@ const Subscription: React.FC = () => {
     if (!selectedPrice?.subscriptionPriceId || isProcessingReturn || isActive) return;
 
     try {
-      setIsUpgrading(true);
       setPageError(null);
       setNotice(null);
       clearStatusError();
       resetAudit();
-      setPlans((current) => current);
-      await runAudit();
+      await plansQuery.refetch();
       markCheckoutCalled();
-
-      const checkoutUrl = await paymentService.createCheckoutSession({
-        priceId: selectedPrice.subscriptionPriceId,
-      });
-
-      if (!checkoutUrl) {
-        throw new Error('Missing checkoutUrl');
-      }
+      const checkoutUrl = await upgradeMutation.mutateAsync(selectedPrice.subscriptionPriceId);
 
       markRedirectedToStripe();
       setNotice('Redirecting to Stripe checkout...');
@@ -294,8 +290,6 @@ const Subscription: React.FC = () => {
       const message = err?.message || 'Unable to start checkout session.';
       setPageError(message);
       setAuditError(message);
-    } finally {
-      setIsUpgrading(false);
     }
   };
 
@@ -303,8 +297,7 @@ const Subscription: React.FC = () => {
     try {
       setPageError(null);
       clearStatusError();
-      const plansResult = await runAudit();
-      setPlans(Array.isArray(plansResult) ? plansResult : []);
+      await plansQuery.refetch();
       const latestStatus = await refreshStatus(true);
       setFinalStatus(latestStatus);
 
@@ -320,10 +313,9 @@ const Subscription: React.FC = () => {
 
   const handleCancel = async () => {
     try {
-      setIsCanceling(true);
       setPageError(null);
       clearStatusError();
-      await paymentService.cancelSubscription();
+      await cancelMutation.mutateAsync();
       const latestStatus = await refreshStatus(true);
       setFinalStatus(latestStatus);
       setNotice('Subscription cancellation has been scheduled successfully.');
@@ -331,8 +323,6 @@ const Subscription: React.FC = () => {
       const message = err?.message || 'Unable to cancel subscription.';
       setPageError(message);
       setAuditError(message);
-    } finally {
-      setIsCanceling(false);
     }
   };
 
@@ -345,17 +335,8 @@ const Subscription: React.FC = () => {
         </section>
 
         {diagnosticError ? (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>{diagnosticError}</span>
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="inline-flex items-center justify-center rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-              >
-                Retry
-              </button>
-            </div>
+          <div className="mb-4">
+            <ErrorState message={diagnosticError} onRetry={() => void handleRetry()} />
           </div>
         ) : null}
 
@@ -391,8 +372,8 @@ const Subscription: React.FC = () => {
         <section className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {isPlansLoading ? (
             <>
-              <div className="h-[360px] animate-pulse rounded-2xl bg-slate-200/70" />
-              <div className="h-[360px] animate-pulse rounded-2xl bg-slate-200/70" />
+              <SkeletonBlock className="h-[360px]" />
+              <SkeletonBlock className="h-[360px]" />
             </>
           ) : (
             <>
@@ -467,6 +448,17 @@ const Subscription: React.FC = () => {
                 <p className="mt-1">`plansLoaded` is true, but no active plan price was returned for `POST /subscriptions/checkout`.</p>
               </div>
             </div>
+          </section>
+        ) : null}
+
+        {!isPlansLoading && plans.length === 0 ? (
+          <section className="mb-6">
+            <EmptyState
+              title="No subscription plans available"
+              text="The backend did not return any active plans yet."
+              actionLabel="Retry"
+              onAction={() => void plansQuery.refetch()}
+            />
           </section>
         ) : null}
 

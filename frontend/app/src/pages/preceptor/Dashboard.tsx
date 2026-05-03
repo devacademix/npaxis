@@ -4,7 +4,9 @@ import ResponsiveGrid from '../../components/layout/ResponsiveGrid';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import DashboardCard from '../../components/preceptor/DashboardCard';
 import ChartSection, { type InteractionsDataPoint, type ViewsDataPoint } from '../../components/preceptor/ChartSection';
+import { useSession } from '../../context/SessionContext';
 import useDashboardData from '../../hooks/useDashboardData';
+import { maskName } from '../../utils/maskName';
 
 const formatter = new Intl.NumberFormat('en-IN');
 
@@ -20,8 +22,7 @@ const formatDate = (value?: string) => {
 };
 
 const Dashboard: React.FC = () => {
-  const role = localStorage.getItem('role');
-  const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
+  const { role, isLoading: isSessionLoading } = useSession();
   const navigate = useNavigate();
   const { user, stats, recentInquiries, subscription, isLoading, isSubscriptionLoading, error } = useDashboardData();
 
@@ -43,7 +44,7 @@ const Dashboard: React.FC = () => {
 
   const displayName = user?.displayName || localStorage.getItem('displayName') || 'Preceptor';
 
-  if (!isPreceptor) {
+  if (!isSessionLoading && role !== 'PRECEPTOR') {
     return <Navigate to="/login" replace />;
   }
 
@@ -163,7 +164,7 @@ const Dashboard: React.FC = () => {
                     <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-900">{item.studentName}</p>
+                          <p className="text-sm font-bold text-slate-900">{maskName(item.studentName)}</p>
                           <p className="mt-1 text-sm text-slate-700">{item.subject}</p>
                           <p className="mt-2 text-xs font-medium text-slate-500">{formatDate(item.createdAt)}</p>
                         </div>

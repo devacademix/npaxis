@@ -4,6 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import SettingsForm, { type SettingsState, type SettingsTab } from '../../components/admin/SettingsForm';
 import { authService } from '../../services/auth';
 import { adminService, type SystemSetting } from '../../services/admin';
+import settingsService, { type AdminCurrentUser } from '../../services/settings';
 
 const defaultSettings: SettingsState = {
   general: {
@@ -108,6 +109,8 @@ const Settings: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<AdminCurrentUser | null>(null);
+  const [verifiedSettingKeys, setVerifiedSettingKeys] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -116,8 +119,16 @@ const Settings: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const backendSettings = await adminService.getSettings();
+        const [backendSettings, adminIdentity] = await Promise.all([
+          adminService.getSettings(),
+          settingsService.getCurrentAdmin().catch(() => null),
+        ]);
         const mappedSettings = mapSettingsToUI(backendSettings);
+        if (adminIdentity) {
+          mappedSettings.general.adminName = mappedSettings.general.adminName || adminIdentity.name || '';
+          mappedSettings.general.adminEmail = mappedSettings.general.adminEmail || adminIdentity.email || '';
+          setCurrentAdmin(adminIdentity);
+        }
         setSettings(mappedSettings);
         setSavedSettings(mappedSettings);
       } catch (err: any) {
@@ -186,12 +197,46 @@ const Settings: React.FC = () => {
 
     try {
       setIsSaving(true);
+      setVerifiedSettingKeys([]);
 
       await Promise.all(
         changedSettings.map(({ key, value }) => adminService.updateSetting(key, { value }))
       );
 
+      const verifiedKeys = await Promise.all(
+        changedSettings.map(async ({ key }) => {
+          const verified = await settingsService.getSettingByKey(key);
+          return verified.settingKey;
+        })
+      );
+
+      const adminNameChanged =
+        normalizeSettingValue(settings.general.adminName) !== normalizeSettingValue(savedSettings.general.adminName);
+      const adminEmailChanged =
+        normalizeSettingValue(settings.general.adminEmail) !== normalizeSettingValue(savedSettings.general.adminEmail);
+
+      if (currentAdmin && (adminNameChanged || adminEmailChanged)) {
+        await settingsService.updateAdminDetails(currentAdmin.userId, {
+          fullName: settings.general.adminName.trim() || currentAdmin.name,
+          username: currentAdmin.username,
+          password: '',
+          email: settings.general.adminEmail.trim() || currentAdmin.email,
+          roles: [3],
+        });
+
+        setCurrentAdmin((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: settings.general.adminName.trim() || prev.name,
+                email: settings.general.adminEmail.trim() || prev.email,
+              }
+            : prev
+        );
+      }
+
       setSavedSettings(settings);
+      setVerifiedSettingKeys(verifiedKeys);
       setSuccess('Settings saved successfully.');
     } catch (err: any) {
       setError(err?.message || 'Failed to save settings.');
@@ -229,6 +274,11 @@ const Settings: React.FC = () => {
 
       {error ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
       {success ? <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div> : null}
+      {verifiedSettingKeys.length > 0 ? (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          Verified keys from backend: {verifiedSettingKeys.join(', ')}
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="flex min-h-[360px] items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -239,6 +289,26 @@ const Settings: React.FC = () => {
         </div>
       ) : (
         <>
+          {currentAdmin ? (
+            <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Live Admin Identity</p>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Name</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{currentAdmin.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Email</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{currentAdmin.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Username</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{currentAdmin.username || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <SettingsForm
             activeTab={activeTab}
             onTabChange={setActiveTab}

@@ -43,6 +43,16 @@ export interface PaymentHistoryItem {
   planName?: string;
 }
 
+export interface SubscriptionEventItem {
+  eventId: number;
+  subscriptionId?: number;
+  eventType: string;
+  status: string;
+  createdAt?: string;
+  stripeEventId?: string;
+  errorMessage?: string;
+}
+
 interface CheckoutSessionResponse {
   sessionId?: string;
   checkoutUrl?: string;
@@ -113,6 +123,20 @@ export const paymentService = {
     const response = await api.get(`${SUBSCRIPTION_API_PREFIX}/access-check`, authConfig());
     const payload = unwrapApiData<{ hasAccess?: boolean }>(response);
     return Boolean(payload?.hasAccess);
+  },
+
+  getSubscriptionEvents: async (): Promise<SubscriptionEventItem[]> => {
+    const response = await api.get(`${SUBSCRIPTION_API_PREFIX}/events`, authConfig());
+    const payload = unwrapApiData<any>(response);
+    return extractPageItems<any>(payload).map((item) => ({
+      eventId: Number(item?.eventId ?? 0),
+      subscriptionId: item?.subscriptionId != null ? Number(item.subscriptionId) : undefined,
+      eventType: String(item?.eventType ?? 'UNKNOWN'),
+      status: String(item?.status ?? 'UNKNOWN'),
+      createdAt: item?.createdAt ? String(item.createdAt) : undefined,
+      stripeEventId: item?.stripeEventId ? String(item.stripeEventId) : undefined,
+      errorMessage: item?.errorMessage ? String(item.errorMessage) : undefined,
+    }));
   },
 
   getPaymentHistory: async (_preceptorId?: number | string): Promise<PaymentHistoryItem[]> => {

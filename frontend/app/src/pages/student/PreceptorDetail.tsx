@@ -4,6 +4,7 @@ import ActionButtons from '../../components/student/ActionButtons';
 import ContactCard from '../../components/student/ContactCard';
 import InquiryModal from '../../components/student/InquiryModal';
 import StudentLayout from '../../components/layout/StudentLayout';
+import { maskName } from '../../utils/maskName';
 import {
   preceptorService,
   type PreceptorContact,
@@ -168,7 +169,7 @@ const PreceptorDetail: React.FC = () => {
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="text-3xl font-black tracking-tight text-slate-900">
-                      {preceptorData.displayName || 'Preceptor'}
+                      {preceptorData.displayName ? maskName(preceptorData.displayName) : 'Preceptor'}
                     </h2>
                     <p className="mt-1 text-sm font-medium text-slate-500">
                       {preceptorData.credentials || 'Credentials not listed'}

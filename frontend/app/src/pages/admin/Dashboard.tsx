@@ -146,6 +146,7 @@ const Dashboard: React.FC = () => {
   const [topPreceptors, setTopPreceptors] = useState<TopPreceptorLeaderboardItem[]>([]);
   const [topPreceptorsLoading, setTopPreceptorsLoading] = useState(true);
   const [topPreceptorsError, setTopPreceptorsError] = useState<string | null>(null);
+  const [overviewSnapshot, setOverviewSnapshot] = useState<AdminTrendOverview | null>(null);
 
   const handleGenerateReport = async () => {
     try {
@@ -194,6 +195,19 @@ const Dashboard: React.FC = () => {
     };
 
     fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const loadOverview = async () => {
+      try {
+        const overview = await adminService.getDashboardOverview();
+        setOverviewSnapshot(overview);
+      } catch {
+        setOverviewSnapshot(null);
+      }
+    };
+
+    loadOverview();
   }, []);
 
   useEffect(() => {
@@ -430,6 +444,35 @@ const Dashboard: React.FC = () => {
               Revenue segments are generated from live admin data and gracefully fall back when a restricted feed is unavailable.
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="mb-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h4 className="text-lg font-bold text-slate-900">Overview Snapshot</h4>
+            <p className="text-sm text-slate-500">
+              Live values from `/api/v1/administration/analytics/overview`.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600">
+            {overviewSnapshot ? 'Connected' : 'Unavailable'}
+          </span>
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            ['Students', Number(overviewSnapshot?.totalStudents ?? 0)],
+            ['Preceptors', Number(overviewSnapshot?.totalPreceptors ?? 0)],
+            ['Monthly Revenue', Number(overviewSnapshot?.monthlyRevenue ?? 0)],
+            ['Total Inquiries', Number(overviewSnapshot?.totalInquiries ?? 0)],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{label}</p>
+              <p className="mt-3 text-2xl font-black tracking-tight text-slate-900">
+                {String(label).includes('Revenue') ? `$${Number(value).toLocaleString()}` : Number(value).toLocaleString()}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 

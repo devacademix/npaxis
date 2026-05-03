@@ -4,7 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import UserFilters from '../../components/admin/UserFilters';
 import UserTable, { type UserTableRow } from '../../components/admin/UserTable';
 import { authService } from '../../services/auth';
-import { userService, type UserRecord } from '../../services/user';
+import { type UserRecord, userService } from '../../services/user';
 import { adminService, type AdminUser } from '../../services/admin';
 
 const PAGE_SIZE = 8;
@@ -75,10 +75,18 @@ const Users: React.FC = () => {
       setIsLoading(true);
       setError(null);
       const searchParams = buildUserSearchParams(debouncedSearch);
-      const response =
-        debouncedSearch.length > 0
-          ? await adminService.searchUsers(searchParams)
-          : await userService.getAllUsers();
+      let response: Array<UserRecord | AdminUser> = [];
+
+      if (statusFilter === 'DELETED') {
+        response = await userService.getDeletedUsers();
+      } else if (debouncedSearch.length > 0) {
+        response = await adminService.searchUsers(searchParams);
+      } else if (statusFilter === 'ACTIVE') {
+        response = await userService.getAllActiveUsers();
+      } else {
+        response = await adminService.getAllUsers();
+      }
+
       const normalized = (Array.isArray(response) ? response : []).map(mapUserRecordToTableRow);
       setUsers(normalized);
     } catch (err: any) {
@@ -86,7 +94,7 @@ const Users: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, isAdmin]);
+  }, [debouncedSearch, isAdmin, statusFilter]);
 
   useEffect(() => {
     loadUsers();
@@ -107,7 +115,7 @@ const Users: React.FC = () => {
       const matchesRole =
         roleFilter === 'ALL' || normalizeRoleValue(user.role) === normalizeRoleValue(roleFilter);
 
-      const derivedStatus = user.isDeleted || !user.enabled ? 'DISABLED' : 'ACTIVE';
+      const derivedStatus = user.isDeleted ? 'DELETED' : !user.enabled ? 'DISABLED' : 'ACTIVE';
       const matchesStatus = statusFilter === 'ALL' || derivedStatus === statusFilter;
 
       return matchesRole && matchesStatus;
@@ -148,7 +156,9 @@ const Users: React.FC = () => {
     setIsViewUserLoading(true);
 
     try {
-      const detail = await adminService.getAdminUserDetail(user.userId);
+      const detail = user.isDeleted
+        ? await userService.getDeletedUserById(user.userId)
+        : await adminService.getAdminUserDetail(user.userId);
       if (detail) {
         setViewUser(mapUserRecordToTableRow(detail));
       }
