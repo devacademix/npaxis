@@ -9,277 +9,216 @@
 
 -- Insert standard medical specialties
 INSERT INTO specialties (name, name_normalized, description, is_predefined, created_at, last_modified_at, deleted)
-VALUES
-    (
-        'Cardiology',
+VALUES ('Cardiology',
         'CARDIOLOGY',
         'Study and treatment of heart and cardiovascular system diseases',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Internal Medicine',
+        FALSE),
+       ('Internal Medicine',
         'INTERNAL MEDICINE',
         'General internal medicine focusing on adult disease diagnosis and treatment',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Pediatrics',
+        FALSE),
+       ('Pediatrics',
         'PEDIATRICS',
         'Medical care and treatment of infants, children, and adolescents',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Surgery',
+        FALSE),
+       ('Surgery',
         'SURGERY',
         'Operative and surgical treatment of diseases and injuries',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Orthopedic Surgery',
+        FALSE),
+       ('Orthopedic Surgery',
         'ORTHOPEDIC SURGERY',
         'Surgical treatment of bones, joints, and musculoskeletal disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Neurology',
+        FALSE),
+       ('Neurology',
         'NEUROLOGY',
         'Diagnosis and treatment of nervous system disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Psychiatry',
+        FALSE),
+       ('Psychiatry',
         'PSYCHIATRY',
         'Diagnosis and treatment of mental health and behavioral disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Obstetrics & Gynecology',
+        FALSE),
+       ('Obstetrics & Gynecology',
         'OBSTETRICS & GYNECOLOGY',
         'Medical care during pregnancy, childbirth, and reproductive health',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Dermatology',
+        FALSE),
+       ('Dermatology',
         'DERMATOLOGY',
         'Treatment of skin, hair, and nail disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Radiology',
+        FALSE),
+       ('Radiology',
         'RADIOLOGY',
         'Diagnostic imaging and radiological treatment',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Pathology',
+        FALSE),
+       ('Pathology',
         'PATHOLOGY',
         'Study of disease and examination of tissues and specimens',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Anesthesiology',
+        FALSE),
+       ('Anesthesiology',
         'ANESTHESIOLOGY',
         'Administration of anesthesia and perioperative care',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Emergency Medicine',
+        FALSE),
+       ('Emergency Medicine',
         'EMERGENCY MEDICINE',
         'Acute care treatment in emergency settings',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Family Medicine',
+        FALSE),
+       ('Family Medicine',
         'FAMILY MEDICINE',
         'Comprehensive medical care for individuals and families',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Oncology',
+        FALSE),
+       ('Oncology',
         'ONCOLOGY',
         'Treatment and prevention of cancer',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Pulmonology',
+        FALSE),
+       ('Pulmonology',
         'PULMONOLOGY',
         'Treatment of respiratory and lung diseases',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Gastroenterology',
+        FALSE),
+       ('Gastroenterology',
         'GASTROENTEROLOGY',
         'Treatment of digestive system diseases',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Nephrology',
+        FALSE),
+       ('Nephrology',
         'NEPHROLOGY',
         'Treatment of kidney and urinary system diseases',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Endocrinology',
+        FALSE),
+       ('Endocrinology',
         'ENDOCRINOLOGY',
         'Treatment of endocrine glands and hormone-related disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Rheumatology',
+        FALSE),
+       ('Rheumatology',
         'RHEUMATOLOGY',
         'Treatment of autoimmune and joint disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Infectious Diseases',
+        FALSE),
+       ('Infectious Diseases',
         'INFECTIOUS DISEASES',
         'Diagnosis and treatment of infectious diseases',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Immunology',
+        FALSE),
+       ('Immunology',
         'IMMUNOLOGY',
         'Study of immune system and immune disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Hematology',
+        FALSE),
+       ('Hematology',
         'HEMATOLOGY',
         'Treatment of blood disorders and blood cancers',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Ophthalmology',
+        FALSE),
+       ('Ophthalmology',
         'OPHTHALMOLOGY',
         'Treatment of eye and vision disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Otolaryngology',
+        FALSE),
+       ('Otolaryngology',
         'OTOLARYNGOLOGY',
         'Treatment of ear, nose, and throat conditions',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Urology',
+        FALSE),
+       ('Urology',
         'UROLOGY',
         'Treatment of genitourinary system diseases',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Neurosurgery',
+        FALSE),
+       ('Neurosurgery',
         'NEUROSURGERY',
         'Surgical treatment of nervous system disorders',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Psychiatry & Psychology',
+        FALSE),
+       ('Psychiatry & Psychology',
         'PSYCHIATRY & PSYCHOLOGY',
         'Mental health diagnosis and treatment',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Nursing',
+        FALSE),
+       ('Nursing',
         'NURSING',
         'Patient care and nursing support',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    ),
-    (
-        'Physical Therapy',
+        FALSE),
+       ('Physical Therapy',
         'PHYSICAL THERAPY',
         'Rehabilitation and movement therapy',
         TRUE,
         NOW(),
         NOW(),
-        FALSE
-    );
+        FALSE);
 
 -- =====================================================
 -- Verify inserts

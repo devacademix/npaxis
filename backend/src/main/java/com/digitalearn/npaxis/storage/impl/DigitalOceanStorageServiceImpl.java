@@ -2,15 +2,22 @@ package com.digitalearn.npaxis.storage.impl;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
-import com.digitalearn.npaxis.exceptions.*;
+import com.digitalearn.npaxis.exceptions.StorageException;
+import com.digitalearn.npaxis.exceptions.StorageFileNotFoundException;
+import com.digitalearn.npaxis.exceptions.StorageFileSizeExceededException;
+import com.digitalearn.npaxis.exceptions.StorageUnsupportedFileTypeException;
 import com.digitalearn.npaxis.storage.StorageService;
 import com.digitalearn.npaxis.storage.config.DigitalOceanStorageProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -21,7 +28,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.time.Duration;
-import java.util.*;
+import java.util.Date;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -32,11 +41,8 @@ import java.util.regex.Pattern;
 @Service
 @ConditionalOnProperty(prefix = "digitalocean.spaces", name = "endpoint")
 @RequiredArgsConstructor
+@Profile("prod")
 public class DigitalOceanStorageServiceImpl implements StorageService {
-
-    private final AmazonS3 amazonS3;
-    private final TransferManager transferManager;
-    private final DigitalOceanStorageProperties properties;
 
     // Constants
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
@@ -47,9 +53,11 @@ public class DigitalOceanStorageServiceImpl implements StorageService {
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
-
     // Pattern to sanitize filenames: remove path traversal chars, spaces, and non-ASCII
     private static final Pattern FILENAME_SANITIZE_PATTERN = Pattern.compile("[^a-zA-Z0-9._-]");
+    private final AmazonS3 amazonS3;
+    private final TransferManager transferManager;
+    private final DigitalOceanStorageProperties properties;
 
     @Override
     public String storeFile(MultipartFile file, String subDirectory, String identifier) {
@@ -64,10 +72,10 @@ public class DigitalOceanStorageServiceImpl implements StorageService {
         // 2. File size validation
         if (fileSize > properties.getMaxFileSizeBytes()) {
             log.warn("File size exceeded: size={} bytes, max={} bytes, identifier={}",
-                     fileSize, properties.getMaxFileSizeBytes(), identifier);
+                    fileSize, properties.getMaxFileSizeBytes(), identifier);
             throw new StorageFileSizeExceededException(
                     String.format("File size %d bytes exceeds maximum allowed %d bytes",
-                                  fileSize, properties.getMaxFileSizeBytes()),
+                            fileSize, properties.getMaxFileSizeBytes()),
                     fileSize,
                     properties.getMaxFileSizeBytes()
             );
@@ -253,8 +261,8 @@ public class DigitalOceanStorageServiceImpl implements StorageService {
      * Format: {subDirectory}/{identifier}_{uuid}_{sanitizedFilename}.{extension}
      * Example: profiles/user42_3fa85f64-uuid_avatar.jpg
      *
-     * @param subDirectory   the target subdirectory (e.g., "licenses", "profiles")
-     * @param identifier     a unique identifier (e.g., userId)
+     * @param subDirectory     the target subdirectory (e.g., "licenses", "profiles")
+     * @param identifier       a unique identifier (e.g., userId)
      * @param originalFilename the original filename from the uploaded file
      * @return the constructed object key
      */

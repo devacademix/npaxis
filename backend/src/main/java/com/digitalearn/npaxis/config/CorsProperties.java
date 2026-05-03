@@ -10,12 +10,12 @@ import java.util.List;
 /**
  * Configuration properties for CORS (Cross-Origin Resource Sharing).
  * Allows dynamic configuration of allowed origins via environment variables.
- *
+ * <p>
  * Usage in application.yml:
  * npaxis:
- *   cors:
- *     allowed-origins: https://npaxis.com,https://www.npaxis.com
- *
+ * cors:
+ * allowed-origins: https://npaxis.com,https://www.npaxis.com
+ * <p>
  * Or via environment variable:
  * NPAXIS_CORS_ALLOWED_ORIGINS=https://npaxis.com,https://www.npaxis.com
  */
@@ -28,7 +28,7 @@ public class CorsProperties {
      * Examples:
      * - Development: http://localhost:3000,http://localhost:5173
      * - Production: https://npaxis.com,https://www.npaxis.com
-     *
+     * <p>
      * Default: http://localhost:3000 (development only)
      */
     private String allowedOrigins = "http://localhost:3000,http://localhost:5173,http://localhost:5174";
