@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate } from 'react-router-dom';
 import PreceptorLayout from '../../components/layout/PreceptorLayout';
 import ProfileForm, { type PreceptorProfileFormData } from '../../components/preceptor/ProfileForm';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
+import { useSession } from '../../context/SessionContext';
 import paymentService, { type SubscriptionStatus } from '../../services/payment';
 import { preceptorService } from '../../services/preceptor';
 import userService from '../../services/user';
@@ -32,88 +37,80 @@ const emptyForm: PreceptorProfileFormData = {
   licenseFileUrl: '',
 };
 
-const emptyAnalytics: PreceptorAnalyticsSnapshot = {
-  profileViews: 0,
-  contactReveals: 0,
-  inquiries: 0,
-};
-
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROFILE_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 
 const Profile: React.FC = () => {
-  const role = localStorage.getItem('role');
-  const isPreceptor = role === 'PRECEPTOR' || role === 'ROLE_PRECEPTOR' || (role ?? '').includes('PRECEPTOR');
+  const { currentUser, role, isLoading: isSessionLoading } = useSession();
+  const isPreceptor = role === 'PRECEPTOR';
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [userId, setUserId] = useState<number | null>(null);
   const [formData, setFormData] = useState<PreceptorProfileFormData>(emptyForm);
   const [initialFormData, setInitialFormData] = useState<PreceptorProfileFormData>(emptyForm);
-  const [analytics, setAnalytics] = useState<PreceptorAnalyticsSnapshot>(emptyAnalytics);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [savedProfileImageUrl, setSavedProfileImageUrl] = useState('');
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isPreceptor) return;
-
-    let isCancelled = false;
-
-    const loadProfile = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const user = await preceptorService.getLoggedInUser();
-        if (isCancelled) return;
-
-        setUserId(user.userId);
-
-        const [profile, subscription, stats] = await Promise.all([
-          preceptorService.getPreceptorById(user.userId).catch(() => null),
-          paymentService.getSubscriptionStatus().catch(() => null),
-          preceptorService.getStats(user.userId).catch(() => null),
-        ]);
-
-        if (isCancelled) return;
-
-        const mappedProfile = mapProfileData(profile, user);
-        const nextForm: PreceptorProfileFormData = {
-          ...mappedProfile,
-          premiumStatus: mapSubscriptionStatusLabel(subscription),
+  const userQuery = useQuery({
+    queryKey: ['preceptor-profile', 'user', currentUser?.userId ?? 'session'],
+    queryFn: async () => {
+      if (currentUser) {
+        return {
+          userId: currentUser.userId,
+          displayName: currentUser.displayName,
+          email: currentUser.email,
         };
-
-        setFormData(nextForm);
-        setInitialFormData(nextForm);
-        setSubscriptionStatus(subscription);
-        setAnalytics(mapAnalyticsSnapshot(stats));
-
-        userService.fetchProfilePictureObjectUrl(user.userId).then((imageUrl) => {
-          if (isCancelled) return;
-          setProfileImageUrl(imageUrl || '');
-          setSavedProfileImageUrl(imageUrl || '');
-        });
-      } catch (err: any) {
-        if (isCancelled) return;
-        setError(err?.message || 'Failed to load preceptor profile.');
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
       }
+      return preceptorService.getLoggedInUser();
+    },
+    enabled: !isSessionLoading && isPreceptor,
+    staleTime: 60_000,
+  });
+
+  const profileQuery = useQuery({
+    queryKey: ['preceptor-profile', 'details', userQuery.data?.userId ?? 'unknown'],
+    queryFn: async () => {
+      if (!userQuery.data?.userId) {
+        throw new Error('Unable to identify the logged-in preceptor.');
+      }
+
+      const [profile, subscription, stats, imageUrl] = await Promise.all([
+        preceptorService.getPreceptorById(userQuery.data.userId).catch(() => null),
+        paymentService.getSubscriptionStatus().catch(() => null),
+        preceptorService.getStats(userQuery.data.userId).catch(() => null),
+        userService.fetchProfilePictureObjectUrl(userQuery.data.userId).catch(() => ''),
+      ]);
+
+      return { profile, subscription, stats, imageUrl };
+    },
+    enabled: !isSessionLoading && isPreceptor && Boolean(userQuery.data?.userId),
+    placeholderData: (previousData) => previousData,
+  });
+
+  const analytics = useMemo<PreceptorAnalyticsSnapshot>(
+    () => mapAnalyticsSnapshot(profileQuery.data?.stats ?? null),
+    [profileQuery.data?.stats]
+  );
+
+  useEffect(() => {
+    if (!userQuery.data || !profileQuery.data) return;
+
+    const mappedProfile = mapProfileData(profileQuery.data.profile, userQuery.data);
+    const nextForm: PreceptorProfileFormData = {
+      ...mappedProfile,
+      premiumStatus: mapSubscriptionStatusLabel(profileQuery.data.subscription),
     };
 
-    loadProfile();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isPreceptor]);
+    setFormData(nextForm);
+    setInitialFormData(nextForm);
+    setSubscriptionStatus(profileQuery.data.subscription ?? null);
+    setProfileImageUrl(profileQuery.data.imageUrl || '');
+    setSavedProfileImageUrl(profileQuery.data.imageUrl || '');
+  }, [profileQuery.data, userQuery.data]);
 
   useEffect(() => {
     return () => {
@@ -129,7 +126,7 @@ const Profile: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [success]);
 
-  if (!isPreceptor) {
+  if (!isSessionLoading && !isPreceptor) {
     return <Navigate to="/login" replace />;
   }
 
@@ -147,35 +144,27 @@ const Profile: React.FC = () => {
     return null;
   };
 
-  const handleSave = async () => {
-    setError(null);
-    setSuccess(null);
-
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    if (!userId) {
-      setError('Unable to identify preceptor account. Please login again.');
-      return;
-    }
-
-    const payload = mapProfileFormToRequestDTO(formData);
-
-    try {
-      setIsSaving(true);
-      const updated = await preceptorService.updatePreceptorProfile(userId, payload);
-
-      if (profileImageFile) {
-        await userService.uploadProfilePicture(userId, profileImageFile);
-        const imageUrl = await userService.fetchProfilePictureObjectUrl(userId);
-        setProfileImageUrl(imageUrl || profileImageUrl);
-        setSavedProfileImageUrl(imageUrl || profileImageUrl);
-        setProfileImageFile(null);
+  const updateProfileMutation = useMutation({
+    mutationKey: ['preceptor-profile', 'save'],
+    mutationFn: async () => {
+      if (!userQuery.data?.userId) {
+        throw new Error('Unable to identify preceptor account. Please login again.');
       }
 
+      const payload = mapProfileFormToRequestDTO(formData);
+      const updated = await preceptorService.updatePreceptorProfile(userQuery.data.userId, payload);
+
+      if (profileImageFile) {
+        await userService.uploadProfilePicture(userQuery.data.userId, profileImageFile);
+      }
+
+      const imageUrl = profileImageFile
+        ? await userService.fetchProfilePictureObjectUrl(userQuery.data.userId)
+        : savedProfileImageUrl;
+
+      return { updated, imageUrl };
+    },
+    onSuccess: async ({ updated, imageUrl }) => {
       const mappedProfile = mapProfileData(updated, {
         displayName: formData.fullName,
         email: formData.email,
@@ -188,10 +177,31 @@ const Profile: React.FC = () => {
       setFormData(nextData);
       setInitialFormData(nextData);
       setSuccess('Profile updated successfully.');
+      setProfileImageUrl(imageUrl || profileImageUrl);
+      setSavedProfileImageUrl(imageUrl || profileImageUrl);
+      setProfileImageFile(null);
+      await queryClient.invalidateQueries({ queryKey: ['preceptor-profile'] });
+    },
+  });
+
+  const isLoading = isSessionLoading || (userQuery.isLoading && !userQuery.data) || (profileQuery.isLoading && !profileQuery.data);
+  const isSaving = updateProfileMutation.isPending;
+  const pageError = error || userQuery.error?.message || profileQuery.error?.message || updateProfileMutation.error?.message || null;
+
+  const handleSave = async () => {
+    setError(null);
+    setSuccess(null);
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      await updateProfileMutation.mutateAsync();
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile.');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -211,9 +221,9 @@ const Profile: React.FC = () => {
           <p className="mt-1 text-slate-500">Manage your professional details, visibility, and account status.</p>
         </div>
 
-        {error ? (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {error}
+        {pageError ? (
+          <div className="mb-4">
+            <ErrorState message={pageError} onRetry={() => void profileQuery.refetch()} />
           </div>
         ) : null}
 
@@ -225,10 +235,10 @@ const Profile: React.FC = () => {
 
         {isLoading ? (
           <div className="space-y-4">
-            <div className="h-32 animate-pulse rounded-2xl bg-slate-200/70" />
-            <div className="h-[420px] animate-pulse rounded-2xl bg-slate-200/70" />
+            <SkeletonBlock className="h-32" />
+            <SkeletonBlock className="h-[420px]" />
           </div>
-        ) : (
+        ) : userQuery.data && profileQuery.data ? (
           <div className="space-y-6">
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -314,6 +324,8 @@ const Profile: React.FC = () => {
               onUpgradePlan={() => navigate('/subscription')}
             />
           </div>
+        ) : (
+          <EmptyState text="We could not load your profile right now." actionLabel="Retry" onAction={() => void profileQuery.refetch()} />
         )}
       </div>
     </PreceptorLayout>

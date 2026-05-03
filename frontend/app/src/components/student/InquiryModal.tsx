@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import inquiryService from '../../services/inquiry';
+import { maskName } from '../../utils/maskName';
 
 const MESSAGE_LIMIT = 1000;
 
@@ -81,7 +82,9 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, preceptor, onClose,
         </div>
 
         <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-sm font-bold text-slate-900">{preceptor.displayName || 'Preceptor'}</p>
+          <p className="text-sm font-bold text-slate-900">
+            {preceptor.displayName ? maskName(preceptor.displayName) : 'Preceptor'}
+          </p>
           <p className="mt-1 text-xs text-slate-600">
             {preceptor.specialty || 'Specialty not listed'} • {preceptor.location || 'Location unavailable'}
           </p>

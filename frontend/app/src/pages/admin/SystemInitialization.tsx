@@ -1,10 +1,29 @@
 import React, { useState } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { authService } from '../../services/auth';
+import systemService, { type SystemHealth } from '../../services/system';
 
 const SystemInitialization: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [isHealthLoading, setIsHealthLoading] = useState(true);
+
+  React.useEffect(() => {
+    const loadHealth = async () => {
+      try {
+        setIsHealthLoading(true);
+        const response = await systemService.getHealth();
+        setHealth(response);
+      } catch (err: any) {
+        setStatus((prev) => prev ?? { type: 'error', message: err?.message || 'Failed to load system health.' });
+      } finally {
+        setIsHealthLoading(false);
+      }
+    };
+
+    loadHealth();
+  }, []);
 
   const handleInit = async () => {
     setStatus(null);
@@ -41,6 +60,31 @@ const SystemInitialization: React.FC = () => {
         )}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-5 rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Backend Health</p>
+            {isHealthLoading ? (
+              <p className="mt-2 text-sm text-slate-500">Checking backend health...</p>
+            ) : (
+              <div className="mt-3 grid gap-3 md:grid-cols-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Service</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{health?.service || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Status</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{health?.status || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Auth Mode</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{health?.auth || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Health URL</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{health?.health || 'N/A'}</p>
+                </div>
+              </div>
+            )}
+          </div>
           <p className="text-sm text-slate-600">
             Click the button below to seed roles and create the default admin account defined by the backend.
             This is typically needed once during deployment.

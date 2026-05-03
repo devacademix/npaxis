@@ -1,5 +1,6 @@
 import React from 'react';
 import type { StudentPreceptor } from '../../services/student';
+import { maskName } from '../../utils/maskName';
 
 interface PreceptorCardProps {
   preceptor: StudentPreceptor;
@@ -37,7 +38,7 @@ const PreceptorCard: React.FC<PreceptorCardProps> = ({
     >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-lg font-black tracking-tight text-slate-900">{preceptor.displayName}</p>
+          <p className="truncate text-lg font-black tracking-tight text-slate-900">{maskName(preceptor.displayName)}</p>
           {preceptor.credentials ? (
             <p className="mt-1 truncate text-sm font-semibold text-slate-700">{preceptor.credentials}</p>
           ) : null}

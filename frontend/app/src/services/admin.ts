@@ -219,6 +219,13 @@ export interface WebhookMetrics {
   reportGeneratedAt?: string;
 }
 
+export interface AdminCatalogItem {
+  id: number;
+  name: string;
+  description?: string;
+  isPredefined: boolean;
+}
+
 const unwrapApiData = <T>(response: any): T => {
   if (response?.data?.data !== undefined) {
     return response.data.data as T;
@@ -237,6 +244,7 @@ const authConfig = () => {
 };
 
 const ADMIN_API_PREFIX = '/api/v1/administration';
+const ADMIN_CATALOG_API_PREFIX = '/admin/credentials-specialties';
 
 const buildPaginationConfig = (params?: Record<string, any>) => {
   if (!params) return {};
@@ -711,6 +719,82 @@ export const adminService = {
   getAdminLicenseDownloadUrl: (userId: number | string) => `/api/v1/administration/preceptors/${userId}/license/download`,
 
   getAdminLicenseReviewUrl: (userId: number | string) => `/api/v1/administration/preceptors/${userId}/license/review`,
+
+  getCredentials: async (): Promise<AdminCatalogItem[]> => {
+    const response = await api.get(`${ADMIN_CATALOG_API_PREFIX}/credentials`, authConfig());
+    const payload = unwrapApiData<any>(response);
+    return (Array.isArray(payload) ? payload : []).map((item) => ({
+      id: Number(item?.id ?? 0),
+      name: String(item?.name ?? ''),
+      description: item?.description ? String(item.description) : undefined,
+      isPredefined: Boolean(item?.isPredefined),
+    }));
+  },
+
+  createCredential: async (payload: { name: string; description?: string }) => {
+    const response = await api.post(`${ADMIN_CATALOG_API_PREFIX}/credentials`, payload, authConfig());
+    const data = unwrapApiData<any>(response);
+    return {
+      id: Number(data?.id ?? 0),
+      name: String(data?.name ?? ''),
+      description: data?.description ? String(data.description) : undefined,
+      isPredefined: Boolean(data?.isPredefined),
+    } satisfies AdminCatalogItem;
+  },
+
+  updateCredential: async (credentialId: number | string, payload: { name: string; description?: string }) => {
+    const response = await api.put(`${ADMIN_CATALOG_API_PREFIX}/credentials/${credentialId}`, payload, authConfig());
+    const data = unwrapApiData<any>(response);
+    return {
+      id: Number(data?.id ?? 0),
+      name: String(data?.name ?? ''),
+      description: data?.description ? String(data.description) : undefined,
+      isPredefined: Boolean(data?.isPredefined),
+    } satisfies AdminCatalogItem;
+  },
+
+  deleteCredential: async (credentialId: number | string) => {
+    const response = await api.delete(`${ADMIN_CATALOG_API_PREFIX}/credentials/${credentialId}`, authConfig());
+    return unwrapApiData(response);
+  },
+
+  getSpecialties: async (): Promise<AdminCatalogItem[]> => {
+    const response = await api.get(`${ADMIN_CATALOG_API_PREFIX}/specialties`, authConfig());
+    const payload = unwrapApiData<any>(response);
+    return (Array.isArray(payload) ? payload : []).map((item) => ({
+      id: Number(item?.id ?? 0),
+      name: String(item?.name ?? ''),
+      description: item?.description ? String(item.description) : undefined,
+      isPredefined: Boolean(item?.isPredefined),
+    }));
+  },
+
+  createSpecialty: async (payload: { name: string; description?: string }) => {
+    const response = await api.post(`${ADMIN_CATALOG_API_PREFIX}/specialties`, payload, authConfig());
+    const data = unwrapApiData<any>(response);
+    return {
+      id: Number(data?.id ?? 0),
+      name: String(data?.name ?? ''),
+      description: data?.description ? String(data.description) : undefined,
+      isPredefined: Boolean(data?.isPredefined),
+    } satisfies AdminCatalogItem;
+  },
+
+  updateSpecialty: async (specialtyId: number | string, payload: { name: string; description?: string }) => {
+    const response = await api.put(`${ADMIN_CATALOG_API_PREFIX}/specialties/${specialtyId}`, payload, authConfig());
+    const data = unwrapApiData<any>(response);
+    return {
+      id: Number(data?.id ?? 0),
+      name: String(data?.name ?? ''),
+      description: data?.description ? String(data.description) : undefined,
+      isPredefined: Boolean(data?.isPredefined),
+    } satisfies AdminCatalogItem;
+  },
+
+  deleteSpecialty: async (specialtyId: number | string) => {
+    const response = await api.delete(`${ADMIN_CATALOG_API_PREFIX}/specialties/${specialtyId}`, authConfig());
+    return unwrapApiData(response);
+  },
 };
 
 export default adminService;

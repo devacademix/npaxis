@@ -138,7 +138,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 >
                   <option value="English">English</option>
-                  <option value="Hindi">Hindi</option>
+                  <option value="English (India)">English (India)</option>
                   <option value="Spanish">Spanish</option>
                 </select>
               </div>

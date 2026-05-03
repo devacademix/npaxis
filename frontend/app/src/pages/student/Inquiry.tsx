@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import StudentLayout from '../../components/layout/StudentLayout';
+import { maskName } from '../../utils/maskName';
 import inquiryService from '../../services/inquiry';
 import { preceptorService, type PreceptorProfile } from '../../services/preceptor';
 
@@ -128,7 +129,9 @@ const Inquiry: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm font-bold text-slate-900">{preceptor?.displayName || `Preceptor #${preceptorId}`}</p>
+                    <p className="text-sm font-bold text-slate-900">
+                      {preceptor?.displayName ? maskName(preceptor.displayName) : `Preceptor #${preceptorId}`}
+                    </p>
                     <p className="mt-1 text-xs text-slate-600">
                       {preceptor?.specialty || 'Specialty not listed'} • {preceptor?.location || 'Location unavailable'}
                     </p>

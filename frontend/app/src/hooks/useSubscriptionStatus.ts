@@ -1,38 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import paymentService, { type SubscriptionStatus } from '../services/payment';
 
-const STATUS_CACHE_TTL_MS = 8000;
 const STATUS_POLL_DELAYS_MS = [2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000];
-
-let cachedStatus: SubscriptionStatus | null | undefined;
-let cachedAt = 0;
-let inFlightRequest: Promise<SubscriptionStatus | null> | null = null;
-
-const hasFreshCache = () =>
-  cachedStatus !== undefined && Date.now() - cachedAt < STATUS_CACHE_TTL_MS;
-
-const fetchSubscriptionStatus = async (force = false): Promise<SubscriptionStatus | null> => {
-  if (!force && hasFreshCache()) {
-    return cachedStatus ?? null;
-  }
-
-  if (!force && inFlightRequest) {
-    return inFlightRequest;
-  }
-
-  inFlightRequest = paymentService
-    .getSubscriptionStatus()
-    .then((result) => {
-      cachedStatus = result ?? null;
-      cachedAt = Date.now();
-      return cachedStatus;
-    })
-    .finally(() => {
-      inFlightRequest = null;
-    });
-
-  return inFlightRequest;
-};
+const subscriptionStatusQueryKey = ['subscription', 'status'] as const;
 
 const wait = (delayMs: number) =>
   new Promise<void>((resolve) => {
@@ -56,28 +27,30 @@ export interface PollResult {
 }
 
 export const useSubscriptionStatus = () => {
-  const [subscription, setSubscription] = useState<SubscriptionStatus | null | undefined>(() =>
-    hasFreshCache() ? cachedStatus ?? null : undefined
-  );
-  const [isLoading, setIsLoading] = useState(() => !hasFreshCache());
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const activePollToken = useRef(0);
 
-  const refreshStatus = useCallback(async (force = false) => {
-    try {
-      setError(null);
-      setIsLoading(true);
-      const nextStatus = await fetchSubscriptionStatus(force);
-      setSubscription(nextStatus);
-      return nextStatus;
-    } catch (err: any) {
-      const message = err?.message || 'Failed to load subscription status.';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const query = useQuery<SubscriptionStatus | null, Error>({
+    queryKey: subscriptionStatusQueryKey,
+    queryFn: () => paymentService.getSubscriptionStatus(),
+    staleTime: 8_000,
+    refetchInterval: (queryState) => {
+      const data = queryState.state.data;
+      return data?.accessEnabled === true ? false : 3_000;
+    },
+    placeholderData: (previousData) => previousData,
+  });
+
+  const refreshStatus = useCallback(
+    async (force = false) => {
+      const nextStatus = await query.refetch();
+      if (force) {
+        await queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey });
+      }
+      return nextStatus.data ?? null;
+    },
+    [query, queryClient]
+  );
 
   const cancelPolling = useCallback(() => {
     activePollToken.current += 1;
@@ -88,7 +61,7 @@ export const useSubscriptionStatus = () => {
       const token = activePollToken.current + 1;
       activePollToken.current = token;
 
-      let latestStatus: SubscriptionStatus | null = null;
+      let latestStatus = query.data ?? null;
 
       for (const delayMs of STATUS_POLL_DELAYS_MS) {
         if (activePollToken.current !== token) {
@@ -96,10 +69,13 @@ export const useSubscriptionStatus = () => {
         }
 
         try {
-          const nextStatus = await fetchSubscriptionStatus(true);
+          const nextStatus = await queryClient.fetchQuery({
+            queryKey: subscriptionStatusQueryKey,
+            queryFn: () => paymentService.getSubscriptionStatus(),
+            staleTime: 0,
+          });
+
           latestStatus = nextStatus ?? null;
-          setSubscription(nextStatus ?? null);
-          setError(null);
           options.onCheck?.({
             at: Date.now(),
             accessEnabled: nextStatus?.accessEnabled,
@@ -114,7 +90,6 @@ export const useSubscriptionStatus = () => {
           }
         } catch (err: any) {
           const message = err?.message || 'Failed to refresh subscription status.';
-          setError(message);
           options.onError?.(message);
         }
 
@@ -126,32 +101,24 @@ export const useSubscriptionStatus = () => {
         activated: latestStatus?.accessEnabled === true,
       };
     },
-    []
+    [query.data, queryClient]
   );
 
-  useEffect(() => {
-    if (hasFreshCache()) {
-      setSubscription(cachedStatus ?? null);
-      setIsLoading(false);
-      return;
-    }
+  const clearStatusError = useCallback(() => {
+    queryClient.resetQueries({ queryKey: subscriptionStatusQueryKey, exact: true });
+  }, [queryClient]);
 
-    refreshStatus().catch(() => undefined);
-  }, [refreshStatus]);
-
-  useEffect(() => () => cancelPolling(), [cancelPolling]);
-
-  const isActive = useMemo(() => subscription?.accessEnabled === true, [subscription]);
+  const isActive = useMemo(() => query.data?.accessEnabled === true, [query.data]);
 
   return {
-    subscription,
+    subscription: query.data,
     isActive,
-    isLoading,
-    error,
+    isLoading: query.isLoading,
+    error: query.error?.message || null,
     refreshStatus,
     pollUntilActive,
     cancelPolling,
-    clearStatusError: () => setError(null),
+    clearStatusError,
   };
 };
 

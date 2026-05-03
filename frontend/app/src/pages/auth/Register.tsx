@@ -235,7 +235,7 @@ const Register: React.FC = () => {
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500">Country code select karna required hai, aur phone number bhi required field hai.</p>
+                    <p className="text-xs text-slate-500">Selecting a country code and entering a phone number are both required.</p>
                   </div>
 
                   {activeTab === 'student' ? (

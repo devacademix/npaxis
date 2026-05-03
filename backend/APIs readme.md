@@ -86,6 +86,7 @@ requirements, and expected outputs.
 
 | Endpoint                     | Method | Description                             | Input                             | Output                    |
 |:-----------------------------|:-------|:----------------------------------------|:----------------------------------|:--------------------------|
+| `/`                          | GET    | Fetches all active users.               | None                              | List of `UserResponseDTO` |
 | `/user/me`                   | GET    | Fetches currently logged-in user.       | None                              | `LoggedInUserResponseDTO` |
 | `/user-{userId}`             | PUT    | Updates user information.               | `userId` (Path), `UserRequestDTO` | `UserResponseDTO`         |
 | `/active/all`                | GET    | Fetches all active users.               | None                              | List of `UserResponseDTO` |
@@ -254,6 +255,7 @@ requirements, and expected outputs.
 | Endpoint                | Method | Description                   | Input                        | Output                                    |
 |:------------------------|:-------|:------------------------------|:-----------------------------|:------------------------------------------|
 | `/dashboard`            | GET    | Get admin dashboard overview. | None                         | `AdminAnalyticsOverviewDTO`               |
+| `/dashboard/report`     | GET    | Download admin dashboard report as PDF. | None               | PDF file (`Resource`)                     |
 | `/settings`             | GET    | Get all system settings.      | None                         | List of `SystemSettingsDTO`               |
 | `/settings/{key}`       | GET    | Get specific setting by key.  | `key` (Path)                 | `SystemSettingsDTO`                       |
 | `/settings/{key}`       | PUT    | Update a system setting.      | `key` (Path), `value` (Body) | `SystemSettingsDTO`                       |
