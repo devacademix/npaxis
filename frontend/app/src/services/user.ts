@@ -29,8 +29,6 @@ const authConfig = () => {
   };
 };
 
-const ADMIN_API_PREFIX = '/api/v1/administration';
-
 export const userService = {
   getAllUsers: async (): Promise<UserRecord[]> => {
     const response = await api.get('/users/all', authConfig());
@@ -50,15 +48,6 @@ export const userService = {
   getDeletedUserById: async (userId: number | string): Promise<UserRecord> => {
     const response = await api.get(`/users/deleted/user-${userId}`, authConfig());
     return unwrapApiData<UserRecord>(response);
-  },
-
-  toggleAccountStatus: async (userId: number, enabled: boolean) => {
-    const response = await api.put(
-      `${ADMIN_API_PREFIX}/user-${userId}/toggle-account?enabled=${enabled}`,
-      null,
-      authConfig()
-    );
-    return unwrapApiData<string | null>(response);
   },
 
   softDeleteUser: async (userId: number) => {

@@ -1,0 +1,1 @@
+{"businessErrorCode":3005,"businessErrorDescription":"Invalid data access usage, often due to incorrect API or null entity parameters.","error":"Invalid data access usage: No enum constant com.digitalearn.npaxis.analytics.EventType.PROFILE_VIEW","timestamp":"2026-05-03 18:24"}

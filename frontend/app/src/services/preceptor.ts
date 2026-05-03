@@ -1,7 +1,15 @@
 import type { AxiosProgressEvent } from 'axios';
-import api from './auth';
+import api, { authService } from './auth';
 
 export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | string;
+export type PreceptorAvailableDay =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY'
+  | 'SUNDAY';
 
 export interface PreceptorProfile {
   userId: number;
@@ -88,15 +96,15 @@ export interface PreceptorUpdatePayload {
   credentials: string[];
   specialties: string[];
   location: string;
-  setting: string;
-  availableDays: string[];
-  honorarium: string;
-  requirements: string;
-  email: string;
-  phone: string;
-  licenseNumber: string;
-  licenseState: string;
-  licenseFileUrl: string;
+  setting: string | null;
+  availableDays: PreceptorAvailableDay[];
+  honorarium: string | null;
+  requirements: string | null;
+  email: string | null;
+  phone: string | null;
+  licenseNumber: string | null;
+  licenseState: string | null;
+  licenseFileUrl: string | null;
 }
 
 const extractData = <T>(response: any): T => {
@@ -218,8 +226,7 @@ export const preceptorService = {
   getLoggedInUser: async (): Promise<LoggedInPreceptorUser> => {
     const fallbackUserId = localStorage.getItem('userId');
     try {
-      const response = await api.get('/users/user/me', authConfig());
-      return normalizeUser(extractData<any>(response));
+      return normalizeUser(await authService.getCurrentUserCached());
     } catch (error) {
       if (!fallbackUserId) {
         throw error;

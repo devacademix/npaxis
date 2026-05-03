@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { authService } from '../../services/auth';
+import { authService, emitSessionChanged } from '../../services/auth';
 import type { AuthResponse } from '../../types';
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -53,7 +53,7 @@ const VerifyOtp: React.FC = () => {
     switch (role) {
       case 'ROLE_ADMIN':
       case 'ADMIN':
-        navigate('/admin');
+        navigate('/admin/dashboard');
         return;
       case 'ROLE_PRECEPTOR':
       case 'PRECEPTOR':
@@ -61,7 +61,7 @@ const VerifyOtp: React.FC = () => {
         return;
       case 'ROLE_STUDENT':
       case 'STUDENT':
-        navigate('/student');
+        navigate('/student/dashboard');
         return;
       default:
         navigate('/login');
@@ -95,6 +95,7 @@ const VerifyOtp: React.FC = () => {
       localStorage.setItem('role', response.role);
       localStorage.setItem('userId', String(response.userId));
       localStorage.setItem('displayName', response.displayName || '');
+      emitSessionChanged();
 
       redirectByRole(response.role);
     } catch (err: any) {

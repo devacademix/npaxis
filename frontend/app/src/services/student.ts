@@ -1,4 +1,4 @@
-import api from './auth';
+import api, { authService } from './auth';
 
 export interface StudentUser {
   userId: number;
@@ -47,6 +47,14 @@ export interface StudentInquirySummary {
   createdAt?: string;
 }
 
+export interface StudentPaginatedResponse<T> {
+  items: T[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+}
+
 const unwrapApiData = <T>(response: any): T => {
   if (response?.data?.data !== undefined) {
     return response.data.data as T;
@@ -65,6 +73,7 @@ const authConfig = () => {
 };
 
 const ADMIN_API_PREFIX = '/api/v1/administration';
+const SAVED_PRECEPTOR_REMOVALS_KEY = 'npaxis:hidden-saved-preceptors';
 
 const toNumber = (value: unknown, fallback = 0): number => {
   const converted = Number(value);
@@ -77,6 +86,46 @@ const extractPageItems = <T>(payload: any): T[] => {
   if (Array.isArray(payload?.items)) return payload.items;
   if (Array.isArray(payload?.data)) return payload.data;
   return [];
+};
+
+const getSavedRemovalStorageKey = (userId: number | string) =>
+  `${SAVED_PRECEPTOR_REMOVALS_KEY}:${String(userId)}`;
+
+const getHiddenSavedPreceptorIds = (userId: number | string): number[] => {
+  if (typeof window === 'undefined') return [];
+  const rawValue = window.localStorage.getItem(getSavedRemovalStorageKey(userId));
+  if (!rawValue) return [];
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value));
+  } catch {
+    return [];
+  }
+};
+
+const setHiddenSavedPreceptorIds = (userId: number | string, ids: number[]) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(getSavedRemovalStorageKey(userId), JSON.stringify(ids));
+};
+
+const hideSavedPreceptorLocally = (userId: number | string, preceptorId: number | string) => {
+  const normalizedId = Number(preceptorId);
+  if (!Number.isFinite(normalizedId)) return;
+
+  const nextIds = Array.from(new Set([...getHiddenSavedPreceptorIds(userId), normalizedId]));
+  setHiddenSavedPreceptorIds(userId, nextIds);
+};
+
+const restoreSavedPreceptorLocally = (userId: number | string, preceptorId: number | string) => {
+  const normalizedId = Number(preceptorId);
+  if (!Number.isFinite(normalizedId)) return;
+
+  const nextIds = getHiddenSavedPreceptorIds(userId).filter((id) => id !== normalizedId);
+  setHiddenSavedPreceptorIds(userId, nextIds);
 };
 
 const normalizeUser = (payload: any): StudentUser => ({
@@ -120,8 +169,7 @@ export const studentService = {
     const fallbackUserId = fallbackUserIdRaw ? Number(fallbackUserIdRaw) : null;
 
     try {
-      const response = await api.get('/users/user/me', authConfig());
-      return normalizeUser(unwrapApiData<any>(response));
+      return normalizeUser(await authService.getCurrentUserCached());
     } catch (error) {
       if (!fallbackUserId || Number.isNaN(fallbackUserId)) {
         throw error;
@@ -139,11 +187,15 @@ export const studentService = {
   getSavedPreceptors: async (userId: number | string): Promise<StudentPreceptor[]> => {
     const response = await api.get(`/students/student-${userId}/saved`, authConfig());
     const payload = unwrapApiData<any>(response);
-    return extractPageItems<any>(payload).map(normalizePreceptor);
+    const hiddenIds = new Set(getHiddenSavedPreceptorIds(userId));
+    return extractPageItems<any>(payload)
+      .map(normalizePreceptor)
+      .filter((preceptor) => !hiddenIds.has(preceptor.userId));
   },
 
   savePreceptor: async (userId: number | string, preceptorId: number | string): Promise<void> => {
     await api.post(`/students/student-${userId}/save-preceptor/${preceptorId}`, null, authConfig());
+    restoreSavedPreceptorLocally(userId, preceptorId);
   },
 
   removeSavedPreceptor: async (
@@ -152,10 +204,16 @@ export const studentService = {
   ): Promise<{ serverSynced: boolean }> => {
     try {
       await api.delete(`/students/student-${userId}/save-preceptor/${preceptorId}`, authConfig());
+      restoreSavedPreceptorLocally(userId, preceptorId);
       return { serverSynced: true };
     } catch (error: any) {
       const status = error?.response?.status;
-      if (status === 404 || status === 405 || status === 501) {
+      const message = String(error?.message || error?.response?.data?.message || '').toLowerCase();
+      const deleteNotSupported =
+        message.includes('request method') && message.includes('delete') && message.includes('not supported');
+
+      if (status === 404 || status === 405 || status === 501 || deleteNotSupported) {
+        hideSavedPreceptorLocally(userId, preceptorId);
         return { serverSynced: false };
       }
       throw error;
@@ -206,13 +264,38 @@ export const studentService = {
     return extractPageItems<any>(payload).map(normalizeStudentProfile);
   },
 
-  searchAdminStudents: async (filters?: { university?: string; program?: string; page?: number; size?: number }) => {
+  getAdminStudentsPaginated: async (params?: { page?: number; size?: number }): Promise<StudentPaginatedResponse<AdminStudentListItem>> => {
+    const response = await api.get(`${ADMIN_API_PREFIX}/students/list`, {
+      ...authConfig(),
+      params,
+    });
+    const payload = unwrapApiData<any>(response);
+    const meta = response?.data?.meta ?? {};
+
+    return {
+      items: extractPageItems<any>(payload).map(normalizeStudentProfile),
+      totalElements: Number(meta?.totalElements ?? 0),
+      totalPages: Number(meta?.totalPages ?? 0),
+      page: Number(meta?.page ?? params?.page ?? 0),
+      size: Number(meta?.size ?? params?.size ?? 10),
+    };
+  },
+
+  searchAdminStudents: async (filters?: { university?: string; program?: string; page?: number; size?: number }): Promise<StudentPaginatedResponse<AdminStudentListItem>> => {
     const response = await api.get(`${ADMIN_API_PREFIX}/students/search`, {
       ...authConfig(),
       params: filters,
     });
     const payload = unwrapApiData<any>(response);
-    return extractPageItems<any>(payload).map(normalizeStudentProfile);
+    const meta = response?.data?.meta ?? {};
+
+    return {
+      items: extractPageItems<any>(payload).map(normalizeStudentProfile),
+      totalElements: Number(meta?.totalElements ?? 0),
+      totalPages: Number(meta?.totalPages ?? 0),
+      page: Number(meta?.page ?? filters?.page ?? 0),
+      size: Number(meta?.size ?? filters?.size ?? 10),
+    };
   },
 
   getAdminStudentDetail: async (userId: number | string): Promise<StudentProfile> => {

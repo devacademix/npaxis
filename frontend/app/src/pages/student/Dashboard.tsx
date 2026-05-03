@@ -1,8 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { Navigate, useNavigate } from 'react-router-dom';
+import ResponsiveGrid from '../../components/layout/ResponsiveGrid';
 import StudentLayout from '../../components/layout/StudentLayout';
 import PreceptorCard from '../../components/student/PreceptorCard';
 import StatsCard from '../../components/student/StatsCard';
+import EmptyState from '../../components/ui/EmptyState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
+import { useSession } from '../../context/SessionContext';
+import { maskName } from '../../utils/maskName';
+import { inquiryService } from '../../services/inquiry';
 import {
   studentService,
   type StudentPreceptor,
@@ -26,71 +33,113 @@ const formatDate = (date: Date): string =>
   });
 
 const Dashboard: React.FC = () => {
-  const role = localStorage.getItem('role');
-  const isStudent = role === 'STUDENT' || role === 'ROLE_STUDENT' || (role ?? '').includes('STUDENT');
+  const { currentUser, role, isLoading: isSessionLoading } = useSession();
+  const isStudent = role === 'STUDENT';
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<StudentUser | null>(null);
-  const [studentData, setStudentData] = useState<StudentProfile | null>(null);
-  const [savedPreceptors, setSavedPreceptors] = useState<StudentPreceptor[]>([]);
-  const [recommendedPreceptors, setRecommendedPreceptors] = useState<StudentPreceptor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [userQuery, profileQuery, savedQuery, inquiriesQuery, recommendationsQuery] = useQueries({
+    queries: [
+      {
+        queryKey: ['student-dashboard', 'user', currentUser?.userId ?? 'session'],
+        queryFn: async () => {
+          if (currentUser) {
+            return {
+              userId: currentUser.userId,
+              displayName: currentUser.displayName,
+              email: currentUser.email,
+            } satisfies StudentUser;
+          }
+          return studentService.getLoggedInUser();
+        },
+        enabled: !isSessionLoading && isStudent,
+        staleTime: 60_000,
+      },
+      {
+        queryKey: ['student-dashboard', 'profile', currentUser?.userId ?? 'session'],
+        queryFn: async () => {
+          const resolvedUser =
+            currentUser
+              ? {
+                  userId: currentUser.userId,
+                  displayName: currentUser.displayName,
+                  email: currentUser.email,
+                }
+              : await studentService.getLoggedInUser();
+          return studentService.getStudentProfile(resolvedUser.userId);
+        },
+        enabled: !isSessionLoading && isStudent,
+        placeholderData: (previousData: StudentProfile | undefined) => previousData,
+      },
+      {
+        queryKey: ['student-dashboard', 'saved', currentUser?.userId ?? 'session'],
+        queryFn: async () => {
+          const resolvedUser =
+            currentUser
+              ? {
+                  userId: currentUser.userId,
+                  displayName: currentUser.displayName,
+                  email: currentUser.email,
+                }
+              : await studentService.getLoggedInUser();
+          return studentService.getSavedPreceptors(resolvedUser.userId);
+        },
+        enabled: !isSessionLoading && isStudent,
+        placeholderData: (previousData: StudentPreceptor[] | undefined) => previousData,
+      },
+      {
+        queryKey: ['student-dashboard', 'inquiries'],
+        queryFn: () => inquiryService.getMyInquiries('ALL', true),
+        enabled: !isSessionLoading && isStudent,
+        refetchInterval: 5_000,
+        placeholderData: (previousData: any[] | undefined) => previousData,
+      },
+      {
+        queryKey: ['student-dashboard', 'recommendations'],
+        queryFn: () => studentService.searchPreceptors(10),
+        enabled: !isSessionLoading && isStudent,
+        placeholderData: (previousData: StudentPreceptor[] | undefined) => previousData,
+      },
+    ],
+  });
+
+  const user = (userQuery.data as StudentUser | undefined) ?? null;
+  const studentData = (profileQuery.data as StudentProfile | undefined) ?? null;
+  const savedPreceptors = (savedQuery.data as StudentPreceptor[] | undefined) ?? [];
+  const allRecommendations = (recommendationsQuery.data as StudentPreceptor[] | undefined) ?? [];
+  const recommendedPreceptors = useMemo(() => {
+    const savedIds = new Set(savedPreceptors.map((item) => item.userId));
+    const filteredRecommendations = allRecommendations.filter((item) => !savedIds.has(item.userId));
+    return filteredRecommendations.length > 0 ? filteredRecommendations : allRecommendations;
+  }, [allRecommendations, savedPreceptors]);
+  const totalInquiries = Array.isArray(inquiriesQuery.data) ? inquiriesQuery.data.length : 0;
+  const recentlyViewedCount = allRecommendations.length;
+  const isLoading =
+    isSessionLoading ||
+    ((userQuery.isLoading && !userQuery.data) ||
+      (profileQuery.isLoading && !profileQuery.data) ||
+      (savedQuery.isLoading && !savedQuery.data));
+  const isRecommendationsLoading = recommendationsQuery.isLoading && !recommendationsQuery.data;
+  const error =
+    userQuery.error?.message ||
+    (profileQuery.error as any)?.message ||
+    (savedQuery.error as any)?.message ||
+    null;
+  const infoMessage =
+    !error &&
+    [profileQuery.error, savedQuery.error, inquiriesQuery.error, recommendationsQuery.error].some(Boolean)
+      ? 'Some dashboard widgets are temporarily unavailable. Core features are still usable.'
+      : null;
 
   useEffect(() => {
     if (!isStudent) return;
-
-    const loadStudentDashboard = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        setInfoMessage(null);
-
-        const currentUser = await studentService.getLoggedInUser();
-        setUser(currentUser);
-
-        const nonCriticalErrors: string[] = [];
-        const [profile, saved, recommended] = await Promise.all([
-          studentService.getStudentProfile(currentUser.userId).catch((err: any) => {
-            nonCriticalErrors.push(err?.message || 'Student profile unavailable.');
-            return null;
-          }),
-          studentService.getSavedPreceptors(currentUser.userId).catch((err: any) => {
-            nonCriticalErrors.push(err?.message || 'Saved preceptors unavailable.');
-            return [] as StudentPreceptor[];
-          }),
-          studentService.searchPreceptors(10).catch((err: any) => {
-            nonCriticalErrors.push(err?.message || 'Recommended preceptors unavailable.');
-            return [] as StudentPreceptor[];
-          }),
-        ]);
-
-        setStudentData(profile);
-        setSavedPreceptors(saved);
-
-        const savedIds = new Set(saved.map((item) => item.userId));
-        const filteredRecommendations = recommended.filter((item) => !savedIds.has(item.userId));
-        setRecommendedPreceptors(filteredRecommendations.length > 0 ? filteredRecommendations : recommended);
-
-        if (nonCriticalErrors.length > 0) {
-          setInfoMessage('Some dashboard widgets are temporarily unavailable. Core features are still usable.');
-        }
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load student dashboard.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadStudentDashboard();
-  }, [isStudent]);
+    console.log('Inquiries:', inquiriesQuery.data ?? []);
+  }, [inquiriesQuery.data, isStudent]);
 
   const displayName = user?.displayName || localStorage.getItem('displayName') || 'Student';
 
   const savedCount = savedPreceptors.length;
-  const inquiriesSent = Number(studentData?.inquiriesSent ?? 0);
-  const recentlyViewed = Number(studentData?.recentlyViewed ?? 0);
+  const inquiriesSent = totalInquiries;
+  const recentlyViewed = recentlyViewedCount;
 
   const recentActivity = useMemo<ActivityItem[]>(() => {
     const activities: ActivityItem[] = [];
@@ -101,7 +150,7 @@ const Dashboard: React.FC = () => {
       activities.push({
         id: `saved-${preceptor.userId}-${index}`,
         date: formatDate(date),
-        message: `Saved ${preceptor.displayName} to your shortlist.`,
+        message: `Saved ${maskName(preceptor.displayName)} to your shortlist.`,
       });
     });
 
@@ -118,7 +167,7 @@ const Dashboard: React.FC = () => {
     return activities.slice(0, 5);
   }, [savedPreceptors, inquiriesSent]);
 
-  if (!isStudent) {
+  if (!isSessionLoading && !isStudent) {
     return <Navigate to="/login" replace />;
   }
 
@@ -148,10 +197,11 @@ const Dashboard: React.FC = () => {
           </div>
         ) : null}
 
-        <section id="saved-summary" className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section id="saved-summary" className="mb-6">
+          <ResponsiveGrid mobileCols={1} tabletCols={2} desktopCols={3}>
           {isLoading ? (
             Array.from({ length: 3 }, (_, index) => (
-              <div key={index} className="h-36 animate-pulse rounded-2xl bg-slate-200/70" />
+              <SkeletonBlock key={index} className="h-36" />
             ))
           ) : (
             <>
@@ -178,6 +228,7 @@ const Dashboard: React.FC = () => {
               />
             </>
           )}
+          </ResponsiveGrid>
         </section>
 
         <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -219,10 +270,10 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isRecommendationsLoading ? (
             <div className="flex gap-4 overflow-x-auto pb-2">
               {Array.from({ length: 4 }, (_, index) => (
-                <div key={index} className="h-72 min-w-[260px] animate-pulse rounded-2xl bg-slate-200/70" />
+                <SkeletonBlock key={index} className="h-72 min-w-[260px]" />
               ))}
             </div>
           ) : recommendedPreceptors.length > 0 ? (
@@ -232,9 +283,7 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-12 text-center text-sm font-medium text-slate-500">
-              No recommendations available right now. Please check back shortly.
-            </div>
+            <EmptyState text="No recommendations available right now. Please check back shortly." />
           )}
         </section>
 
@@ -248,7 +297,7 @@ const Dashboard: React.FC = () => {
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }, (_, index) => (
-                  <div key={index} className="h-14 animate-pulse rounded-xl bg-slate-200/70" />
+                  <SkeletonBlock key={index} className="h-14" />
                 ))}
               </div>
             ) : recentActivity.length > 0 ? (
@@ -271,9 +320,7 @@ const Dashboard: React.FC = () => {
                 </table>
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-12 text-center text-sm font-medium text-slate-500">
-                No recent activity yet. Start browsing preceptors to begin.
-              </div>
+              <EmptyState text="No recent activity yet. Start browsing preceptors to begin." />
             )}
           </article>
 
@@ -284,7 +331,7 @@ const Dashboard: React.FC = () => {
             {isLoading ? (
               <div className="mt-4 space-y-3">
                 {Array.from({ length: 5 }, (_, index) => (
-                  <div key={index} className="h-8 animate-pulse rounded-lg bg-slate-200/70" />
+                  <SkeletonBlock key={index} className="h-8 rounded-lg" />
                 ))}
               </div>
             ) : (

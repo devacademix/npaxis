@@ -16,6 +16,9 @@ interface Preceptor {
 
 const PendingPreceptors: React.FC = () => {
   const [preceptors, setPreceptors] = useState<Preceptor[]>([]);
+  const [totalPending, setTotalPending] = useState(0);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -31,7 +34,7 @@ const PendingPreceptors: React.FC = () => {
 
   useEffect(() => {
     fetchPreceptors();
-  }, []);
+  }, [page]);
 
   // Display Toast for 3s
   useEffect(() => {
@@ -45,27 +48,18 @@ const PendingPreceptors: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await adminService.getPendingPreceptors();
-
-      if (Array.isArray(response)) {
-        setPreceptors(response);
-      } else {
-        setPreceptors([]);
-      }
+      const response = await adminService.getPendingPreceptors({ page, size: 10 });
+      setPreceptors(Array.isArray(response.items) ? response.items : []);
+      setTotalPending(Number(response.totalElements ?? 0));
+      setTotalPages(Math.max(1, Number(response.totalPages ?? 1)));
     } catch (err: any) {
       setError(err?.message || 'Failed to fetch pending preceptors.');
-      setMockData(); // Fallback to mock data so UI is demonstrable
+      setPreceptors([]);
+      setTotalPending(0);
+      setTotalPages(1);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const setMockData = () => {
-    setPreceptors([
-      { id: 1, name: 'Dr. Sarah Jenkins', email: 's.jenkins@medcenter.org', credentials: 'MD, FACS', licenseNumber: 'NY-9842103', dateSubmitted: 'Oct 24, 2023', status: 'Pending Verification', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZGc1mYGzZfdXlaygc0T_PwTjHzQELGuIcuizxJgAz_mSQU8JxntfjuGuNubGdYBFfuhmVoGhwl7P0Y95Uo-qCV1ctSRtIWFMM6Wli4Uso5JxD2MFcb0Vt6oMNul7BJIB--FxaRey3iEwVGk2LS1UxbnvM0BTl3F7OOWz1wCgV00jCvWUbVryKpmdBet28pabniJWIFn6-cKXt9-ArsN06WunM2BZmY_BBpAAsao0gS1lMUWeE2amWnSz57L-2n1Mr4qWj0080UY_t' },
-      { id: 2, name: 'Dr. Marcus Thorne', email: 'm.thorne@healthtrust.io', credentials: 'DNP, APRN', licenseNumber: 'CA-4451092', dateSubmitted: 'Oct 25, 2023', status: 'Pending Verification', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB7h5DdQ4IPpFotw0Ri9SxEXz6_Q6ZUWJbtqtODRkxIAQAFf670a8Bvb2L49PTWwn4mN20gT3l9F4DiVxyjJRaNnAGOrzQFC27KWrzXZS78R5tGp7BHz2PcEzO1QdB42nq1yifcVPTX8J07wyxtb-sJfW3h4Iw33herHX6CTw-U2ok3lohaWsy9EvQKzX5LVNIXx5XJvb3ggbBQnLHzCb9AIiIyAQpzhDP058Lk5U6C1ivkouGzfYWU-rXFZMhM9ZmlYYyTBl4fldfL' },
-      { id: 3, name: 'Dr. Elena Rodriguez', email: 'e.rodriguez@clinic.org', credentials: 'MD, PhD', licenseNumber: 'TX-1123908', dateSubmitted: 'Oct 26, 2023', status: 'Pending Verification', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCUUppncimo343IEaFsOu5bkBPbCxUkAiAKu_mcg6LMXj9mTxubXcfrLBNvWCWhhEAXv4ZLtGnGcQUBurKKY11Mtp4F9zivANV1jGf9BYnmj4cjDa1HImiCXHoRmVtxaKyleAJlKMopSfkqGo00SaRksO3IifCdQ19Z6Jabch8X5NgW-3pa-yZE6PGlY_qQWBlsZNaA1JBfWVrkQ7MIEFnfzaN8qUNsEqMUMCaVQif3MJiYD8CkNhs6azFzeBcRL_DmJojgp5decwEu' }
-    ]);
   };
 
   const handleActionClick = (type: 'approve' | 'reject', preceptor: Preceptor) => {
@@ -194,7 +188,7 @@ const PendingPreceptors: React.FC = () => {
           <h2 className="text-4xl font-extrabold text-on-surface tracking-tight font-headline">Preceptor Verification</h2>
           <p className="text-slate-500 mt-2 flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-amber-600"></span>
-            <span className="font-medium text-amber-700">{preceptors.length} Pending Applications</span> requiring review
+            <span className="font-medium text-amber-700">{totalPending} Pending Applications</span> requiring review
           </p>
         </div>
         <div className="flex gap-3">
@@ -303,7 +297,27 @@ const PendingPreceptors: React.FC = () => {
         )}
         {!isLoading && preceptors.length > 0 && (
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-xs text-slate-500 font-medium">Showing {preceptors.length} pending applications</p>
+            <p className="text-xs text-slate-500 font-medium">
+              Showing {preceptors.length} pending applications on page {page + 1} of {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(current - 1, 0))}
+                disabled={page <= 0}
+                className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-slate-100"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((current) => current + 1)}
+                disabled={page + 1 >= totalPages}
+                className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-slate-100"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

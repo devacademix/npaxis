@@ -54,6 +54,7 @@ const UserFilters: React.FC<UserFiltersProps> = ({
           <option value="ALL">All Status</option>
           <option value="ACTIVE">Active</option>
           <option value="DISABLED">Disabled</option>
+          <option value="DELETED">Deleted</option>
         </select>
       </div>
     </div>

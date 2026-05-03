@@ -39,7 +39,7 @@ const AdminManagement: React.FC = () => {
 
       setAdmins(Array.isArray(adminRoster) ? adminRoster : []);
       setPendingPreceptors(
-        (Array.isArray(pendingList) ? pendingList : []).map((preceptor) => ({
+        (Array.isArray(pendingList?.items) ? pendingList.items : []).map((preceptor) => ({
           id: preceptor.id,
           name: preceptor.name,
           email: preceptor.email,

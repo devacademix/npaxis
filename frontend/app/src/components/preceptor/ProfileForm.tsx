@@ -6,26 +6,36 @@ export interface PreceptorProfileFormData {
   credentials: string;
   specialty: string;
   location: string;
-  setting: string;
+  clinicalSetting: string;
   availableDays: string[];
   honorarium: string;
   requirements: string;
   email: string;
   phone: string;
   verificationStatus: string;
-  isPremium: boolean;
+  premiumStatus: string;
   isVerified: boolean;
   licenseNumber: string;
   licenseState: string;
   licenseFileUrl: string;
 }
 
+interface AnalyticsSummary {
+  profileViews: number;
+  contactReveals: number;
+  inquiries: number;
+}
+
 interface ProfileFormProps {
   data: PreceptorProfileFormData;
   isSaving: boolean;
+  analytics: AnalyticsSummary;
   onChange: (field: keyof PreceptorProfileFormData, value: string | string[] | boolean) => void;
   onSave: () => void;
   onCancel: () => void;
+  onGoDashboard: () => void;
+  onUploadLicense: () => void;
+  onUpgradePlan: () => void;
 }
 
 const DAY_OPTIONS = [
@@ -45,7 +55,17 @@ const statusBadgeClass = (status: string) => {
   return 'bg-amber-100 text-amber-700';
 };
 
-const ProfileForm: React.FC<ProfileFormProps> = ({ data, isSaving, onChange, onSave, onCancel }) => {
+const ProfileForm: React.FC<ProfileFormProps> = ({
+  data,
+  isSaving,
+  analytics,
+  onChange,
+  onSave,
+  onCancel,
+  onGoDashboard,
+  onUploadLicense,
+  onUpgradePlan,
+}) => {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -72,10 +92,10 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ data, isSaving, onChange, onS
             </span>
             <span
               className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                data.isPremium ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                data.premiumStatus === 'Active' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
               }`}
             >
-              Premium: {data.isPremium ? 'Active' : 'Inactive'}
+              Premium: {data.premiumStatus || 'Inactive'}
             </span>
           </div>
         </div>
@@ -111,6 +131,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ data, isSaving, onChange, onS
             <input
               value={data.specialty}
               onChange={(event) => onChange('specialty', event.target.value)}
+              placeholder="Add your specialty"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
               disabled={isSaving}
               required
@@ -131,8 +152,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ data, isSaving, onChange, onS
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Clinical Setting</label>
             <input
-              value={data.setting}
-              onChange={(event) => onChange('setting', event.target.value)}
+              value={data.clinicalSetting}
+              onChange={(event) => onChange('clinicalSetting', event.target.value)}
               placeholder="Hospital, Private Clinic..."
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
               disabled={isSaving}
@@ -191,6 +212,55 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ data, isSaving, onChange, onS
             className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
             disabled={isSaving}
           />
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-slate-900">Analytics Snapshot</h3>
+          <p className="mt-1 text-sm text-slate-500">Live performance metrics from your analytics endpoint.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[
+            ['Profile Views', analytics.profileViews],
+            ['Contact Reveals', analytics.contactReveals],
+            ['Total Inquiries', analytics.inquiries],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+              <p className="mt-2 text-3xl font-black tracking-tight text-slate-900">{Number(value ?? 0).toLocaleString('en-IN')}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-slate-900">Quick Actions</h3>
+          <p className="mt-1 text-sm text-slate-500">Jump to the most common profile and account actions.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={onGoDashboard}
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Go to Dashboard
+          </button>
+          <button
+            type="button"
+            onClick={onUploadLicense}
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Upload License
+          </button>
+          <button
+            type="button"
+            onClick={onUpgradePlan}
+            className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+          >
+            Upgrade Plan
+          </button>
         </div>
       </section>
 

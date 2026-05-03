@@ -8,6 +8,15 @@ const api = axios.create({
 
 let backendUnavailableUntil = 0;
 const BACKEND_RETRY_COOLDOWN_MS = 15_000;
+let currentUserCache: UserResponse | null = null;
+let currentUserRequest: Promise<UserResponse> | null = null;
+const SESSION_CHANGED_EVENT = 'npaxis:session-changed';
+
+export const emitSessionChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
+  }
+};
 
 const createBackendUnavailableError = () => ({
   message: 'Unable to reach the server. Please ensure backend is running on port 8080.',
@@ -19,6 +28,9 @@ const clearAuthStorage = () => {
   localStorage.removeItem('role');
   localStorage.removeItem('userId');
   localStorage.removeItem('displayName');
+  currentUserCache = null;
+  currentUserRequest = null;
+  emitSessionChanged();
 };
 
 const unwrapApiData = <T>(response: any): T => {
@@ -78,6 +90,7 @@ api.interceptors.response.use(
           localStorage.setItem('role', refreshed.role);
           localStorage.setItem('userId', String(refreshed.userId));
           localStorage.setItem('displayName', refreshed.displayName);
+          emitSessionChanged();
 
           originalRequest.headers = originalRequest.headers ?? {};
           originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
@@ -199,6 +212,9 @@ export const authService = {
       if (refreshed.displayName) localStorage.setItem('displayName', refreshed.displayName);
       if (refreshed.role) localStorage.setItem('role', refreshed.role);
       if (refreshed.userId != null) localStorage.setItem('userId', String(refreshed.userId));
+      currentUserCache = null;
+      currentUserRequest = null;
+      emitSessionChanged();
     }
 
     return refreshed;
@@ -215,7 +231,23 @@ export const authService = {
         Authorization: `Bearer ${localStorage.getItem('accessToken')}`
       }
     });
-    return unwrapApiData<UserResponse>(response);
+    const user = unwrapApiData<UserResponse>(response);
+    currentUserCache = user;
+    return user;
+  },
+
+  getCurrentUserCached: async (): Promise<UserResponse> => {
+    if (currentUserCache) {
+      return currentUserCache;
+    }
+
+    if (!currentUserRequest) {
+      currentUserRequest = authService.getCurrentUser().finally(() => {
+        currentUserRequest = null;
+      });
+    }
+
+    return currentUserRequest;
   }
 };
 
