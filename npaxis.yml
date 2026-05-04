@@ -1,0 +1,21 @@
+name: npaxis-app
+
+services:
+  - name: backend
+    source_dir: backend
+    github:
+      repo: devacademix/npaxis
+      branch: main
+    run_command: java -jar target/*.jar
+    build_command: ./mvnw clean package
+    environment_slug: java
+    http_port: 8080
+
+static_sites:
+  - name: frontend
+    source_dir: frontend
+    github:
+      repo: devacademix/npaxis
+      branch: main
+    build_command: npm install && npm run build
+    output_dir: build
