@@ -2,7 +2,7 @@ spring:
   application:
     name: npaxis
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: prod
 
   # ============================================
   # Flyway Database Migration Configuration

@@ -8,11 +8,11 @@ INSERT INTO roles (name, description, created_at, last_modified_at, deleted)
 VALUES ('ADMIN', 'Administrator with full system access', NOW(), NOW(), FALSE),
        ('PRECEPTOR', 'Educator and preceptor role', NOW(), NOW(), FALSE),
        ('STUDENT', 'Student learner role', NOW(), NOW(), FALSE),
-       ('USER', 'Basic user role', NOW(), NOW(), FALSE),
-13428709ON CONFLICT (name) DO NOTHING;
+       ('USER', 'Basic user role', NOW(), NOW(), FALSE)
+ON CONFLICT (name) DO NOTHING;
 
 -- ==================== INSERT CREDENTIALS ====================
-)INSERT INTO credentials (name, name_normalized, description, is_predefined, created_at, last_modified_at, deleted)
+INSERT INTO credentials (name, name_normalized, description, is_predefined, created_at, last_modified_at, deleted)
 VALUES ('MBBS', 'MBBS', 'Bachelor of Medicine, Bachelor of Surgery', TRUE, NOW(), NOW(), FALSE),
        ('MD', 'MD', 'Doctor of Medicine', TRUE, NOW(), NOW(), FALSE),
        ('DO', 'DO', 'Doctor of Osteopathic Medicine', TRUE, NOW(), NOW(), FALSE),
@@ -120,27 +120,6 @@ SELECT sp.subscription_plan_id,
        FALSE::BOOLEAN
 FROM subscription_plans sp
 WHERE sp.code = 'PRO'
-  AND sp.deleted = FALSE ON CONFLICT (plan_id, billing_interval, currency) DO NOTHING;
-
--- ELITE Plan Pricing
-INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id,
-                                 stripe_price_id, active, created_at, last_modified_at, deleted)
-SELECT sp.subscription_plan_id,
-       'MONTHLY'::VARCHAR(20), 'usd'::VARCHAR(10), 1999::BIGINT, 'prod_elite_monthly'::VARCHAR(120), 'price_elite_monthly'::VARCHAR(120), TRUE::BOOLEAN, NOW(),
-       NOW(),
-       FALSE::BOOLEAN
-FROM subscription_plans sp
-WHERE sp.code = 'ELITE'
-  AND sp.deleted = FALSE ON CONFLICT (plan_id, billing_interval, currency) DO NOTHING;
-
-INSERT INTO subscription_prices (plan_id, billing_interval, currency, amount_in_minor_units, stripe_product_id,
-                                 stripe_price_id, active, created_at, last_modified_at, deleted)
-SELECT sp.subscription_plan_id,
-       'YEARLY'::VARCHAR(20), 'usd'::VARCHAR(10), 19999::BIGINT, 'prod_elite_yearly'::VARCHAR(120), 'price_elite_yearly'::VARCHAR(120), TRUE::BOOLEAN, NOW(),
-       NOW(),
-       FALSE::BOOLEAN
-FROM subscription_plans sp
-WHERE sp.code = 'ELITE'
   AND sp.deleted = FALSE ON CONFLICT (plan_id, billing_interval, currency) DO NOTHING;
 
 -- =====================================================

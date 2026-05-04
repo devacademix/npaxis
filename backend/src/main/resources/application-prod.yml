@@ -2,6 +2,7 @@ spring:
   config:
     activate:
       on-profile: prod
+    import: optional:file:./secrets-prod.properties
 
   application:
     name: npaxis
@@ -37,7 +38,7 @@ spring:
   # ============================================
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     open-in-view: false
     properties:
@@ -124,10 +125,10 @@ npaxis:
     local-directory: ${STORAGE_LOCAL_DIRECTORY:/var/app/npaxis/uploads}
     allowed-extensions: ${STORAGE_ALLOWED_EXTENSIONS:pdf,png,jpg,jpeg,doc,docx}
     cloud:
-      bucket-name: ${CLOUD_BUCKET_NAME}
-      region: ${CLOUD_REGION}
-      access-key: ${CLOUD_ACCESS_KEY}
-      secret-key: ${CLOUD_SECRET_KEY}
+      bucket-name: ${DO_SPACES_BUCKET}
+      region: ${DO_SPACES_REGION}
+      access-key: ${DO_SPACES_ACCESS_KEY}
+      secret-key: ${DO_SPACES_SECRET_KEY}
 
 # ============================================
 # Production DigitalOcean Configuration
