@@ -18,4 +18,3 @@ public record MessageResponseDTO(
         LocalDateTime createdAt
 ) {
 }
-

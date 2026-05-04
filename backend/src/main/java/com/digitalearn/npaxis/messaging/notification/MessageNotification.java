@@ -1,5 +1,6 @@
 package com.digitalearn.npaxis.messaging.notification;
 
+import com.digitalearn.npaxis.auditing.BaseEntity;
 import com.digitalearn.npaxis.messaging.conversation.Conversation;
 import com.digitalearn.npaxis.user.User;
 import jakarta.persistence.Column;
@@ -14,12 +15,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
+import lombok.experimental.SuperBuilder;
 
 /**
  * MessageNotification Entity
@@ -39,8 +38,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class MessageNotification {
+@SuperBuilder
+public class MessageNotification extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -73,11 +72,6 @@ public class MessageNotification {
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
-    /**
-     * Timestamp when notification was created
-     */
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
 
 }
 

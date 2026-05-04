@@ -13,7 +13,7 @@ import java.util.Optional;
 
 /**
  * Repository interface for managing User entities.
- * This interface extends JpaRepository to provide CRUD operations and custom query methods.
+ * This interface extends BaseRepository to provide CRUD operations and custom query methods.
  */
 @Repository(value = "UserRepository")
 public interface UserRepository extends BaseRepository<User, Long> {

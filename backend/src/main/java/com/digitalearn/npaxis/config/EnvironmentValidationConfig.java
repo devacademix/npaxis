@@ -1,7 +1,6 @@
 package com.digitalearn.npaxis.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -13,7 +12,7 @@ import java.util.List;
  * Production environment variables validator.
  * Ensures all required configuration is present before application startup.
  * Fails fast to prevent runtime issues in production.
- *
+ * <p>
  * This validator is only active in 'prod' profile.
  */
 @Slf4j
@@ -71,7 +70,7 @@ public class EnvironmentValidationConfig {
         if (!missingVars.isEmpty()) {
             String message = String.format(
                     "Production deployment failed! Missing %d required environment variables:\n%s\n" +
-                    "Please ensure all environment variables are set before deploying to production.",
+                            "Please ensure all environment variables are set before deploying to production.",
                     missingVars.size(),
                     String.join("\n- ", missingVars)
             );

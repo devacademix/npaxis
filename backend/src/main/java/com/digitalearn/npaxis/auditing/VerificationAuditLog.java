@@ -12,10 +12,10 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
@@ -36,8 +36,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class VerificationAuditLog {
+@SuperBuilder
+public class VerificationAuditLog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -66,19 +66,10 @@ public class VerificationAuditLog {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "deleted", nullable = false)
-    private boolean deleted = false;
-
     @PrePersist
     protected void onCreate() {
         if (changeTimestamp == null) {
             this.changeTimestamp = LocalDateTime.now();
-        }
-        if (createdAt == null) {
-            this.createdAt = LocalDateTime.now();
         }
     }
 }

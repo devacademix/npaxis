@@ -57,4 +57,3 @@ public interface ConversationService {
     void validateUserParticipation(Long conversationId, Long userId);
 
 }
-

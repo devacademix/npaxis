@@ -1,8 +1,8 @@
 package com.digitalearn.npaxis.messaging.message;
 
+import com.digitalearn.npaxis.auditing.BaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
  * Repository for Message entity
  */
 @Repository
-public interface MessageRepository extends JpaRepository<Message, Long> {
+public interface MessageRepository extends BaseRepository<Message, Long> {
 
     /**
      * Find all messages in a conversation, ordered by creation date descending
@@ -29,7 +29,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      */
     @Query("SELECT m FROM Message m WHERE " +
             "m.conversation.id = :conversationId AND " +
-            "m.sender.id != :userId AND " +
+            "m.sender.userId != :userId AND " +
             "m.readAt IS NULL AND " +
             "m.deleted = false " +
             "ORDER BY m.createdAt DESC")
@@ -44,7 +44,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
      */
     @Query("SELECT COUNT(m) FROM Message m WHERE " +
             "m.conversation.id = :conversationId AND " +
-            "m.sender.id != :userId AND " +
+            "m.sender.userId != :userId AND " +
             "m.readAt IS NULL AND " +
             "m.deleted = false")
     Integer countUnreadMessagesForUser(

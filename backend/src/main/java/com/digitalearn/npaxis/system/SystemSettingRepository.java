@@ -1,7 +1,7 @@
 package com.digitalearn.npaxis.system;
 
+import com.digitalearn.npaxis.auditing.BaseRepository;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -13,7 +13,7 @@ import java.util.Optional;
  * Provides methods for querying and caching system configuration.
  */
 @Repository
-public interface SystemSettingRepository extends JpaRepository<SystemSetting, Long> {
+public interface SystemSettingRepository extends BaseRepository<SystemSetting, Long> {
 
     /**
      * Find a setting by its unique key (cached).

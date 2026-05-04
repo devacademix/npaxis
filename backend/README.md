@@ -90,6 +90,7 @@ The application supports three Spring profiles:
 - **prod**: Production deployment on DigitalOcean
 
 To run with a specific profile:
+
 ```bash
 ./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=prod"
 ```

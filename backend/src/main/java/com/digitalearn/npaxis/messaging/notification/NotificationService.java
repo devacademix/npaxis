@@ -36,4 +36,3 @@ public interface NotificationService {
     Integer getUnreadNotificationCount(Long userId);
 
 }
-

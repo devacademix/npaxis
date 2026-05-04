@@ -1,6 +1,6 @@
 package com.digitalearn.npaxis.preceptor;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.digitalearn.npaxis.auditing.BaseRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +11,7 @@ import java.util.Set;
  * Repository for managing Credential entities
  */
 @Repository
-public interface CredentialRepository extends JpaRepository<Credential, Long> {
+public interface CredentialRepository extends BaseRepository<Credential, Long> {
 
     /**
      * Find a credential by its normalized name (case-insensitive)

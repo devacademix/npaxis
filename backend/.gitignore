@@ -55,6 +55,7 @@ secrets-*.properties
 .env.local
 .env.*.local
 *.secrets
+app.yaml
 
 # =========================
 # Misc
@@ -62,4 +63,3 @@ secrets-*.properties
 HELP.md
 /uploads/
 /logs/**
-app.yaml

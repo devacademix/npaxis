@@ -86,4 +86,3 @@ public class Message extends BaseEntity {
     private LocalDateTime readAt;
 
 }
-

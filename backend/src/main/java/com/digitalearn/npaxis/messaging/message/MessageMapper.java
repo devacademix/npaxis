@@ -28,4 +28,3 @@ public abstract class MessageMapper {
     public abstract Message toEntity(MessageRequestDTO requestDTO);
 
 }
-

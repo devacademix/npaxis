@@ -30,4 +30,3 @@ public abstract class ConversationMapper {
     public abstract Conversation toEntity(ConversationRequestDTO requestDTO);
 
 }
-

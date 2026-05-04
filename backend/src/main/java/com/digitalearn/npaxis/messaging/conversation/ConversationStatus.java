@@ -12,4 +12,3 @@ public enum ConversationStatus {
     RESOLVED,
     CLOSED
 }
-

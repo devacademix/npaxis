@@ -1,5 +1,6 @@
 package com.digitalearn.npaxis.messaging.readstatus;
 
+import com.digitalearn.npaxis.auditing.BaseEntity;
 import com.digitalearn.npaxis.messaging.message.Message;
 import com.digitalearn.npaxis.user.User;
 import jakarta.persistence.Column;
@@ -13,10 +14,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
@@ -40,8 +41,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class MessageReadStatus {
+@SuperBuilder
+public class MessageReadStatus extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,11 +68,6 @@ public class MessageReadStatus {
     @Column(name = "read_at", nullable = false)
     private LocalDateTime readAt;
 
-    /**
-     * Timestamp when this record was created
-     */
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
 
 }
 

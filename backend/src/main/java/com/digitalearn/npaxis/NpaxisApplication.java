@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 /**
  * NPAxis Application entry point.
- *
+ * <p>
  * Automatically enables:
  * - JPA Auditing for @CreatedBy, @LastModifiedBy
  * - Async task execution for background operations

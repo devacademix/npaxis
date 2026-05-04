@@ -7,4 +7,3 @@ public enum NotificationType {
     NEW_MESSAGE,  // New message in conversation
     REPLY         // Reply to a message
 }
-

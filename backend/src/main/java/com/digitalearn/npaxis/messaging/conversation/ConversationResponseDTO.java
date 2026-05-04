@@ -20,4 +20,3 @@ public record ConversationResponseDTO(
         LocalDateTime lastModifiedAt
 ) {
 }
-
