@@ -1,8 +1,10 @@
 spring:
+  config:
+    activate:
+      on-profile: dev
+
   application:
     name: npaxis
-  config:
-    import: optional:file:secrets.properties
 
   # ============================================
   # Development Database Configuration
@@ -20,6 +22,7 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -37,13 +40,13 @@ spring:
         smtp:
           auth: false
           starttls:
-            enable: enabled
-            required: true
+            enable: true
+            required: false
           trust: "*"
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
-          debug: true
+          debug: false
 
   # ============================================
   # Development Task Execution Configuration
@@ -55,6 +58,10 @@ spring:
         max-size: 5
         queue-capacity: 100
       thread-name-prefix: npaxis-async-
+    scheduling:
+      pool:
+        size: 2
+      thread-name-prefix: npaxis-scheduled-
 
 # ============================================
 # Development Security Configuration
@@ -109,9 +116,11 @@ payment:
     secret-key: ${STRIPE_SECRET_KEY:sk_test_dev}
     publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_dev}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_test_dev}
-    success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/subscription/success}
-    cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/subscription/cancel}
-    return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:5173/dashboard}
+    checkout:
+      success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/subscription/success}
+      cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/subscription/cancel}
+    portal:
+      return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:5173/dashboard}
     api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
     max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
     connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
@@ -134,7 +143,6 @@ logging:
     org.postgresql: INFO
     com.digitalearn.npaxis: DEBUG
 
-
 # ============================================
 # Development Server Configuration
 # ============================================
@@ -156,8 +164,26 @@ springdoc:
 # ============================================
 # Development Storage Configuration
 # Bucket initialization disabled by default in dev
-# Enable via environment variable: STORAGE_BUCKET_INITIALIZE=true
 # ============================================
 storage:
   bucket:
     initialize: false
+
+# ============================================
+# Development Actuator Configuration
+# ============================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: always
+    env:
+      enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true

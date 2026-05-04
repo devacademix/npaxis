@@ -72,10 +72,33 @@ mvn clean install
 You can start the application using the Maven wrapper:
 
 ```bash
+# Development (default)
 ./mvnw spring-boot:run
+
+# Or explicitly with dev profile
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=dev"
 ```
 
 The application will start on `http://localhost:8080`.
+
+### Environment Profiles
+
+The application supports three Spring profiles:
+
+- **dev** (default): Local development with all debug features enabled
+- **staging**: Pre-production testing
+- **prod**: Production deployment on DigitalOcean
+
+To run with a specific profile:
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=prod"
+```
+
+**Note:** Production profile requires all environment variables to be set or deployment will fail.
+
+## Production Deployment
+
+For detailed production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ## 📖 API Documentation
 

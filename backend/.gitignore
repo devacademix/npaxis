@@ -62,3 +62,4 @@ secrets-*.properties
 HELP.md
 /uploads/
 /logs/**
+app.yaml

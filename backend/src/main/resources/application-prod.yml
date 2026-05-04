@@ -1,17 +1,21 @@
 spring:
+  config:
+    activate:
+      on-profile: prod
+
   application:
     name: npaxis
 
   # ============================================
-  # External Configuration Support
-  # Allow loading configuration from external files or env vars
-  # Usage: -Dspring.config.import="file:///path/to/secrets-prod.properties"
+  # Startup Validation
   # ============================================
-  config:
-    import: optional:file:${CONFIG_IMPORT_PATH:./secrets-prod.properties}
+  devtools:
+    restart:
+      enabled: false
 
   # ============================================
   # Production Database Configuration
+  # Uses environment variables for all credentials
   # ============================================
   datasource:
     url: ${DB_URL}
@@ -24,14 +28,18 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+      auto-commit: true
+      connection-test-query: "SELECT 1"
 
   # ============================================
   # Production JPA/Hibernate Configuration
+  # Optimized for performance and safety
   # ============================================
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -39,8 +47,10 @@ spring:
         jdbc:
           batch_size: 25
           fetch_size: 50
+          use_scrollable_resultset: false
         order_inserts: true
         order_updates: true
+        enable_lazy_load_no_trans: false
 
   # ============================================
   # Production Mail Configuration
@@ -73,10 +83,17 @@ spring:
         max-size: 20
         queue-capacity: 500
       thread-name-prefix: npaxis-async-
+      shutdown:
+        await-termination: true
+        await-termination-period: 60s
     scheduling:
       pool:
         size: 5
       thread-name-prefix: npaxis-scheduled-
+
+  # ============================================
+  # Production Error Handling
+  # ============================================
   web:
     error:
       include-message: always
@@ -155,7 +172,7 @@ payment:
 # ============================================
 logging:
   level:
-    root: INFO
+    root: WARN
     org.springframework: WARN
     org.springframework.web: WARN
     org.springframework.security: WARN
@@ -164,26 +181,36 @@ logging:
     org.postgresql: WARN
     com.digitalearn.npaxis: INFO
   file:
-    name: ${LOG_FILE_PATH:/var/log/npaxis}/npaxis.log
+    name: ${LOG_FILE_PATH:-}/npaxis.log
     max-size: 10MB
     max-history: 30
     total-size-cap: 1GB
 
-
 # ============================================
 # Production Server Configuration
+# IMPORTANT: DigitalOcean App Platform uses PORT env variable
+# Binds to 0.0.0.0 to accept connections from load balancers
 # ============================================
 server:
-  port: 8080
+  address: 0.0.0.0
+  port: ${PORT:8080}
   compression:
     enabled: true
     min-response-size: 1024
   shutdown: graceful
   servlet:
     context-path: /api/v1
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 10000
+    accept-count: 100
+    connection-timeout: 30000
 
 # ============================================
 # Production SpringDoc/Swagger Configuration
+# Disabled for security
 # ============================================
 springdoc:
   api-docs:
@@ -198,3 +225,32 @@ storage:
   bucket:
     initialize: true
 
+# ============================================
+# Production Actuator Configuration
+# ============================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      enabled: true
+      show-details: when-authorized
+      show-components: when-authorized
+    info:
+      enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+    diskspace:
+      threshold: 1GB
+    db:
+      enabled: true
+  server:
+    port: 8080
+    ssl:
+      enabled: false

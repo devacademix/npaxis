@@ -205,7 +205,13 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
-            <version>1.12.600</version>
+            <version>1.12.729</version>
+        </dependency>
+
+        <!-- Micrometer for Metrics (required for production monitoring) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
         <!-- Spring AOP for aspect-oriented analytics tracking -->
