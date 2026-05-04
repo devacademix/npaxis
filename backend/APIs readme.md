@@ -252,15 +252,15 @@ requirements, and expected outputs.
 
 ### 5.2 Admin Dashboard & Settings
 
-| Endpoint                | Method | Description                   | Input                        | Output                                    |
-|:------------------------|:-------|:------------------------------|:-----------------------------|:------------------------------------------|
-| `/dashboard`            | GET    | Get admin dashboard overview. | None                         | `AdminAnalyticsOverviewDTO`               |
-| `/dashboard/report`     | GET    | Download admin dashboard report as PDF. | None               | PDF file (`Resource`)                     |
-| `/settings`             | GET    | Get all system settings.      | None                         | List of `SystemSettingsDTO`               |
-| `/settings/{key}`       | GET    | Get specific setting by key.  | `key` (Path)                 | `SystemSettingsDTO`                       |
-| `/settings/{key}`       | PUT    | Update a system setting.      | `key` (Path), `value` (Body) | `SystemSettingsDTO`                       |
-| `/revenue-summary`      | GET    | Get revenue report.           | None                         | `RevenueReportDTO`                        |
-| `/revenue-transactions` | GET    | Get transaction history.      | Pageable params              | Paginated list of `TransactionHistoryDTO` |
+| Endpoint                | Method | Description                             | Input                        | Output                                    |
+|:------------------------|:-------|:----------------------------------------|:-----------------------------|:------------------------------------------|
+| `/dashboard`            | GET    | Get admin dashboard overview.           | None                         | `AdminAnalyticsOverviewDTO`               |
+| `/dashboard/report`     | GET    | Download admin dashboard report as PDF. | None                         | PDF file (`Resource`)                     |
+| `/settings`             | GET    | Get all system settings.                | None                         | List of `SystemSettingsDTO`               |
+| `/settings/{key}`       | GET    | Get specific setting by key.            | `key` (Path)                 | `SystemSettingsDTO`                       |
+| `/settings/{key}`       | PUT    | Update a system setting.                | `key` (Path), `value` (Body) | `SystemSettingsDTO`                       |
+| `/revenue-summary`      | GET    | Get revenue report.                     | None                         | `RevenueReportDTO`                        |
+| `/revenue-transactions` | GET    | Get transaction history.                | Pageable params              | Paginated list of `TransactionHistoryDTO` |
 
 ### 5.3 Admin Revenue Management
 

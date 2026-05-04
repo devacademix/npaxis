@@ -1,4 +1,8 @@
 spring:
+  config:
+    activate:
+      on-profile: staging
+
   application:
     name: npaxis
 
@@ -16,6 +20,7 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+      auto-commit: true
 
   # ============================================
   # Staging JPA/Hibernate Configuration
@@ -24,10 +29,14 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         generate_statistics: false
+        jdbc:
+          batch_size: 25
+          fetch_size: 50
 
   # ============================================
   # Staging Mail Configuration
@@ -60,6 +69,10 @@ spring:
         max-size: 10
         queue-capacity: 250
       thread-name-prefix: npaxis-async-
+    scheduling:
+      pool:
+        size: 3
+      thread-name-prefix: npaxis-scheduled-
 
 # ============================================
 # Staging Security Configuration
@@ -68,8 +81,8 @@ security:
   jwt:
     secret: ${JWT_SECRET}
     expiration:
-      access: ${JWT_EXPIRATION_ACCESS}
-      refresh: ${JWT_EXPIRATION_REFRESH}
+      access: ${JWT_EXPIRATION_ACCESS:900000}
+      refresh: ${JWT_EXPIRATION_REFRESH:604800000}
 
 # ============================================
 # Staging NPAxis Configuration
@@ -113,18 +126,15 @@ payment:
     secret-key: ${STRIPE_SECRET_KEY}
     publishable-key: ${STRIPE_PUBLISHABLE_KEY}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET}
-    checkout:
-      success-url: ${STRIPE_SUCCESS_URL}
-      cancel-url: ${STRIPE_CANCEL_URL}
-    portal:
-      return-url: ${STRIPE_PORTAL_RETURN_URL}
+    success-url: ${STRIPE_SUCCESS_URL}
+    cancel-url: ${STRIPE_CANCEL_URL}
+    customer-portal-return-url: ${STRIPE_PORTAL_RETURN_URL}
     api-version: ${STRIPE_API_VERSION:2024-12-18.acacia}
     max-network-retries: ${STRIPE_MAX_NETWORK_RETRIES:3}
     connect-timeout-ms: ${STRIPE_CONNECT_TIMEOUT_MS:5000}
     read-timeout-ms: ${STRIPE_READ_TIMEOUT_MS:10000}
     currency: ${STRIPE_CURRENCY:usd}
-    trial:
-      period-days: ${STRIPE_TRIAL_DAYS:14}
+    default-trial-days: ${STRIPE_TRIAL_DAYS:14}
 
 # ============================================
 # Staging Logging Configuration
@@ -133,41 +143,66 @@ logging:
   level:
     root: INFO
     org.springframework: INFO
-    org.springframework.web: DEBUG
+    org.springframework.web: WARN
     org.springframework.security: INFO
     org.springframework.data: INFO
     org.hibernate: WARN
     org.postgresql: INFO
-    com.digitalearn.npaxis: DEBUG
-
+    com.digitalearn.npaxis: INFO
+  file:
+    name: ${LOG_FILE_PATH:-}/npaxis.log
+    max-size: 10MB
+    max-history: 30
+    total-size-cap: 1GB
 
 # ============================================
 # Staging Server Configuration
 # ============================================
 server:
-  port: 8080
+  port: ${PORT:8080}
   compression:
     enabled: true
     min-response-size: 1024
   shutdown: graceful
   servlet:
     context-path: /api/v1
+  tomcat:
+    threads:
+      max: 150
+      min-spare: 8
 
 # ============================================
 # Staging SpringDoc/Swagger Configuration
-# Can be enabled for testing but should be disabled before prod
+# Disabled for security
 # ============================================
 springdoc:
   api-docs:
-    enabled: true
+    enabled: false
   swagger-ui:
-    enabled: true
+    enabled: false
 
 # ============================================
 # Staging Storage Configuration
-# Bucket initialization enabled to test with real credentials
 # ============================================
 storage:
   bucket:
     initialize: true
 
+# ============================================
+# Staging Actuator Configuration
+# ============================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+    info:
+      enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true

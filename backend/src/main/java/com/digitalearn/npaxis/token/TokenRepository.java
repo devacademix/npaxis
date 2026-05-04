@@ -1,10 +1,10 @@
 package com.digitalearn.npaxis.token;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.digitalearn.npaxis.auditing.BaseRepository;
 
 import java.util.Optional;
 
-public interface TokenRepository extends JpaRepository<Token, Long> {
+public interface TokenRepository extends BaseRepository<Token, Long> {
     //    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Token> findTopByEmailOrderByCreatedAtDesc(String email);
 

@@ -1,0 +1,37 @@
+## Build artifacts
+#logs/
+#target/
+#.mvn/wrapper/maven-wrapper.jar
+#
+## IDE
+#.idea/
+#.vscode/
+#*.iml
+#*.swp
+#*.swo
+#*~
+#
+## OS
+#.DS_Store
+#Thumbs.db
+#
+## Version control
+#.git/
+#.gitignore
+#.gitattributes
+#
+## Documentation
+#*.md
+#.github/
+#
+## Test files
+#src/test/
+#
+## Build files
+#.m2/
+#.gradle/
+#
+## Environment files (should never be in container)
+#.env
+#.env.local
+#secrets*.properties

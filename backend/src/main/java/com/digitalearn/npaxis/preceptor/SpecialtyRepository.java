@@ -1,6 +1,6 @@
 package com.digitalearn.npaxis.preceptor;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.digitalearn.npaxis.auditing.BaseRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +11,7 @@ import java.util.Set;
  * Repository for managing Specialty entities
  */
 @Repository
-public interface SpecialtyRepository extends JpaRepository<Specialty, Long> {
+public interface SpecialtyRepository extends BaseRepository<Specialty, Long> {
 
     /**
      * Find a specialty by its normalized name (case-insensitive)

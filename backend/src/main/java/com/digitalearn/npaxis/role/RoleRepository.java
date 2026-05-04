@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * Repository interface for managing Role entities.
- * This interface extends JpaRepository to provide CRUD operations and custom query methods.
+ * This interface extends BaseRepository to provide CRUD operations and custom query methods.
  */
 @Repository
 public interface RoleRepository extends BaseRepository<Role, Long> {

@@ -55,10 +55,11 @@ secrets-*.properties
 .env.local
 .env.*.local
 *.secrets
+app.yaml
 
 # =========================
 # Misc
 # =========================
 HELP.md
 /uploads/
-/logs/
+/logs/**
