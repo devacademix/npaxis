@@ -22,6 +22,3 @@ static_sites:
     depends_on:
       - backend
     environment_slug: node-js
-    envs:
-      - key: BACKEND_URL
-        value: ${backend.PUBLIC_URL}
